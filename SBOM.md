@@ -1,0 +1,2 @@
+# Dependency and license inventory
+Application runtime has zero third-party npm packages; package-lock.json records the empty dependency graph. Runtime: Node.js 24.19.0 (MIT with bundled third-party notices; consult distribution LICENSE). SQLite bundled with Node (public domain). No redistributed models, 3D assets or third-party UI libraries. No license is assigned to the founder's application source without owner direction; keep private. Review redistribution notices before shipping a runtime installer.

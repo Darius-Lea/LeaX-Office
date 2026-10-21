@@ -1,0 +1,4 @@
+# Architecture
+Node 24 native TypeScript stripping, built-in HTTP server and SQLite; static HTML/CSS/JavaScript dashboard. No build step. Prepared SQL statements; persistent tasks, evidence checkpoints, audit records, founder hash and expiring sessions. Scrypt password hashing and random one-time console bootstrap. HttpOnly SameSite cookie, origin checks, login throttling, loopback binding and restrictive CSP. This is a single-founder local app, not a multi-tenant SaaS security boundary.
+
+Alpha checks a fixed USAspending public source. It records provenance rather than interpreting portal availability as a business lead. Bravo reviews source provenance and marks missing extraction as blocked. SQLite immediate transactions serialize job claims; 60-second leases recover interrupted claims. Only read-only remote work is implemented; no consequential external actions or inferred approvals.
