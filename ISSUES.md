@@ -1,8 +1,10 @@
 # Known issues
-- No actual opportunity search/extraction or local inference yet. Current task completion is intentionally blocked after source review.
-- Live www.usaspending.gov unavailable: direct Node fetch DNS EAI_AGAIN; environment proxy request cancelled. No successful live source validation.
-- Worker processing requires a running process; no automatic schedules or UI controls yet. A recent heartbeat is not proof a specific task is running.
-- Manual backups only; no rotation, automatic backups or recovery wizard. Loss of the data directory loses business state. Keep off-device private copies.
-- Windows task registration script not tested. Cannot validate Windows behavior in this Linux environment.
-- No browser E2E test or TypeScript type checking yet; tests execute native TypeScript directly.
-- Local-only single-founder app; do not expose publicly. No SaaS tenant isolation, password recovery or email verification.
+- Live api.usaspending.gov blocked by cloud proxy CONNECT 403. Official API contract checked from upstream GitHub; connector tested with synthetic fixtures only. No live results claimed.
+- USAspending records are historical contract awards, not open solicitations or confirmations that contractors need APG services. Bravo checks record provenance, not recipient contacts or business eligibility. Qualification remains unverified.
+- National/overseas research covers US federal award records only. No complete worldwide discovery connector. Three-page cap is explicit; broad searches are incomplete and ranked by award value, not expected APG revenue.
+- No local inference yet; Ollama absent in this environment. Alpha and Bravo are deterministic workers currently, not language-model agents.
+- Manual backups only. Loss of data directory or host can lose business records; keep protected off-device copies.
+- No browser E2E or TypeScript typecheck. Windows registration script untested; background execution requires explicit opt-in. No automatic registration performed.
+- Single-founder local app, not publicly deployable SaaS. No tenant isolation/password recovery/email verification. Founder remains free of subscription billing.
+- Legacy tasks with portal-availability evidence cannot be reviewed by the new connector; queue a new assignment. Legacy records remain intact.
+- Missing/invalid source identity or description blocks the page instead of inventing evidence; failed tasks retain earlier pages and allow manual retry.

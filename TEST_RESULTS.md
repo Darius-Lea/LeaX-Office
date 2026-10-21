@@ -1,7 +1,8 @@
 # Actual validation
-2026-10-20, Node 24.19.0 Linux.
-- npm test: 1 integration test passed, 0 failed/skipped. Covers password minimum, founder cannot be replaced, valid/invalid authentication, task persistence, Alpha evidence handoff, expired lease recovery, Bravo missing-extraction state, unavailable-source state, zero fabricated opportunities, SQLite backup integrity and reopening saved state.
-- Isolated HTTP smoke test passed: HTML served, setup status, code+password founder creation, session authentication, task creation/readback, online backup, health response. Temporary test database removed.
-- Current app server started on loopback 4310. No background worker left running.
-- Live research request failed DNS EAI_AGAIN; proxy-enabled retry failed request cancellation. Not validated live. Model inference unrun; Ollama absent. Windows script and browser interactions unrun.
-No build required by current native Node/static frontend architecture; no typecheck configured. This does not establish completion of Phase 1 or production readiness.
+2026-10-20 continued, Node 24.19.0 Linux.
+- npm test: 3 tests passed, 0 failed/skipped. Source tests validate nationwide/unrestricted location filters, business-service keyword mapping, response/provenance validation and malicious source URL rejection.
+- Worker/storage integration validates founder protection and sessions; multi-page Alpha collection; blocked-page checkpoint retention; resumed collection; expired claim recovery; Bravo provenance review/completion; cross-task URL deduplication/associations; three-page cap; exhausted abandoned claims; empty search; malformed-source rejection; SQLite online backup integrity and reopening saved records.
+- HTTP integration starts isolated real servers and verifies unauthenticated access denial, bad Origin denial, founder setup, invalid task input, retry status restrictions and checkpoint preservation, source metadata, backups, logout, and founder/session/task persistence across server restart. Tests use temporary DBs removed afterward.
+- Official upstream API contract retrieved successfully from GitHub to confirm supported fields and pagination schema.
+- Live API HTTPS request failed cloud proxy CONNECT 403. Live collection NOT validated. Worker fixtures are synthetic, confined to test DBs. No business leads or contracts claimed.
+- Windows behavior, real model inference and browser interaction unrun. Syntax checks run for changed server/worker/source/frontend. No build needed for native Node/static frontend; no typecheck configured.

@@ -1,4 +1,5 @@
 # Integrations
-USAspending public portal: fixed read-only availability check; no API key, no actual opportunity search. Requires www.usaspending.gov egress. Verify source terms and implement a documented search endpoint before claiming discovery.
-Ollama: optional loopback model-list detection at port 11434. Not installed; no inference implemented. No paid AI integrations required or enabled.
-Git HTTPS read-only remote check completed with no refs returned (empty repository). No token requested. No email/calendar/telephony/billing integrations.
+USAspending public federal contract-award API: POST https://api.usaspending.gov/api/v2/search/spending_by_award/ . No API key, paid account or communication permissions needed. Fixed destination, 15-second timeout, bounded 2 MB response and 20 records/page, three-page cap. Requests select contract types A/B/C/D; keywords map deterministically from business services. No geographic exclusion. Historical awards are prospect evidence, not open bids. Official schema reference: https://github.com/fedspendingtransparency/usaspending-api/blob/master/usaspending_api/api_contracts/contracts/v2/search/spending_by_award.md . Live API validation blocked by proxy 403; fixtures are explicitly synthetic. api.usaspending.gov added to cloud draft, preserving www.usaspending.gov.
+
+Ollama: optional loopback model-list detection on port 11434. Inference/model selection unfinished; no models downloaded.
+No email/calendar/telephony/billing connections. No external account authorization required for current functionality.
