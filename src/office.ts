@@ -1,6 +1,7 @@
 import {db,setting,clock,enqueue,setSetting} from './store.ts';
 import {searchSolicitations,solicitationState} from './solicitations.ts';
 import {processAgent,queueAgent} from './ai.ts';
+import {nextResearchGoal} from './research.ts';
 import {tick} from './worker.ts';
 import {managerPatrol} from './manager.ts';
 import {teamPulse} from './team.ts';
@@ -13,7 +14,7 @@ export async function pulse(fetcher:typeof fetch=fetch){
  void processAgent().catch(error=>console.error('AI worker:',String(error)));
  if(busy)return false;
  if(!db.prepare("SELECT id FROM tasks WHERE status IN ('Queued','Running') LIMIT 1").get()&&Date.now()-Number(setting('last_research')||Date.now())>=21600000){
- enqueue(setting('standing_goal'));setSetting('last_research',String(Date.now()));
+ const lane=Number(setting('research_lane')||'0');enqueue(nextResearchGoal(setting('standing_goal'),lane));setSetting('research_lane',String(lane+1));setSetting('last_research',String(Date.now()));
  }
  busy=true;
  try{managerPatrol();const worked=await tick(fetcher);const teamWorked=teamPulse();

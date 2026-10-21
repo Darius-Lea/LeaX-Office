@@ -1,5 +1,5 @@
 import {db,setting,setSetting,audit} from './store.ts';
-import {termsFor} from './research.ts';
+import {allTermsFor} from './research.ts';
 
 export const SOLICITATION_SOURCE={id:'sam-opportunities',name:'SAM.gov current contract notices',endpoint:'https://api.sam.gov/opportunities/v2/search',keyName:'SAM_API_KEY',coverage:'US federal notices across all states and overseas locations; not complete private-sector or worldwide coverage'};
 const STATUS_KEY='sam_search_status';
@@ -33,7 +33,7 @@ export function classifySolicitation(record:any,now=Date.now()):SolicitationClas
 }
 function dateParameter(date:Date){return String(date.getUTCMonth()+1).padStart(2,'0')+'/'+String(date.getUTCDate()).padStart(2,'0')+'/'+date.getUTCFullYear();}
 export function solicitationQuery(goal:string,now=Date.now(),index=0){
- const phrases=termsFor(goal);const term=phrases[index%phrases.length];
+ const phrases=allTermsFor(goal);const term=phrases[index%phrases.length];
  const parameters=new URLSearchParams({postedFrom:dateParameter(new Date(now-29*86400000)),postedTo:dateParameter(new Date(now)),limit:String(LIMIT),offset:'0',title:term});
  parameters.append('ptype','o');parameters.append('ptype','k');
  return {parameters,term};

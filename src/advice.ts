@@ -2,11 +2,11 @@ export type Advice={fit:'strong service match'|'specialist review'|'poor service
 export function awardAdvice(record:any,company='Your company'):Advice{
  let e:any={};try{e=typeof record.evidence==='string'?JSON.parse(record.evidence):record.evidence||{};}catch{}
  const description=typeof e.description==='string'?e.description:'';
- const strong=/structured cabling|\bcat[ -]?6\b|IT build.out|telecom rooms|network installation|network.*cabling|cabling.*network|audio.?visual|small wiring|rack.and.stack|wireless access/i.test(description);
+ const strong=/construction clean.?up|post.construction cleaning|medical.*network|hospital.*cabling|structured cabling|\bcat[ -]?6\b|IT build.out|telecom rooms|network installation|network.*cabling|cabling.*network|audio.?visual|small wiring|rack.and.stack|wireless access/i.test(description);
  const outside=/diesel|generators?|switchgear|sprinkler|fire pump|fire suppression/i.test(description);
  const specialist=/fire alarm|life safety|security systems?/i.test(description);
  let fit:Advice['fit']=strong?'strong service match':outside?'poor service match':specialist?'specialist review':'insufficient detail';
- const reason=strong?'The description includes technology installation services relevant to the current IT/low-voltage service profile.':outside?'The description primarily concerns electrical/mechanical or fire-suppression work; a “low voltage” keyword alone does not establish an IT/AV opportunity.':specialist?'Safety/security systems may require verified specialist licensing and capability.':'The available description is too vague to recommend this as a sales prospect.';
+ const reason=strong?'The description includes installation or construction-cleanup services relevant to the current service profile. Confirm your company’s actual capability before pursuing.':outside?'The description primarily concerns electrical/mechanical or fire-suppression work; a “low voltage” keyword alone does not establish an IT/AV opportunity.':specialist?'Safety/security systems may require verified specialist licensing and capability.':'The available description is too vague to recommend this as a sales prospect.';
  const international=typeof e.country==='string'&&e.country!=='USA';
  const geography=international?`Performance country ${e.country}: verify legal authorization, travel, licensing and local partner capacity before pursuing.`:e.country==='USA'?`US performance location ${e.state||'state not provided'}: confirm actual delivery coverage; no state is assumed covered.`:'Performance geography is unknown; verify before pursuing.';
  const nextSteps=fit==='poor service match'?[

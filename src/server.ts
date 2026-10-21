@@ -1,3 +1,4 @@
+import {assignmentReport} from './reports.ts';
 import {createServer} from 'node:http';
 import {readFileSync} from 'node:fs';
 import {randomBytes} from 'node:crypto';
@@ -34,8 +35,9 @@ const server=createServer(async(req,res)=>{
  const send=(status:number,data:any)=>{res.writeHead(status,{'Content-Type':'application/json'});res.end(JSON.stringify(data));};
  try{
  const url=new URL(req.url||'/',`http://127.0.0.1:${port}`);
- if(req.method==='GET' && ['/', '/app.js','/office.js','/office3d.js','/style.css'].includes(url.pathname)){const file=url.pathname==='/'?'index.html':url.pathname.slice(1);res.setHeader('Content-Type',file.endsWith('html')?'text/html':file.endsWith('js')?'text/javascript':'text/css');res.end(readFileSync(new URL('../public/'+file,import.meta.url)));return;}
+ if(req.method==='GET' && ['/', '/app.js','/office.js','/office3d.js','/style.css','/report.css','/report.js'].includes(url.pathname)){const file=url.pathname==='/'?'index.html':url.pathname.slice(1);res.setHeader('Content-Type',file.endsWith('html')?'text/html':file.endsWith('js')?'text/javascript':'text/css');res.end(readFileSync(new URL('../public/'+file,import.meta.url)));return;}
  if(req.method==='GET'&&['/vendor/three.module.js','/vendor/three.core.js'].includes(url.pathname)){res.setHeader('Content-Type','text/javascript');res.setHeader('Cache-Control','public, max-age=86400');res.end(readFileSync(new URL('../node_modules/three/build/'+url.pathname.split('/').pop(),import.meta.url)));return;}
+ if(req.method==='GET'&&['/vendor/FontLoader.js','/vendor/TextGeometry.js','/vendor/office-font.json'].includes(url.pathname)){const paths:Record<string,string>={'/vendor/FontLoader.js':'loaders/FontLoader.js','/vendor/TextGeometry.js':'geometries/TextGeometry.js','/vendor/office-font.json':'../fonts/helvetiker_regular.typeface.json'};const raw=readFileSync(new URL('../node_modules/three/examples/jsm/'+paths[url.pathname],import.meta.url),'utf8');res.setHeader('Content-Type',url.pathname.endsWith('json')?'application/json':'text/javascript');res.end(raw.replace(/from 'three'/g,"from '/vendor/three.module.js'"));return;}
  if(req.method==='GET' && url.pathname==='/api/status')return send(200,{product:'ai-headquarters',setupRequired:!db.prepare('SELECT id FROM founder').get()});
  const localPort=(server.address() as any)?.port||port;
  const allowedOrigins=publicBinding?[publicOrigin]:[`http://127.0.0.1:${localPort}`,`http://localhost:${localPort}`,...(publicOrigin?[publicOrigin]:[])];
@@ -48,6 +50,8 @@ const server=createServer(async(req,res)=>{
  const token=login(body.password);if(!token)return send(401,{error:'Invalid credentials'});res.setHeader('Set-Cookie',`hq_session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800${publicOrigin?'; Secure':''}`);return send(200,{ok:true});}
  const token=(req.headers.cookie||'').split('; ').find(v=>v.startsWith('hq_session='))?.slice(11)||'';
  if(!authenticated(token))return send(401,{error:'Sign in required'});
+ if(req.method==='GET'&&url.pathname.startsWith('/api/reports/')){const html=assignmentReport(decodeURIComponent(url.pathname.slice('/api/reports/'.length)),url.searchParams.get('download')==='1');res.setHeader('Content-Type','text/html; charset=utf-8');if(url.searchParams.get('download')==='1')res.setHeader('Content-Disposition','attachment; filename="Assignment-packet.html"');res.end(html);return;}
+ if(req.method==='GET'&&url.pathname==='/api/download/windows'){res.setHeader('Content-Type','application/vnd.microsoft.portable-executable');res.setHeader('Content-Disposition','attachment; filename="AI-Headquarters-Setup.exe"');res.end(readFileSync(process.env.HQ_INSTALLER_PATH||new URL('../downloads/AI-Headquarters-Setup.exe',import.meta.url)));return;}
  if(req.method==='GET'&&url.pathname==='/api/state'){
  const state=snapshot();return send(200,{...state,opportunities:state.opportunities.map(record=>({...record,advice:awardAdvice(record,state.company.name)})),...teamState(),roleCharters:ROLE_CHARTERS,manager:managerState(),aiRuns:agentRuns(),aiConfigured:!!setting('ollama_model'),contactResearch:contactState(),drafts:draftState(),solicitations:solicitationState()});}
  if(req.method==='GET'&&url.pathname==='/api/export/database'){

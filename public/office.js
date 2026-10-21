@@ -9,7 +9,7 @@ async function ensure3D(){
  loading=true;message.textContent='Loading your 3D office…';
  try{
  const {createOffice3D}=await import('/office3d.js');
- renderer=createOffice3D(webglHost,{onEmployee:id=>latestInspect?.(id),onOwner:()=>document.querySelector('#owner-computer').click()});
+ renderer=createOffice3D(webglHost,{onEmployee:id=>latestInspect?.(id),onOwner:(pane)=>{document.querySelector('#owner-computer').click();if(pane==='packets')document.querySelector('[data-pane=packets]').click();}});
  viewport.classList.add('webgl-ready');webglHost.hidden=document.body.dataset.view!=='3d';
  renderer.update(latestState);renderer.setEnabled(document.body.dataset.view==='3d');
  message.textContent='Drag to look around · Scroll to zoom · Click an employee or your owner computer. Keyboard: focus the office, use arrows and + / −. Clerical view provides standard controls.';

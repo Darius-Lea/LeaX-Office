@@ -9,3 +9,5 @@
 - Local models and WebGL use variable RAM/CPU/GPU; no fixed low-memory guarantee. Graphics pause when idle/hidden and have lightweight alternatives. GPU detection remains unknown.
 - Scheduling/clock permission cannot keep a powered-off/sleeping machine running. Automatic backup rotation, encrypted off-device backup sync and unattended OS startup remain incomplete/opt-in.
 - Current app is single-founder; public multi-tenant security audit/isolation, account recovery and production deployment hardening remain incomplete.
+
+Native Windows setup is now cross-compiled and replaces the unsigned PowerShell launcher for normal downloads. It remains unsigned and has not been executed on Windows. Validate native UI, runtime download signature checks, DPAPI, shortcuts, existing-process ownership and backup recovery on Windows before treating installation as verified. Code signing requires a legitimate publisher certificate; none is present. Broad private construction/news/rollout feeds and autonomous decision-maker discovery are not implemented.

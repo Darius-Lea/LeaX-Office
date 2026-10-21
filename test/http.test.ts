@@ -19,7 +19,7 @@ test('HTTP auth, origin protection, retry, saved account across restart, and log
  try{
  server=await launch(directory);let cookie='';
  const call=async(path:string,body?:object,origin?:string)=>fetch(`http://127.0.0.1:${server.port}/api/${path}`,{method:body?'POST':'GET',headers:{'Content-Type':'application/json',Origin:origin||`http://127.0.0.1:${server.port}`,Cookie:cookie},body:body?JSON.stringify(body):undefined});
- assert.equal((await call('state')).status,401);assert.equal((await call('export/database')).status,401);assert.equal((await call('office/clock',{active:true})).status,401);
+ assert.equal((await call('reports/anything')).status,401);assert.equal((await call('download/windows')).status,401);assert.equal((await call('state')).status,401);assert.equal((await call('export/database')).status,401);assert.equal((await call('office/clock',{active:true})).status,401);
  assert.equal((await call('setup',{code:server.code,password:'test founder passphrase'},'https://evil.test')).status,403);
  const auth=await call('setup',{code:server.code,password:'test founder passphrase'});assert.equal(auth.status,200);cookie=auth.headers.get('set-cookie')!.split(';')[0];
  assert.equal((await call('contacts/research',{url:'https://127.0.0.1/private',company:'Blocked target'})).status,400);assert.equal((await call('ai/run',{agent:'Einstein',prompt:'What next?'})).status,400);assert.equal((await call('ai/install',{confirm:false})).status,400);
@@ -30,7 +30,7 @@ test('HTTP auth, origin protection, retry, saved account across restart, and log
  assert.equal((await call('company',{name:'',legalName:'',goal:''})).status,400);
  assert.equal((await call('tasks',{goal:''})).status,400);
  const id=(await (await call('tasks',{goal:'Nationwide cabling'})).json()).id;
- assert.equal((await call('tasks/retry',{id})).status,409);assert.equal((await call('tasks/edit',{id,goal:'Edited nationwide objective'})).status,200);
+ const packet=await call('reports/'+id);assert.equal(packet.status,200);assert.match(await packet.text(),/Print \/ Save as PDF/);assert.match((await call('reports/'+id+'?download=1')).headers.get('content-disposition')!,/attachment/);assert.equal((await call('tasks/retry',{id})).status,409);assert.equal((await call('tasks/edit',{id,goal:'Edited nationwide objective'})).status,200);
  const db=new DatabaseSync(join(directory,'headquarters.sqlite'));db.prepare('INSERT INTO opportunities(id,task,title,url,evidence) VALUES(?,?,?,?,?)').run('test-record',id,'Synthetic HTTP test record','https://example.test/fixture','{}');db.prepare("UPDATE tasks SET status='Blocked',checkpoint=?,error='offline' WHERE id=?").run('{"page":2}',id);db.close();
  assert.equal((await call('research/note',{id:'test-record',note:'Owner qualification check pending'})).status,200);assert.equal((await call('research/note',{id:'missing',note:'x'})).status,400);
  assert.equal((await call('tasks/retry',{id})).status,200);

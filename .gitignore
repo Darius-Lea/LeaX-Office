@@ -9,3 +9,5 @@ server-state.json
 *.sqlite
 *.sqlite-wal
 *.sqlite-shm
+installer/payload.zip
+installer/*.syso

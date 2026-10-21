@@ -6,11 +6,16 @@ export const SOURCE = {
  coverage: 'US federal awards, nationwide and overseas performance locations; not a worldwide open-tender feed',
 };
 export const DEFAULT_TERMS = ['structured cabling', 'network installation', 'low voltage'];
-export function termsFor(goal:string):string[] {
- const families:[RegExp,string][]=[[/cabl|cat6/i,'structured cabling'],[/network|wi-fi|wireless/i,'network installation'],[/low.voltage/i,'low voltage'],[/cctv|security/i,'security system installation'],[/data.center|rack/i,'data center'],[/digital.signage|audio|commercial.av/i,'audio visual installation'],[/printer/i,'printer maintenance'],[/point.of.sale|\bpos\b/i,'point of sale']];
+export function allTermsFor(goal:string):string[] {
+ const families:[RegExp,string][]=[[/construction.clean|post.construction|cleanup|clean.up/i,'construction cleanup'],[/medical|nursing|healthcare|hospital/i,'hospital network installation'],[/construction|rollout/i,'technology installation'],[/cabl|cat6/i,'structured cabling'],[/network|wi-fi|wireless/i,'network installation'],[/low.voltage/i,'low voltage'],[/cctv|security/i,'security system installation'],[/data.center|rack/i,'data center'],[/digital.signage|audio|commercial.av/i,'audio visual installation'],[/printer/i,'printer maintenance'],[/point.of.sale|\bpos\b/i,'point of sale']];
  const terms=families.filter(([pattern])=>pattern.test(goal)).map(([,term])=>term);
- return (terms.length?terms:DEFAULT_TERMS).slice(0,3);
+ return (terms.length?terms:DEFAULT_TERMS).slice(0,10);
 }
+export function termsFor(goal:string):string[]{
+ const lane=goal.match(/^Research lane: ([^\n]+)\n/);if(lane){const allowed=allTermsFor(goal.slice(lane[0].length));if(allowed.includes(lane[1]))return [lane[1]];}
+ return allTermsFor(goal).slice(0,3);
+}
+export function nextResearchGoal(goal:string,index:number){const lanes=allTermsFor(goal);return 'Research lane: '+lanes[index%lanes.length]+'\n'+goal;}
 export function requestBody(goal:string,page:number){
  return {filters:{award_type_codes:['A','B','C','D'],keywords:termsFor(goal)},
  fields:['Last Modified Date','generated_internal_id','Award ID','Recipient Name','Award Amount','Description','Awarding Agency','Place of Performance State Code','Place of Performance Country Code'],

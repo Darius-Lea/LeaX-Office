@@ -5,3 +5,5 @@
 4. Add verified business website discovery/contact verification, recipient ownership and opt-out history. Then connect official owner-authorized email/replies with durable approval/idempotency boundaries.
 5. Build qualified estimates/proposals, confirmed work orders/dispatch and invoicing/collections with actual inputs. Keep awarded value, pipeline estimates and collected revenue separate.
 6. Add verified automatic backup rotation and durable hosting/synchronization; improve 3D office incrementally while measured business outputs remain the priority.
+
+2026-10-21 follow-up: Native x64 GUI setup and consolidated owner-computer packets implemented; next prerequisite is actual Windows installation/import validation and a connected local Ollama model/free SAM key. Broader construction/news/private bid sources and automated official-site/decision-maker discovery remain incomplete, not simulated.

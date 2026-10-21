@@ -1,4 +1,6 @@
 import * as THREE from '/vendor/three.module.js';
+import {FontLoader} from '/vendor/FontLoader.js';
+import {TextGeometry} from '/vendor/TextGeometry.js';
 
 // Procedural, locally served office. Animations show recorded task/patrol states only.
 export function createOffice3D(host,{onEmployee,onOwner}){
@@ -57,7 +59,13 @@ export function createOffice3D(host,{onEmployee,onOwner}){
  }
  function disposeLabel(sprite){sprite.material.map?.dispose();sprite.material.dispose();}
  const companyLabel=label('AI HEADQUARTERS','#204b54',5.3,1);companyLabel.position.set(2,3.4,-9);scene.add(companyLabel);
- const interactives=[];const employees=new Map();const workforce=new THREE.Group();scene.add(workforce);
+ let signFont=null,signMesh=null,signCompany='AI HEADQUARTERS';
+ function updateSign(){if(!signFont||disposed)return;const geometry=new TextGeometry(signCompany.toUpperCase(),{font:signFont,size:.65,depth:.07,curveSegments:6,bevelEnabled:true,bevelThickness:.012,bevelSize:.008,bevelSegments:2});geometry.computeBoundingBox();const width=geometry.boundingBox.max.x-geometry.boundingBox.min.x;const scale=Math.min(1,12/Math.max(width,1));if(signMesh){scene.remove(signMesh);signMesh.geometry.dispose();}signMesh=new THREE.Mesh(geometry,material('#c8ad67',{metalness:.85,roughness:.25}));signMesh.scale.setScalar(scale);signMesh.position.set(1-width*scale/2,3.48,-9.02);signMesh.castShadow=true;scene.add(signMesh);companyLabel.visible=false;markDirty();}
+ new FontLoader().load('/vendor/office-font.json',font=>{signFont=font;updateSign();},undefined,()=>{});
+ // Reception printer, output tray and filing cabinets are functional office landmarks.
+ scene.add(box('#3c5058',8,.65,-4.4,1.8,1.3,1.4));scene.add(box('#e5e8e5',8,1.45,-4.4,1.65,.4,1.2));scene.add(box('#273b41',8,1.68,-4.65,.8,.08,.45));scene.add(box('#faf9ef',8,1.7,-4.2,.75,.02,.5));
+ for(let i=0;i<3;i++){scene.add(box('#66797e',-9.9,.85,1.5+i*1.4,1,1.7,1.1));for(let y of [.35,.85,1.35])scene.add(box('#c3ced0',-9.36,y,1.5+i*1.4,.03,.05,.35));}
+ const interactives=[];const printerHit=box('#ffffff',8,1,-4.4,2,2,1.6,{transparent:true,opacity:0});printerHit.userData.action='packets';printerHit.castShadow=false;scene.add(printerHit);interactives.push(printerHit);const employees=new Map();const workforce=new THREE.Group();scene.add(workforce);
  function makePerson(color,index=0,standing=false){
  const p=new THREE.Group();const skin=['#b97b58','#e0b995','#9d654a','#d29b79'][index%4];
  p.add(cylinder('#343d47',0,.54,0,.21,.27));
@@ -106,6 +114,10 @@ export function createOffice3D(host,{onEmployee,onOwner}){
  const managerLabel=label('Manager patrol','#644473',3.6,.6);managerLabel.visible=false;scene.add(managerLabel);
  let managerPath=[],managerTarget=null,lastPatrol=null,managerName='Johnson';
  const managerPosition=new THREE.Vector3(0,.08,6);
+ const courier=makePerson('#bd9653',2,true);courier.visible=false;courier.add(box('#fff8e7',.3,1.1,-.4,.43,.035,.55));scene.add(courier);const courierLabel=label('Saved report → owner inbox','#705d30',4,.6);courierLabel.visible=false;scene.add(courierLabel);
+ let lastNoteId=null,delivery=null;const deliveries=[];
+ function startDelivery(note){const desk=employees.get(note.agent);if(!desk||note.agent==='Johnson')return;const position=desk.position.clone().add(new THREE.Vector3(1.9,0,1));delivery={desk,position,path:[new THREE.Vector3(0,.08,position.z),new THREE.Vector3(0,.08,-5.1),new THREE.Vector3(2.8,.08,-5.1)]};desk.userData.person.visible=false;courier.position.copy(position);courier.visible=true;courierLabel.visible=true;}
+
  function markDirty(){dirty=true;if(enabled&&!frame&&!document.hidden)frame=requestAnimationFrame(draw);}
  function updateCamera(){const flat=distance*Math.cos(elevation);camera.position.set(Math.sin(yaw)*flat,target.y+distance*Math.sin(elevation),Math.cos(yaw)*flat);camera.lookAt(target);}
  function resize(){const width=Math.max(host.clientWidth,320),height=Math.max(host.clientHeight,420);renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();markDirty();}
@@ -113,7 +125,7 @@ export function createOffice3D(host,{onEmployee,onOwner}){
  let pointer=null,dragged=false;
  canvas.addEventListener('pointerdown',e=>{pointer={x:e.clientX,y:e.clientY};dragged=false;canvas.setPointerCapture(e.pointerId);});
  canvas.addEventListener('pointermove',e=>{if(!pointer)return;const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y;if(Math.abs(dx)+Math.abs(dy)>2)dragged=true;yaw-=dx*.006;elevation=THREE.MathUtils.clamp(elevation+dy*.004,.28,1.26);pointer={x:e.clientX,y:e.clientY};markDirty();});
- canvas.addEventListener('pointerup',e=>{pointer=null;if(!dragged){const rect=canvas.getBoundingClientRect(),mouse=new THREE.Vector2((e.clientX-rect.left)/rect.width*2-1,-((e.clientY-rect.top)/rect.height)*2+1);const ray=new THREE.Raycaster();ray.setFromCamera(mouse,camera);const hits=ray.intersectObjects(interactives,false);if(hits[0]){const action=hits[0].object.userData.action;if(action==='owner')onOwner();else onEmployee(action);}}});
+ canvas.addEventListener('pointerup',e=>{pointer=null;if(!dragged){const rect=canvas.getBoundingClientRect(),mouse=new THREE.Vector2((e.clientX-rect.left)/rect.width*2-1,-((e.clientY-rect.top)/rect.height)*2+1);const ray=new THREE.Raycaster();ray.setFromCamera(mouse,camera);const hits=ray.intersectObjects(interactives,false);if(hits[0]){const action=hits[0].object.userData.action;if(action==='owner'||action==='packets')onOwner(action);else onEmployee(action);}}});
  canvas.addEventListener('wheel',e=>{e.preventDefault();distance=THREE.MathUtils.clamp(distance+e.deltaY*.018,17,46);markDirty();},{passive:false});
  canvas.addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','+','-'].includes(e.key)){e.preventDefault();if(e.key==='ArrowLeft')yaw-=.12;if(e.key==='ArrowRight')yaw+=.12;if(e.key==='ArrowUp')elevation=Math.min(elevation+.1,1.26);if(e.key==='ArrowDown')elevation=Math.max(elevation-.1,.28);if(e.key==='+')distance=Math.max(17,distance-2);if(e.key==='-')distance=Math.min(46,distance+2);markDirty();}});
  function visibility(){if(document.hidden&&frame){cancelAnimationFrame(frame);frame=0;}else markDirty();}document.addEventListener('visibilitychange',visibility);
@@ -126,10 +138,12 @@ export function createOffice3D(host,{onEmployee,onOwner}){
  manager.position.copy(managerPosition);manager.rotation.y=Math.atan2(delta.x,delta.z)+Math.PI;
  managerLabel.position.copy(managerPosition).add(new THREE.Vector3(0,2.3,0));for(let i=0;i<manager.userData.legs.length;i++)manager.userData.legs[i].rotation.x=moving&&!reduced.matches?Math.sin(time*.009+i*Math.PI)*.3:0;dirty=true;
  }
+ if(!delivery&&deliveries.length)startDelivery(deliveries.shift());
+ if(delivery){const next=delivery.path[0];if(next){const delta=next.clone().sub(delivery.position),length=delta.length();if(reduced.matches||length<=dt*3.5){delivery.position.copy(next);delivery.path.shift();}else delivery.position.add(delta.multiplyScalar(dt*3.5/length));courier.position.copy(delivery.position);courier.rotation.y=Math.atan2(delta.x,delta.z)+Math.PI;courierLabel.position.copy(delivery.position).add(new THREE.Vector3(0,2.4,0));for(let i=0;i<courier.userData.legs.length;i++)courier.userData.legs[i].rotation.x=reduced.matches?0:Math.sin(time*.009+i*Math.PI)*.3;}else{delivery.desk.userData.person.visible=true;delivery=null;courier.visible=false;courierLabel.visible=false;}dirty=true;}
  let active=false;
  for(const group of employees.values())if(group.userData.active&&!reduced.matches){active=true;for(const arm of group.userData.person.userData.arms)arm.rotation.x=Math.sin(time*.007)*.025;}
  if(dirty||moving||active){updateCamera();renderer.render(scene,camera);dirty=false;}
- if(moving||managerPath.length||active)frame=requestAnimationFrame(draw);
+ if(moving||managerPath.length||active||delivery||deliveries.length)frame=requestAnimationFrame(draw);
  }
  function update(state){
  const ids=new Set(state.employees.map(e=>e.id));
@@ -151,10 +165,11 @@ export function createOffice3D(host,{onEmployee,onOwner}){
  managerLabel.material.map.dispose();const replacement=label(managerName+' · recorded patrol','#644473',3.6,.6);managerLabel.material.dispose();managerLabel.material=replacement.material;
  }
  }else managerPath=[];
+ const newest=Math.max(0,...(state.notes||[]).map(n=>Number(n.id)));if(lastNoteId!==null&&newest>lastNoteId&&state.clock==='in')deliveries.push(...state.notes.filter(n=>Number(n.id)>lastNoteId).sort((a,b)=>a.id-b.id).slice(-10));lastNoteId=Math.max(newest,lastNoteId||0);if(delivery)delivery.desk.userData.person.visible=false;
  const company=state.company.name;
- if(companyLabel.userData.company!==company){companyLabel.material.map.dispose();const replacement=label(company.toUpperCase(),'#204b54',5.3,1);companyLabel.material.dispose();companyLabel.material=replacement.material;companyLabel.userData.company=company;}
+ if(companyLabel.userData.company!==company){companyLabel.material.map.dispose();const replacement=label(company.toUpperCase(),'#204b54',5.3,1);companyLabel.material.dispose();companyLabel.material=replacement.material;companyLabel.userData.company=company;signCompany=company;updateSign();}
  markDirty();
  }
  resize();
- return {update,setEnabled(value){enabled=value;if(!enabled&&frame){cancelAnimationFrame(frame);frame=0;}if(enabled){lastFrame=0;resize();markDirty();}},setAngle(value){yaw=Number(value)*Math.PI/180+.95;markDirty();},dispose(){disposed=true;observer.disconnect();document.removeEventListener('visibilitychange',visibility);if(frame)cancelAnimationFrame(frame);renderer.dispose();boxGeo.dispose();sphereGeo.dispose();cylinderGeo.dispose();for(const m of materialCache.values())m.dispose();canvas.remove();}};
+ return {update,setEnabled(value){enabled=value;if(!enabled&&frame){cancelAnimationFrame(frame);frame=0;}if(enabled){lastFrame=0;resize();markDirty();}},setAngle(value){yaw=Number(value)*Math.PI/180+.95;markDirty();},dispose(){disposed=true;observer.disconnect();document.removeEventListener('visibilitychange',visibility);if(frame)cancelAnimationFrame(frame);renderer.dispose();signMesh?.geometry.dispose();boxGeo.dispose();sphereGeo.dispose();cylinderGeo.dispose();for(const m of materialCache.values())m.dispose();canvas.remove();}};
 }
