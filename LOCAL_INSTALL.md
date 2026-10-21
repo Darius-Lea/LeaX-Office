@@ -1,0 +1,83 @@
+# Run AI Headquarters on your Windows computer
+
+This guided launcher runs the existing app locally, with your normal browser, portable Node and SQLite. It does not require Render, coding, an administrator account, a subscription or a paid AI API. It is **not a signed Windows installer**. Windows x64 and ARM64 are supported by the script; the actual Windows wizard still needs validation on a Windows machine.
+
+## Start without typing commands
+
+1. In your GitHub repository, choose **Code → Download ZIP**. Save it on your computer.
+2. Right-click the ZIP and choose **Extract All**. Keep the whole extracted folder together.
+3. Open the extracted folder and double-click **Start-AI-Headquarters.cmd**.
+4. In the setup window, click **Start / open office**. The wizard detects x64/ARM64 and RAM, verifies and installs a portable Node runtime and the locked application dependencies, then opens your local office in your browser.
+5. Choose your founder password. The launcher supplies the private one-time local setup code; do not paste it into chat. If you already created a local founder account, sign in with its existing password.
+
+The optional desktop shortcut reopens this launcher. Your Render account/data is separate and is not synchronized or imported automatically.
+
+If Windows says the downloaded script cannot run because it is unsigned, do not disable Windows security globally. Verify the ZIP came from your own repository, then use its **Properties → Unblock → Apply** option before extracting it again, if your Windows policy permits. A workplace security policy may require your administrator to approve the app. This launcher uses process-scoped `RemoteSigned`; it does not use `Bypass` or weaken the machine's permanent execution policy.
+
+## What is installed and kept
+
+Everything is user scoped under:
+
+`%LOCALAPPDATA%\AIHeadquarters`
+
+- `data`: durable SQLite database and local backups. **Keep this folder.** It is outside application versions, so updating code does not create a fresh founder account or erase prior work.
+- `versions`: separate application versions. Existing versions and any edits are not overwritten. Old versions are retained for recovery.
+- `runtimes`: portable Node 24.19.0, selected for your Windows architecture. No system Node installation or PATH change is required.
+- `downloads` / `npm-cache`: verified runtime download and dependency cache.
+- `sam-api-key.dpapi`: optional SAM.gov API credential encrypted with Windows DPAPI for the current user. It is separate from process state and is never loaded into the visible wizard field.
+- `server-state.json`: process identity and, only during first setup, a setup code encrypted for your Windows user with DPAPI. It is not portable to another Windows user.
+- `recovery`: verified pre-import database backups and archived original SQLite files kept when you explicitly import a backup.
+- `server.log`, `server-error.log`, `install.log`: local diagnostic logs. Do not publicly share logs without checking them for private information.
+
+The local folder's permissions are restricted to your Windows user, SYSTEM and Administrators. The database itself is not application-encrypted. Protect your Windows account and disk. Copy verified backups to a private off-device location: local storage can still fail, and deleting this folder loses local business data.
+
+The server binds only to `127.0.0.1:4310`; it is not opened to your Wi-Fi network or the internet. Your ordinary Wi-Fi/internet connection is used for permitted public research. A setup fragment in the browser URL is used only locally and is never sent as a URL query to the server; the app clears it after reading it.
+
+## Updating and stopping
+
+To update, download/extract a newer ZIP from your own repository. Open the launcher and click **Stop office** first. Then open the new package's launcher and click **Start / open office**. A new app version is prepared while the data folder stays unchanged. The wizard will not overwrite an app that is already running; it opens the existing instance instead. Keep a verified database backup before major updates.
+
+Closing the browser or setup window leaves the local server running while Windows is awake. Use **Clock out** inside the app to pause new work. Use **Stop office** in this launcher to stop the process completely. The launcher verifies the saved process ID, executable, start time and command line before stopping it; it never kills an unknown process occupying the port. Interrupted read-only work can recover from saved checkpoints after restart.
+
+There is no automatic Windows login/startup registration in this wizard. Restart Windows, then use the desktop shortcut to start again. The existing optional Task Scheduler integration is a separate, explicitly authorized setup.
+
+## Bring an existing office database to this computer
+
+This is an explicit backup/import workflow, **not automatic cloud synchronization**. Do not start over with an empty database if you want to retain your current founder login, tasks and research.
+
+1. In the office you already use (for example, Render), sign in and choose **Download backup**. Save the resulting `.sqlite` file privately on this computer. It contains founder password hashes and business records; do not post or email it publicly.
+2. In the Windows launcher, click **Stop office** if a local office is running. Import is blocked while the launcher's office process exists or anything still uses local port 4310.
+3. Click **Import database backup** and select the trusted `.sqlite` file you just downloaded.
+4. The launcher verifies SQLite integrity and required app tables/columns using portable Node. It prepares a consistent staging copy without editing your selected file, then asks for explicit confirmation. Confirm only if you want the imported founder login and records to replace the current local office.
+5. Before replacement, an existing local database receives its own verified recovery backup. The old database and any matching `-wal`/`-shm` files are archived under `%LOCALAPPDATA%\AIHeadquarters\recovery\<timestamp>`. Existing ordinary backup files stay in the data folder. A same-volume rename installs the validated staging database; it never copies over a live database. Failed replacement attempts try to restore original files and retain recovery copies rather than deleting business data.
+6. Click **Start / open office** yourself after import. Sign in using the **founder password from the imported office**. Import does not automatically start a process, send emails or authorize new accounts.
+
+No current local database means there is nothing old to replace; the staged backup still must pass validation. If the existing local database is corrupt, preservation cannot be verified, unexpected files appear, or rollback needs review, the launcher stops with a recovery message. Keep the selected backup and recovery folder and do not start a second copy until the issue is resolved.
+
+Only import a backup from your own trusted AI Headquarters instance. Read-only input verification checks integrity/schema, not the trustworthiness of every business record or third-party source inside it. Environment secrets such as a Render SAM.gov key are not migrated by the database; configure them separately in the local wizard. Windows-user DPAPI secrets also remain separate from the database. The local app does not synchronize subsequent changes back to Render.
+
+The embedded Node verification/backup helper was exercised on Linux with real SQLite fixtures: read-only WAL source backup, standalone checkpointed staging copy, required schema/integrity, source preservation, rejection of unrelated/corrupt databases, and refusal to overwrite a pre-existing destination. Actual Windows dialog, filesystem rename/rollback and process-ownership checks remain untested.
+
+## Optional current government bid search
+
+Current SAM.gov opportunities require a SAM.gov API key; public historical award research is a separate source and is not a list of open jobs. You can use the local office without entering this optional key, but current government opportunity search will show Setup required until authorized.
+
+1. Open the wizard's **Official SAM.gov API / free account and API-key instructions** link: https://open.gsa.gov/api/get-opportunities-public-api/ . Follow the official SAM.gov account/profile instructions to request your own key. The application does not create an account for you or bypass SAM access limits.
+2. Paste the key into the wizard's masked **SAM.gov API key** field and click **Save SAM key**. Do not paste the key in chat. Saving does not read any existing secret into the field.
+3. If the office is already running, use **Stop office**, then **Start / open office**. Saving the key does not stop a live process automatically or change its environment. On the next start, the launcher injects the saved key only into its local server process as `SAM_API_KEY`, then restores its own prior environment.
+
+The saved key is protected by Windows DPAPI and the local folder's access controls, not stored as plaintext, in the database, or in `server-state.json`. It can be decrypted only in the same Windows-user context; backups of the encrypted file alone are not portable credentials. An already injected `SAM_API_KEY` is reused if there is no saved local credential. The saved local key takes precedence when present. No secret value is printed, prefilled into the UI, or logged by the launcher. A corrupt/unreadable saved key causes a clear setup error instead of logging it.
+
+SAM.gov accounts/API usage are subject to GSA rules and rate limits. The key permits authorized read-only public opportunity requests; it does not authorize emails, bidding, signing contracts or paid services. Follow the official limits and verify notices, eligibility and deadlines before any submission.
+
+## AI and resources
+
+No model is automatically downloaded. The local dashboard, SQLite persistence and deterministic research tools work without a paid AI key. To enable model-driven advice, install **Ollama from https://ollama.com/**, choose a model suitable for your computer, and use the app's AI setup controls. Model licenses and hardware requirements differ. This launcher detects architecture/RAM but does not claim it can detect a supported GPU or guarantee model performance. Model inference uses substantially more memory than the app's Node/browser interface.
+
+The browser/Node architecture avoids bundling a second Chromium runtime, as an Electron app would. Actual memory use depends on your browser, 3D mode, data volume and optional model. Choose the clerical/terminal view on low-powered devices. Work stops when your PC is powered off or asleep; the launcher does not change power settings or prevent sleep.
+
+First setup needs HTTPS access to `nodejs.org` and the npm registry/dependency domains in the committed lockfile. The runtime archive is checked against Node's official `SHASUMS256.txt`, and Windows verifies `node.exe`'s Authenticode signature. npm keeps its lockfile integrity checks. Verification errors stop installation rather than accepting an unverified executable. No VPN, proxy credentials or paid service is configured.
+
+## Current validation limits
+
+The script passed PowerShell parser syntax validation in this Linux development environment (PowerShell 7.4.6, downloaded from the official release with its SHA-256 verified); a real Windows install, OS certificate validation, local startup/stop and shortcut creation must still be tested on Windows. This is a guided source-package launcher, not a published/signed desktop executable, macOS/Linux installer or automatic cloud-data migration. Do not call it a verified Windows release until that test is completed.

@@ -9,7 +9,7 @@ const {teamPulse,teamState}=await import('../src/team.ts');
 test('completed research produces deduplicated CRM, checks, unsent drafts and briefing notes',()=>{
  try{
  const id=enqueue('Find installation partners');db.prepare("UPDATE tasks SET status='Completed' WHERE id=?").run(id);
- db.prepare('INSERT INTO opportunities VALUES(?,?,?,?,?,1)').run('test',id,'Fixture Contractor','https://example.test/award',JSON.stringify({description:'Synthetic cabling record',state:'CA',country:'USA'}));db.prepare('INSERT INTO task_findings VALUES(?,?)').run(id,'test');
+ db.prepare('INSERT INTO opportunities VALUES(?,?,?,?,?,1)').run('test',id,'Fixture Contractor','https://example.test/award',JSON.stringify({description:'Synthetic structured cabling record',state:'CA',country:'USA'}));db.prepare('INSERT INTO task_findings VALUES(?,?)').run(id,'test');
  // A premature executive stage cannot claim that predecessor outputs exist.
  db.prepare("INSERT INTO team_jobs(task,agent,status) VALUES(?,'Einstein','Queued')").run(id);
  for(const agent of ['Juliet','Hotel','Delta'])db.prepare("INSERT INTO team_jobs(task,agent,status) VALUES(?,?,'Blocked')").run(id,agent);

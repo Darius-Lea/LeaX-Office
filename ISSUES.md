@@ -1,16 +1,11 @@
-# Known issues
-- Live api.usaspending.gov blocked by cloud proxy CONNECT 403. Official API contract checked from upstream GitHub; connector tested with synthetic fixtures only. No live results claimed.
-- USAspending records are historical contract awards, not open solicitations or confirmations that contractors need APG services. Bravo checks record provenance, not recipient contacts or business eligibility. Qualification remains unverified.
-- National/overseas research covers US federal award records only. No complete worldwide discovery connector. Three-page cap is explicit; broad searches are incomplete and ranked by award value, not expected APG revenue.
-- No local inference yet; Ollama absent in this environment. Alpha and Bravo are deterministic workers currently, not language-model agents.
-- Manual backups only. Loss of data directory or host can lose business records; keep protected off-device copies.
-- No browser E2E or TypeScript typecheck. Windows registration script untested; background execution requires explicit opt-in. No automatic registration performed.
-- Single-founder local app, not publicly deployable SaaS. No tenant isolation/password recovery/email verification. Founder remains free of subscription billing.
-- Legacy tasks with portal-availability evidence cannot be reviewed by the new connector; queue a new assignment. Legacy records remain intact.
-- Missing/invalid source identity or description blocks the page instead of inventing evidence; failed tasks retain earlier pages and allow manual retry.
-
-Office update: web processing now starts from Clock in, with no separate service needed. Remaining limitations include no full walking-avatar 3D simulation and no tools for custom/extra employee roles. On Render free, idle sleep still halts work; temporary SQLite still risks total data loss on replacement. Source failures remain blocked and visible. Clock-in state resets after web-process restarts by design. Run one normal web service; multi-instance office coordination is not supported.
-
-Latest UI/clock behavior: persistent clock and automatic authenticated opening replace restart-clock-out. Four extra built-in roles now have deterministic output jobs, but custom roles still lack tools. The current historical-award source does not provide decision-maker emails or phone numbers, and drafts correctly remain unaddressed/unsent. Recent modification sorting is not evidence of a new project. New live source validation needed after sort change. CSS body/face markers are not a realistic walk-through simulation.
-
-Latest: Johnson now supervises queue and handoffs; Morgan replaces only the default Hotel display name. Idle time between bounded cycles is expected and is shown honestly. Patrol checks do not establish business qualification, employee intelligence or enterprise production readiness. The role charters list missing tools. No manager can fix sleeping hosts, ephemeral SQLite or absent contact/current-opportunity connectors. Use npm start or the integrated npm run worker entry; the historical direct src/worker.ts entry remains research-only.
+# Known issues and blockers
+- SAM_API_KEY absent in development environment and saved cloud requirements; current notices are not live-validated. Official schema/credentials/deadline behavior tested with fixtures. No open-bid success or APG eligibility claimed.
+- Ollama/models absent here. Adapter performs real inference when configured, but only mocked protocol/persistence has been validated in this workspace. Starter model is small and quality limited; output is advisory.
+- Current research is bounded federal coverage, not every live regional/national/private/international rollout. Historical awards do not establish current need or subcontracting interest. Keyword screening can still miss or misrank records.
+- Public contact extraction reads an owner-supplied page, not an autonomous universal prospect search. Publicly listed emails/tel links and official notice contacts are not verified decision-maker identities or permission to send.
+- No email sender, bid submission, browser-control agent, account login automation, rendered advertising video or external provider integration. Mail composer requires owner approval and final send remains manual.
+- Windows wizard has not run on Windows. Syntax, integrity helper and staging behavior tested on Linux; GUI, signing checks, ACL, DPAPI, process reuse, shortcut and rollback need Windows validation. Launcher is unsigned source, not a certified native installer; trusted downloaded ZIP may need Windows Properties → Unblock.
+- Local and Render data do not synchronize. Explicit authenticated export/import transfers a database with its founder credentials; prior local state is preserved before replacement. Render free ephemeral storage can still lose work before export. Keep off-device private backups.
+- Local models and WebGL use variable RAM/CPU/GPU; no fixed low-memory guarantee. Graphics pause when idle/hidden and have lightweight alternatives. GPU detection remains unknown.
+- Scheduling/clock permission cannot keep a powered-off/sleeping machine running. Automatic backup rotation, encrypted off-device backup sync and unattended OS startup remain incomplete/opt-in.
+- Current app is single-founder; public multi-tenant security audit/isolation, account recovery and production deployment hardening remain incomplete.

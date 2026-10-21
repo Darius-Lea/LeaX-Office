@@ -3,3 +3,14 @@ Single-founder local prototype. Console possession plus first-run code is requir
 No secrets in frontend or Git. Data and backups contain sensitive records; filesystem/user-account protection and encrypted disks are recommended. Not hardened or audited for public hosting. No tenant isolation or remote deployment authorization implied. Security reporting: open a private maintainer channel; do not post credentials.
 
 Public binding is now an explicit deployment mode (automatic on Render). It requires a configured HTTPS origin and private first-run HQ_SETUP_CODE, never prints public bootstrap codes, and issues Secure cookies. Origin validation does not trust forwarded headers. The code previously printed in deployment logs must not be reused. These controls do not establish public production readiness; tenant isolation/security auditing remain outstanding.
+
+## Local AI, contact reader and transfers
+Ollama connects to fixed loopback tags/chat/pull endpoints, with bounded context/output and no model-executable browser/email/filesystem tools. Untrusted web evidence cannot grant permissions. Generated advice is not verification. Cycle context is explicitly linked; interrupted inference is blocked rather than invented. No model downloads without an owner confirmation; hosted requests cannot trigger starter-model installation.
+
+Public contact reading rejects private/reserved destinations and credential query fields, pins validated DNS to avoid rebind, preserves TLS verification, honors applicable crawler robots groups and caps same-origin redirects/time/body/concurrency. It is an owner-supplied public-page reader, not a bypass for private search systems. Published contacts have explicit unverified identity/deliverability/permission status.
+
+Draft preparation validates recipients against saved published contacts, or fresh current-notice POCs. Subject/header injection is rejected; edits reset approval. Only an owner-approved draft can create a mailto composer link. There is no sending/bidding tool or model authorization path. The owner's mail application retains final sending control.
+
+SAM keys stay in the host environment; Windows wizard uses user DPAPI storage and restores launcher environment after child spawn. API request URLs/exception bodies containing keys are never persisted. Public source evidence is separate from generated notes. No raw process environment or credential files are printed.
+
+Local first-run bootstrap uses a private fragment on loopback, consumed and erased in browser history; fragments are not sent in HTTP requests. Injected bootstrap values are suppressed from logs. Database export requires authentication and includes sensitive business records, password hashes and sessions; keep downloads private. Import requires explicit stopped-office confirmation and preserves verified recovery files. These controls do not establish audited multi-tenant/public SaaS security.

@@ -4,6 +4,11 @@ import {randomBytes} from 'node:crypto';
 import {backup} from 'node:sqlite';
 import {join} from 'node:path';
 import {db,directory,setup,login,authenticated,enqueue,snapshot,audit,clock,setting,setSetting,editTask} from './store.ts';
+import {solicitationState,searchSolicitations} from './solicitations.ts';
+import {contactState,researchContacts} from './contacts.ts';
+import {draftState,prepareContactDraft,prepareNoticeDraft,reviewDraft,composerLink} from './drafts.ts';
+import {aiStatus,configureModel,queueAgent,processAgent,retryAgent,agentRuns,installRecommendedModel} from './ai.ts';
+import {awardAdvice} from './advice.ts';
 import {managerState} from './manager.ts';
 import {ROLE_CHARTERS} from './roles.ts';
 import {teamState} from './team.ts';
@@ -22,15 +27,16 @@ if(publicBinding&&!publicOrigin)throw Error('Public binding requires PUBLIC_ORIG
 const needsSetup=!db.prepare('SELECT id FROM founder').get();
 if(publicBinding&&needsSetup&&(!process.env.HQ_SETUP_CODE||process.env.HQ_SETUP_CODE.length<32))throw Error('First public startup requires a private HQ_SETUP_CODE of at least 32 characters in service environment settings');
 const bootstrap=process.env.HQ_SETUP_CODE || randomBytes(24).toString('hex');
-if(needsSetup&&!publicBinding)console.log('One-time local setup code: '+bootstrap);
+if(needsSetup&&!publicBinding&&!process.env.HQ_SETUP_CODE)console.log('One-time local setup code: '+bootstrap);
 const attempts=new Map<string,{count:number,time:number}>();
 const server=createServer(async(req,res)=>{
  res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; frame-ancestors 'none'");res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Cache-Control','no-store');
  const send=(status:number,data:any)=>{res.writeHead(status,{'Content-Type':'application/json'});res.end(JSON.stringify(data));};
  try{
  const url=new URL(req.url||'/',`http://127.0.0.1:${port}`);
- if(req.method==='GET' && ['/', '/app.js','/office.js','/style.css'].includes(url.pathname)){const file=url.pathname==='/'?'index.html':url.pathname.slice(1);res.setHeader('Content-Type',file.endsWith('html')?'text/html':file.endsWith('js')?'text/javascript':'text/css');res.end(readFileSync(new URL('../public/'+file,import.meta.url)));return;}
- if(req.method==='GET' && url.pathname==='/api/status')return send(200,{setupRequired:!db.prepare('SELECT id FROM founder').get()});
+ if(req.method==='GET' && ['/', '/app.js','/office.js','/office3d.js','/style.css'].includes(url.pathname)){const file=url.pathname==='/'?'index.html':url.pathname.slice(1);res.setHeader('Content-Type',file.endsWith('html')?'text/html':file.endsWith('js')?'text/javascript':'text/css');res.end(readFileSync(new URL('../public/'+file,import.meta.url)));return;}
+ if(req.method==='GET'&&['/vendor/three.module.js','/vendor/three.core.js'].includes(url.pathname)){res.setHeader('Content-Type','text/javascript');res.setHeader('Cache-Control','public, max-age=86400');res.end(readFileSync(new URL('../node_modules/three/build/'+url.pathname.split('/').pop(),import.meta.url)));return;}
+ if(req.method==='GET' && url.pathname==='/api/status')return send(200,{product:'ai-headquarters',setupRequired:!db.prepare('SELECT id FROM founder').get()});
  const localPort=(server.address() as any)?.port||port;
  const allowedOrigins=publicBinding?[publicOrigin]:[`http://127.0.0.1:${localPort}`,`http://localhost:${localPort}`,...(publicOrigin?[publicOrigin]:[])];
  if(req.method==='POST' && !allowedOrigins.includes(req.headers.origin))return send(403,{error:'Invalid origin'});
@@ -42,7 +48,30 @@ const server=createServer(async(req,res)=>{
  const token=login(body.password);if(!token)return send(401,{error:'Invalid credentials'});res.setHeader('Set-Cookie',`hq_session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800${publicOrigin?'; Secure':''}`);return send(200,{ok:true});}
  const token=(req.headers.cookie||'').split('; ').find(v=>v.startsWith('hq_session='))?.slice(11)||'';
  if(!authenticated(token))return send(401,{error:'Sign in required'});
- if(req.method==='GET'&&url.pathname==='/api/state')return send(200,{...snapshot(),...teamState(),roleCharters:ROLE_CHARTERS,manager:managerState()});
+ if(req.method==='GET'&&url.pathname==='/api/state'){
+ const state=snapshot();return send(200,{...state,opportunities:state.opportunities.map(record=>({...record,advice:awardAdvice(record,state.company.name)})),...teamState(),roleCharters:ROLE_CHARTERS,manager:managerState(),aiRuns:agentRuns(),aiConfigured:!!setting('ollama_model'),contactResearch:contactState(),drafts:draftState(),solicitations:solicitationState()});}
+ if(req.method==='GET'&&url.pathname==='/api/export/database'){
+ const path=join(directory,'transfer-'+Date.now()+'.sqlite');await backup(db,path);res.setHeader('Content-Type','application/vnd.sqlite3');res.setHeader('Content-Disposition','attachment; filename="AI-Headquarters-backup.sqlite"');res.end(readFileSync(path));return;}
+ if(req.method==='POST'&&url.pathname==='/api/solicitations/search'){return send(200,await searchSolicitations(setting('standing_goal')));}
+ if(req.method==='POST'&&url.pathname==='/api/contacts/research'){return send(200,await researchContacts(body.url,body.company));}
+ if(req.method==='POST'&&url.pathname==='/api/drafts/notice'){return send(201,{id:prepareNoticeDraft(body.noticeid,body.address)});}
+ if(req.method==='POST'&&url.pathname==='/api/drafts/prepare'){return send(201,{id:prepareContactDraft(body.contactId,body.address)});}
+ if(req.method==='POST'&&url.pathname==='/api/drafts/review'){
+ if(typeof body.approve!=='boolean')return send(400,{error:'Choose save or approve'});
+ reviewDraft(body.id,body.subject,body.body,body.approve);return send(200,{ok:true});}
+ if(req.method==='POST'&&url.pathname==='/api/drafts/composer'){return send(200,{url:composerLink(body.id)});}
+ if(req.method==='GET'&&url.pathname==='/api/ai/status')return send(200,{...await aiStatus(),hosted:publicBinding});
+ if(req.method==='POST'&&url.pathname==='/api/ai/configure'){return send(200,await configureModel(body.model));}
+ if(req.method==='POST'&&url.pathname==='/api/ai/install'){
+ if(publicBinding)return send(409,{error:'Model downloads are available in the local app on your own computer, not this hosted service.'});
+ if(body.confirm!==true)return send(400,{error:'Confirm the optional model download first'});
+ // Installation continues independently of a browser request timeout; status persists.
+ if(JSON.parse(setting('ollama_install_status')||'{}').status==='Running')return send(409,{error:'Model download is already running'});
+ void installRecommendedModel().catch(error=>console.error('Model setup:',String(error)));
+ return send(202,{started:true});}
+ if(req.method==='POST'&&url.pathname==='/api/ai/run'){
+ const id=queueAgent(body.agent,body.prompt,body.contextTask);if(setting('clock')==='in')void processAgent().catch(error=>console.error('AI queue:',String(error)));return send(202,{id});}
+ if(req.method==='POST'&&url.pathname==='/api/ai/retry'){retryAgent(body.id);return send(200,{ok:true});}
  if(req.method==='GET'&&url.pathname==='/api/health'){
  let ollama:any={available:false};try{const r=await fetch('http://127.0.0.1:11434/api/tags',{signal:AbortSignal.timeout(1500)});if(r.ok)ollama={available:true,...await r.json() as object};}catch{}
  return send(200,{database:db.prepare('PRAGMA quick_check').get(),ollama,...snapshot()});}

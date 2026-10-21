@@ -31,3 +31,14 @@ Latest behavior supersedes the earlier restart-clock-out instruction: opening th
 
 ## Manager/standalone worker update
 Johnson checks every 60 seconds while the office is clocked in. No extra service required for manager checks in npm start. Optional npm run worker now starts src/background.ts, which includes research, follow-up reports and manager patrol. The Windows scheduler script targets that entry; registration is still explicit/manual. Prefer one normal execution mode, not simultaneous web and standalone workers. Host sleep pauses all checks; persisted clock does not keep Render awake. Existing founder/company data and old employee reports are not reset by the display rename. No paid infrastructure changed.
+
+## Local app, AI and current-notice update (latest)
+Prefer LOCAL_INSTALL.md for the new Windows no-code path: download trusted ZIP, Unblock in Properties if Windows shows that option, Extract All, run Start-AI-Headquarters.cmd. Source versions stay separate from `%LOCALAPPDATA%\AIHeadquarters\data`. The launcher verifies portable Node integrity/signing and uses frozen npm dependencies; code does not include a model, paid account or billing. Its actual Windows execution is still unvalidated.
+
+Ollama must run on the application host. Use app device/model setup; hosted Render localhost is the Render machine, not the browser PC. Optional starter pull requires a local explicit confirmation. Inference has its own serialized queue and does not block source collection. Unavailable models stay Blocked/Setup required; no canned inference fallback is claimed.
+
+Current federal bid notices are distinct from historical awards and require SAM_API_KEY. Windows wizard saves it under user DPAPI and injects it into the child process only; on Render use secure service environment settings. SAM accounts/API access are free with official quotas. No account created automatically. Missing key is not a deployment success for bid research. See SOLICITATIONS.md. Both bounded source schedules use six-hour intervals while clocked in/awake; owner can manually refresh subject to source cooldown.
+
+Authenticated GET /api/export/database downloads a consistent private SQLite snapshot. To move an office, download it before the old host loses data, stop the local office and explicitly use Import database backup in the wizard. Import validates, confirms, creates a recovery backup and archives previous DB/WAL/SHM before same-volume install. Use the imported founder password afterward. This is not automatic synchronization; a free Render redeploy may already have lost data before an export. Keep private off-device copies.
+
+Serve Three.js modules from npm-installed node_modules/three/build; no public CDN or frontend build needed. Build command remains npm ci --ignore-scripts. Do not remove package-lock to hide Yarn warnings; select npm in host settings. No paid resources or external messages/bids are enabled by this update.

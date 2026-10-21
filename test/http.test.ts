@@ -19,9 +19,10 @@ test('HTTP auth, origin protection, retry, saved account across restart, and log
  try{
  server=await launch(directory);let cookie='';
  const call=async(path:string,body?:object,origin?:string)=>fetch(`http://127.0.0.1:${server.port}/api/${path}`,{method:body?'POST':'GET',headers:{'Content-Type':'application/json',Origin:origin||`http://127.0.0.1:${server.port}`,Cookie:cookie},body:body?JSON.stringify(body):undefined});
- assert.equal((await call('state')).status,401);assert.equal((await call('office/clock',{active:true})).status,401);
+ assert.equal((await call('state')).status,401);assert.equal((await call('export/database')).status,401);assert.equal((await call('office/clock',{active:true})).status,401);
  assert.equal((await call('setup',{code:server.code,password:'test founder passphrase'},'https://evil.test')).status,403);
  const auth=await call('setup',{code:server.code,password:'test founder passphrase'});assert.equal(auth.status,200);cookie=auth.headers.get('set-cookie')!.split(';')[0];
+ assert.equal((await call('contacts/research',{url:'https://127.0.0.1/private',company:'Blocked target'})).status,400);assert.equal((await call('ai/run',{agent:'Einstein',prompt:'What next?'})).status,400);assert.equal((await call('ai/install',{confirm:false})).status,400);
  assert.equal((await call('company',{name:'Test Company',legalName:'Test LLC',goal:'Nationwide cabling research'})).status,200);
  assert.equal((await call('employees',{name:'New Assistant',role:'Operations'})).status,200);
  let office=await (await call('state')).json();assert.equal(office.company.name,'Test Company');assert.equal(office.employees.length,8);assert.equal(office.clock,'out');
@@ -34,7 +35,7 @@ test('HTTP auth, origin protection, retry, saved account across restart, and log
  assert.equal((await call('research/note',{id:'test-record',note:'Owner qualification check pending'})).status,200);assert.equal((await call('research/note',{id:'missing',note:'x'})).status,400);
  assert.equal((await call('tasks/retry',{id})).status,200);
  let state=await (await call('state')).json();assert.equal(state.tasks[0].status,'Queued');assert.equal(state.tasks[0].checkpoint,'{"page":2}');assert.equal(state.sources[0].id,'usaspending-contracts');
- assert.equal((await call('backup',{})).status,200);
+ assert.equal((await call('backup',{})).status,200);const exported=await call('export/database');assert.equal(exported.status,200);assert.match(exported.headers.get('content-disposition')!,/attachment/);assert.equal(Buffer.from(await exported.arrayBuffer()).subarray(0,16).toString(),'SQLite format 3\u0000');assert.equal((await (await call('solicitations/search',{})).json()).status,'Setup required');
  await stop(server.child);server=await launch(directory);assert.equal(server.code,undefined);
  assert.equal((await (await call('status')).json()).setupRequired,false);
  assert.equal((await call('state')).status,200); // durable session

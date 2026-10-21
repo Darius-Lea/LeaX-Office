@@ -57,3 +57,6 @@ Measure verified outputs: new relevant companies, current opportunities, source-
 5. Add estimating, proposals, dispatch and collections only as their real inputs and acceptance gates exist.
 
 Build one accountable end-to-end lane before multiplying job titles. A Fortune 500 style of control comes from reliable records and decisions; it is not a claim about the size or maturity of this application.
+
+## Advisor and genuine model execution update
+The application now separates rule-based source/fit controls from genuine optional local-model analysis. Advisors explain why another company's historic award can identify a potential prime partner, while explicitly withholding claims of open subcontracting demand. SAM.gov current-notice search is a separate credentialed source with date/type/freshness gates and official contact provenance, not a reinterpretation of awards. Model assignments use actual Ollama inference when installed; absent runtime/model remains setup-required, not a fixed text impersonation. Public-page contacts and approved mail-composer drafts begin a supervised commercial workflow, but contact authority, recipient permission, actual sending/replies, qualification, bids and revenue still require verified evidence and owner action. Marketing model output is a script/storyboard, not a finished cinematic asset.

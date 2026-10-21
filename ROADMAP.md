@@ -1,12 +1,7 @@
 # Next milestones
-1. Apply API-domain network settings and run a live bounded USAspending search. Confirm fields/provenance against actual data and test data-quality edge cases. Current connector and recovery tests pass with fixtures.
-2. Add actual open-opportunity and international partner sources with documented permissions, geography, deduplication and qualification checks. Historical awards are prospect research only.
-3. Implement Ollama inference/model selection without mandatory paid keys or automatic large downloads.
-4. Add automatic verified backup rotation/restore controls, resource limits, recurring schedules and worker controls.
-5. Validate Windows restart/background behavior and browser workflows; then incrementally improve UI and remaining Phase 1 requirements.
-
-Clock-in milestone completed: integrated web processing, company/employee customization, supervision, initial CSS 3D and alternate views. Next focus: free durable cloud storage strategy; live source validation and additional executable employee tools; Ollama; then richer WebGL/walking avatars tied to backend events. Never substitute decorative animation for missing execution.
-
-Connected internal team now delivers CRM/checklists/unsent drafts/briefings to owner inbox. Immediate missing business-value work: permitted public vendor-services contact discovery with source provenance, verified current tender/rollout feeds, freshness/relevance checks; then model inference and richer 3D avatar simulation. Never fill unknown contact fields or fake continuous activity.
-
-Management increment complete: accountable job charters, Morgan display rename, Johnson real supervision and integrated background entry. See OPERATING_MODEL.md for the evidence gates needed next. Prioritize verified current opportunities and vendor-services contacts, durable storage, approved sales execution and unit economics before more titles or decorative motion.
+1. Validate the Windows guided launcher on a real x64/ARM64 machine; verify setup, model connection, import/restore, data retention and restart. Package/sign a native installer only after this works.
+2. Supply an authorized free SAM.gov API key securely; verify live notices, amendments, deadlines and account rate limits. Broaden relevant current/vendor-program sources with provenance, not prewritten leads.
+3. Run actual Ollama inference on user hardware; measure quality/resources and improve evidence-based business advice. No fake inference success from protocol tests.
+4. Add verified business website discovery/contact verification, recipient ownership and opt-out history. Then connect official owner-authorized email/replies with durable approval/idempotency boundaries.
+5. Build qualified estimates/proposals, confirmed work orders/dispatch and invoicing/collections with actual inputs. Keep awarded value, pipeline estimates and collected revenue separate.
+6. Add verified automatic backup rotation and durable hosting/synchronization; improve 3D office incrementally while measured business outputs remain the priority.
