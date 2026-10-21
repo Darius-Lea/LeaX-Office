@@ -43,4 +43,4 @@ export async function tick(fetcher:typeof fetch=fetch){
  }catch(e){db.prepare("UPDATE tasks SET status='Blocked',lease=0,error=? WHERE id=?").run('Research unavailable: '+String(e),t.id);audit(t.id,'Research blocked; saved evidence and page checkpoint preserved');}
  return true;
 }
-if(process.argv[1] && import.meta.url===pathToFileURL(process.argv[1]).href){let stopping=false;process.on('SIGTERM',()=>{stopping=true;});process.on('SIGINT',()=>{stopping=true;});while(!stopping){await tick();await new Promise(r=>setTimeout(r,2000));}db.close();}
+if(process.argv[1] && import.meta.url===pathToFileURL(process.argv[1]).href){let stopping=false;process.on('SIGTERM',()=>{stopping=true;});process.on('SIGINT',()=>{stopping=true;});while(!stopping){if((db.prepare("SELECT value FROM settings WHERE key='clock'").get() as any)?.value!=='out')await tick();await new Promise(r=>setTimeout(r,2000));}db.close();}

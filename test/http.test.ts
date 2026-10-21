@@ -19,20 +19,26 @@ test('HTTP auth, origin protection, retry, saved account across restart, and log
  try{
  server=await launch(directory);let cookie='';
  const call=async(path:string,body?:object,origin?:string)=>fetch(`http://127.0.0.1:${server.port}/api/${path}`,{method:body?'POST':'GET',headers:{'Content-Type':'application/json',Origin:origin||`http://127.0.0.1:${server.port}`,Cookie:cookie},body:body?JSON.stringify(body):undefined});
- assert.equal((await call('state')).status,401);
+ assert.equal((await call('state')).status,401);assert.equal((await call('office/clock',{active:true})).status,401);
  assert.equal((await call('setup',{code:server.code,password:'test founder passphrase'},'https://evil.test')).status,403);
  const auth=await call('setup',{code:server.code,password:'test founder passphrase'});assert.equal(auth.status,200);cookie=auth.headers.get('set-cookie')!.split(';')[0];
+ assert.equal((await call('company',{name:'Test Company',legalName:'Test LLC',goal:'Nationwide cabling research'})).status,200);
+ assert.equal((await call('employees',{name:'New Assistant',role:'Operations'})).status,200);
+ let office=await (await call('state')).json();assert.equal(office.company.name,'Test Company');assert.equal(office.employees.length,7);assert.equal(office.clock,'out');
+ assert.equal((await call('employees',{id:'Alpha',name:'Alex',role:'Research'})).status,200);
+ assert.equal((await call('company',{name:'',legalName:'',goal:''})).status,400);
  assert.equal((await call('tasks',{goal:''})).status,400);
  const id=(await (await call('tasks',{goal:'Nationwide cabling'})).json()).id;
- assert.equal((await call('tasks/retry',{id})).status,409);
- const db=new DatabaseSync(join(directory,'headquarters.sqlite'));db.prepare("UPDATE tasks SET status='Blocked',checkpoint=?,error='offline' WHERE id=?").run('{"page":2}',id);db.close();
+ assert.equal((await call('tasks/retry',{id})).status,409);assert.equal((await call('tasks/edit',{id,goal:'Edited nationwide objective'})).status,200);
+ const db=new DatabaseSync(join(directory,'headquarters.sqlite'));db.prepare('INSERT INTO opportunities(id,task,title,url,evidence) VALUES(?,?,?,?,?)').run('test-record',id,'Synthetic HTTP test record','https://example.test/fixture','{}');db.prepare("UPDATE tasks SET status='Blocked',checkpoint=?,error='offline' WHERE id=?").run('{"page":2}',id);db.close();
+ assert.equal((await call('research/note',{id:'test-record',note:'Owner qualification check pending'})).status,200);assert.equal((await call('research/note',{id:'missing',note:'x'})).status,400);
  assert.equal((await call('tasks/retry',{id})).status,200);
  let state=await (await call('state')).json();assert.equal(state.tasks[0].status,'Queued');assert.equal(state.tasks[0].checkpoint,'{"page":2}');assert.equal(state.sources[0].id,'usaspending-contracts');
  assert.equal((await call('backup',{})).status,200);
  await stop(server.child);server=await launch(directory);assert.equal(server.code,undefined);
  assert.equal((await (await call('status')).json()).setupRequired,false);
  assert.equal((await call('state')).status,200); // durable session
- state=await (await call('state')).json();assert.equal(state.tasks[0].id,id);
+ state=await (await call('state')).json();assert.equal(state.tasks[0].id,id);assert.equal(state.company.name,'Test Company');assert.equal(state.opportunities[0].note,'Owner qualification check pending');assert.equal(state.employees.length,7);assert.equal(state.employees.find(e=>e.id==='Alpha').name,'Alex');assert.equal(state.clock,'out');
  assert.equal((await call('logout',{})).status,200);assert.equal((await call('state')).status,401);
  }finally{if(server?.child.exitCode===null)await stop(server.child);rmSync(directory,{recursive:true});}
 });

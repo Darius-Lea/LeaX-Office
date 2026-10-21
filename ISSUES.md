@@ -8,3 +8,5 @@
 - Single-founder local app, not publicly deployable SaaS. No tenant isolation/password recovery/email verification. Founder remains free of subscription billing.
 - Legacy tasks with portal-availability evidence cannot be reviewed by the new connector; queue a new assignment. Legacy records remain intact.
 - Missing/invalid source identity or description blocks the page instead of inventing evidence; failed tasks retain earlier pages and allow manual retry.
+
+Office update: web processing now starts from Clock in, with no separate service needed. Remaining limitations include no full walking-avatar 3D simulation and no tools for custom/extra employee roles. On Render free, idle sleep still halts work; temporary SQLite still risks total data loss on replacement. Source failures remain blocked and visible. Clock-in state resets after web-process restarts by design. Run one normal web service; multi-instance office coordination is not supported.

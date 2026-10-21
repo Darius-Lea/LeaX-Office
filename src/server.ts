@@ -3,7 +3,8 @@ import {readFileSync} from 'node:fs';
 import {randomBytes} from 'node:crypto';
 import {backup} from 'node:sqlite';
 import {join} from 'node:path';
-import {db,directory,setup,login,authenticated,enqueue,snapshot,audit} from './store.ts';
+import {db,directory,setup,login,authenticated,enqueue,snapshot,audit,clock,setting,setSetting,editTask} from './store.ts';
+import {startOffice} from './office.ts';
 const port=Number(process.env.PORT||4310);
 const host=process.env.HOST || (process.env.RENDER==='true'?'0.0.0.0':'127.0.0.1');
 const publicBinding=!['127.0.0.1','localhost','::1'].includes(host);
@@ -25,7 +26,7 @@ const server=createServer(async(req,res)=>{
  const send=(status:number,data:any)=>{res.writeHead(status,{'Content-Type':'application/json'});res.end(JSON.stringify(data));};
  try{
  const url=new URL(req.url||'/',`http://127.0.0.1:${port}`);
- if(req.method==='GET' && ['/', '/app.js','/style.css'].includes(url.pathname)){const file=url.pathname==='/'?'index.html':url.pathname.slice(1);res.setHeader('Content-Type',file.endsWith('html')?'text/html':file.endsWith('js')?'text/javascript':'text/css');res.end(readFileSync(new URL('../public/'+file,import.meta.url)));return;}
+ if(req.method==='GET' && ['/', '/app.js','/office.js','/style.css'].includes(url.pathname)){const file=url.pathname==='/'?'index.html':url.pathname.slice(1);res.setHeader('Content-Type',file.endsWith('html')?'text/html':file.endsWith('js')?'text/javascript':'text/css');res.end(readFileSync(new URL('../public/'+file,import.meta.url)));return;}
  if(req.method==='GET' && url.pathname==='/api/status')return send(200,{setupRequired:!db.prepare('SELECT id FROM founder').get()});
  const localPort=(server.address() as any)?.port||port;
  const allowedOrigins=publicBinding?[publicOrigin]:[`http://127.0.0.1:${localPort}`,`http://localhost:${localPort}`,...(publicOrigin?[publicOrigin]:[])];
@@ -42,6 +43,25 @@ const server=createServer(async(req,res)=>{
  if(req.method==='GET'&&url.pathname==='/api/health'){
  let ollama:any={available:false};try{const r=await fetch('http://127.0.0.1:11434/api/tags',{signal:AbortSignal.timeout(1500)});if(r.ok)ollama={available:true,...await r.json() as object};}catch{}
  return send(200,{database:db.prepare('PRAGMA quick_check').get(),ollama,...snapshot()});}
+ if(req.method==='POST'&&url.pathname==='/api/office/clock'){
+ if(typeof body.active!=='boolean')return send(400,{error:'Choose clock in or clock out'});
+ clock(body.active);return send(200,{ok:true});}
+ if(req.method==='POST'&&url.pathname==='/api/company'){
+ if(typeof body.name!=='string'||!body.name.trim()||body.name.length>120||typeof body.goal!=='string'||!body.goal.trim()||body.goal.length>4000||typeof body.legalName!=='string'||body.legalName.length>120)return send(400,{error:'Company name, legal name and standing goal required (120/120/4000 character limits)'});
+ setSetting('company',JSON.stringify({name:body.name.trim(),legalName:body.legalName.trim()}));setSetting('standing_goal',body.goal.trim());audit('office','Founder updated company profile and standing goal');return send(200,{ok:true});}
+ if(req.method==='POST'&&url.pathname==='/api/employees'){
+ if(typeof body.name!=='string'||!body.name.trim()||body.name.length>80||typeof body.role!=='string'||!body.role.trim()||body.role.length>160)return send(400,{error:'Employee name and role required (80/160 character limits)'});
+ const existing=typeof body.id==='string'&&db.prepare('SELECT id FROM employees WHERE id=?').get(body.id);
+ const id=existing?body.id:randomBytes(12).toString('hex');
+ if(existing)db.prepare('UPDATE employees SET name=?,role=? WHERE id=?').run(body.name.trim(),body.role.trim(),id);
+ else db.prepare("INSERT INTO employees VALUES(?,?,?,'planned')").run(id,body.name.trim(),body.role.trim());
+ audit('office','Founder saved employee '+body.name.trim());return send(200,{id});}
+ if(req.method==='POST'&&url.pathname==='/api/research/note'){
+ if(typeof body.id!=='string'||typeof body.note!=='string'||body.note.length>4000||!db.prepare('SELECT id FROM opportunities WHERE id=?').get(body.id))return send(400,{error:'Valid research record and note of up to 4000 characters required'});
+ db.prepare('INSERT OR REPLACE INTO review_notes VALUES(?,?)').run(body.id,body.note);audit('office','Founder annotated research record '+body.id);return send(200,{ok:true});}
+ if(req.method==='POST'&&url.pathname==='/api/tasks/edit'){
+ if(typeof body.id!=='string'||typeof body.goal!=='string')return send(400,{error:'Assignment and objective required'});
+ editTask(body.id,body.goal);return send(200,{ok:true});}
  if(req.method==='POST'&&url.pathname==='/api/tasks'){if(typeof body.goal!=='string'||!body.goal.trim()||body.goal.length>4000)return send(400,{error:'Goal required (maximum 4000 characters)'});return send(201,{id:enqueue(body.goal.trim())});}
  if(req.method==='POST'&&url.pathname==='/api/tasks/retry'){
  if(typeof body.id!=='string')return send(400,{error:'Task ID required'});
@@ -54,4 +74,5 @@ const server=createServer(async(req,res)=>{
  send(404,{error:'Not found'});
  }catch(e){send(400,{error:String(e)});}
 });
+startOffice();
 server.listen(port,host,()=>{const address=server.address();console.log(`AI Headquarters listening on port ${typeof address==='object'&&address?address.port:port}`);});
