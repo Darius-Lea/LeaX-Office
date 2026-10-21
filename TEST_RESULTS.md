@@ -6,3 +6,5 @@
 - Official upstream API contract retrieved successfully from GitHub to confirm supported fields and pagination schema.
 - Live API HTTPS request failed cloud proxy CONNECT 403. Live collection NOT validated. Worker fixtures are synthetic, confined to test DBs. No business leads or contracts claimed.
 - Windows behavior, real model inference and browser interaction unrun. Syntax checks run for changed server/worker/source/frontend. No build needed for native Node/static frontend; no typecheck configured.
+
+2026-10-21: npm test passes 5 tests (0 failures/skips), including local workflow, Render-style all-interface startup, allowed/disallowed origins, Secure cookie issuance, bootstrap not printed publicly, and refusal to start publicly without origin/private bootstrap. These simulate Render locally; actual Render deployment and TLS termination are not tested.

@@ -5,12 +5,12 @@ import {mkdtempSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
-async function launch(directory:string){
- const child=spawn(process.execPath,['src/server.ts'],{env:{...process.env,PORT:'0',HQ_DATA_DIR:directory},stdio:['ignore','pipe','pipe']});
+async function launch(directory:string,extra:Record<string,string>={}){
+ const child=spawn(process.execPath,['src/server.ts'],{env:{...process.env,PORT:'0',HQ_DATA_DIR:directory,...extra},stdio:['ignore','pipe','pipe']});
  let out='';const startup=await new Promise<{port:number,code?:string}>((resolve,reject)=>{
  const timer=setTimeout(()=>{child.kill();reject(Error('Server startup timed out'));},10000);
  child.on('exit',()=>{clearTimeout(timer);reject(Error('Server exited before readiness'));});
- child.stdout.on('data',chunk=>{out+=chunk;const m=out.match(/listening locally on port (\d+)/);if(m){clearTimeout(timer);resolve({port:Number(m[1]),code:out.match(/setup code: (\w+)/)?.[1]});}});
+ child.stdout.on('data',chunk=>{out+=chunk;const m=out.match(/listening on port (\d+)/);if(m){clearTimeout(timer);resolve({port:Number(m[1]),code:out.match(/setup code: (\w+)/)?.[1]});}});
  });return {...startup,child};
 }
 async function stop(child:any){await new Promise<void>(resolve=>{child.once('exit',()=>resolve());child.kill();});}
@@ -35,4 +35,25 @@ test('HTTP auth, origin protection, retry, saved account across restart, and log
  state=await (await call('state')).json();assert.equal(state.tasks[0].id,id);
  assert.equal((await call('logout',{})).status,200);assert.equal((await call('state')).status,401);
  }finally{if(server?.child.exitCode===null)await stop(server.child);rmSync(directory,{recursive:true});}
+});
+
+test('Render public binding uses configured HTTPS origin, secure cookies and private bootstrap',async()=>{
+ const directory=mkdtempSync(join(tmpdir(),'hq-render-'));let server:any;
+ try{
+ const code='test-only-bootstrap-'.repeat(3);
+ server=await launch(directory,{RENDER:'true',RENDER_EXTERNAL_URL:'https://hq-example.onrender.com',HQ_SETUP_CODE:code});
+ assert.equal(server.code,undefined); // never leak bootstrap to deployment logs
+ const call=(origin:string,password='test founder passphrase')=>fetch(`http://127.0.0.1:${server.port}/api/setup`,{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({code,password})});
+ assert.equal((await call(`http://localhost:${server.port}`)).status,403);
+ assert.equal((await call('https://evil.test')).status,403);
+ const response=await call('https://hq-example.onrender.com');assert.equal(response.status,200);assert.match(response.headers.get('set-cookie')!,/; Secure/);
+ assert.equal((await fetch(`http://127.0.0.1:${server.port}/api/status`)).status,200);
+ }finally{if(server?.child.exitCode===null)await stop(server.child);rmSync(directory,{recursive:true});}
+});
+test('public startup refuses missing origin or private setup code',async()=>{
+ const directory=mkdtempSync(join(tmpdir(),'hq-refuse-'));
+ try{
+ await assert.rejects(()=>launch(directory,{HOST:'0.0.0.0',RENDER:'false',PUBLIC_ORIGIN:'',RENDER_EXTERNAL_URL:'',HQ_SETUP_CODE:''}),/exited before readiness/);
+ await assert.rejects(()=>launch(directory,{HOST:'0.0.0.0',PUBLIC_ORIGIN:'https://hq-example.onrender.com',HQ_SETUP_CODE:''}),/exited before readiness/);
+ }finally{rmSync(directory,{recursive:true});}
 });

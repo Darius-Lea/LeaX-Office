@@ -9,3 +9,5 @@ Working but incomplete: health endpoint (database/Ollama availability), heartbea
 
 Needs testing: Windows Task Scheduler script; browser interactions/accessibility; live API schema and data quality; Ollama with installed models.
 Not started: actual model inference/model selection, React/3D office, live open bids, contact and capability verification, automatic backups/rotation, resource controls/schedules, multiple tenants and later commercial phases.
+
+2026-10-21: Added configurable HOST, Render all-interface binding, HTTPS PUBLIC_ORIGIN/RENDER_EXTERNAL_URL validation, Secure public cookies, and private public bootstrap configuration. Node constrained to 24.x; Render npm installation documented. Local/Render-style HTTP and startup refusal tests pass. Actual Render redeployment and persistent cloud storage remain unverified; free Render SQLite storage is ephemeral.

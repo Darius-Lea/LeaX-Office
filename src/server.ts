@@ -5,8 +5,20 @@ import {backup} from 'node:sqlite';
 import {join} from 'node:path';
 import {db,directory,setup,login,authenticated,enqueue,snapshot,audit} from './store.ts';
 const port=Number(process.env.PORT||4310);
-const bootstrap=randomBytes(24).toString('hex');
-if(!db.prepare('SELECT id FROM founder').get())console.log('One-time local setup code: '+bootstrap);
+const host=process.env.HOST || (process.env.RENDER==='true'?'0.0.0.0':'127.0.0.1');
+const publicBinding=!['127.0.0.1','localhost','::1'].includes(host);
+const configuredOrigin=process.env.PUBLIC_ORIGIN || process.env.RENDER_EXTERNAL_URL;
+let publicOrigin:string|undefined;
+if(configuredOrigin){
+ const parsed=new URL(configuredOrigin);
+ if(parsed.protocol!=='https:' || parsed.username || parsed.password || parsed.search || parsed.hash || parsed.pathname!=='/')throw Error('PUBLIC_ORIGIN must be an HTTPS origin without a path');
+ publicOrigin=parsed.origin;
+}
+if(publicBinding&&!publicOrigin)throw Error('Public binding requires PUBLIC_ORIGIN (or RENDER_EXTERNAL_URL) with your HTTPS app origin');
+const needsSetup=!db.prepare('SELECT id FROM founder').get();
+if(publicBinding&&needsSetup&&(!process.env.HQ_SETUP_CODE||process.env.HQ_SETUP_CODE.length<32))throw Error('First public startup requires a private HQ_SETUP_CODE of at least 32 characters in service environment settings');
+const bootstrap=process.env.HQ_SETUP_CODE || randomBytes(24).toString('hex');
+if(needsSetup&&!publicBinding)console.log('One-time local setup code: '+bootstrap);
 const attempts=new Map<string,{count:number,time:number}>();
 const server=createServer(async(req,res)=>{
  res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; frame-ancestors 'none'");res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Cache-Control','no-store');
@@ -16,13 +28,14 @@ const server=createServer(async(req,res)=>{
  if(req.method==='GET' && ['/', '/app.js','/style.css'].includes(url.pathname)){const file=url.pathname==='/'?'index.html':url.pathname.slice(1);res.setHeader('Content-Type',file.endsWith('html')?'text/html':file.endsWith('js')?'text/javascript':'text/css');res.end(readFileSync(new URL('../public/'+file,import.meta.url)));return;}
  if(req.method==='GET' && url.pathname==='/api/status')return send(200,{setupRequired:!db.prepare('SELECT id FROM founder').get()});
  const localPort=(server.address() as any)?.port||port;
- if(req.method==='POST' && req.headers.origin!==`http://127.0.0.1:${localPort}` && req.headers.origin!==`http://localhost:${localPort}`)return send(403,{error:'Invalid origin'});
+ const allowedOrigins=publicBinding?[publicOrigin]:[`http://127.0.0.1:${localPort}`,`http://localhost:${localPort}`,...(publicOrigin?[publicOrigin]:[])];
+ if(req.method==='POST' && !allowedOrigins.includes(req.headers.origin))return send(403,{error:'Invalid origin'});
  let body:any={};if(req.method==='POST'){let raw='';for await(const part of req){raw+=part;if(raw.length>16384)return send(413,{error:'Request too large'});}body=JSON.parse(raw||'{}');}
  if(['/api/setup','/api/login'].includes(url.pathname)&&req.method==='POST'){
  const key=req.socket.remoteAddress||'local';const a=attempts.get(key);if(a && Date.now()-a.time<60000 && a.count>=10)return send(429,{error:'Try again in one minute'});attempts.set(key,{count:a&&Date.now()-a.time<60000?a.count+1:1,time:a?.time&&Date.now()-a.time<60000?a.time:Date.now()});
  if(typeof body.password!=='string' || body.password.length>1024)return send(400,{error:'Invalid password'});
  if(url.pathname==='/api/setup'){if(body.code!==bootstrap)return send(403,{error:'Invalid setup code'});setup(body.password);}
- const token=login(body.password);if(!token)return send(401,{error:'Invalid credentials'});res.setHeader('Set-Cookie',`hq_session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800`);return send(200,{ok:true});}
+ const token=login(body.password);if(!token)return send(401,{error:'Invalid credentials'});res.setHeader('Set-Cookie',`hq_session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800${publicOrigin?'; Secure':''}`);return send(200,{ok:true});}
  const token=(req.headers.cookie||'').split('; ').find(v=>v.startsWith('hq_session='))?.slice(11)||'';
  if(!authenticated(token))return send(401,{error:'Sign in required'});
  if(req.method==='GET'&&url.pathname==='/api/state')return send(200,snapshot());
@@ -41,4 +54,4 @@ const server=createServer(async(req,res)=>{
  send(404,{error:'Not found'});
  }catch(e){send(400,{error:String(e)});}
 });
-server.listen(port,'127.0.0.1',()=>{const address=server.address();console.log(`AI Headquarters listening locally on port ${typeof address==='object'&&address?address.port:port}`);});
+server.listen(port,host,()=>{const address=server.address();console.log(`AI Headquarters listening on port ${typeof address==='object'&&address?address.port:port}`);});

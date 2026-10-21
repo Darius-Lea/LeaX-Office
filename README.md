@@ -10,3 +10,5 @@ Data stays in `data/headquarters.sqlite` with WAL sidecars; set HQ_DATA_DIR to a
 Windows users can manually opt in to the sign-in worker using scripts/windows-worker.ps1. The script is untested on Windows and is never run automatically. Ollama availability/model detection is exposed by the authenticated health endpoint, but inference and model selection are unfinished.
 
 Research uses at most three service terms mapped from the goal (cabling, networking, low voltage, CCTV/security, data center, commercial AV, printers, POS); otherwise defaults to cabling/network installation/low voltage. No state/country restriction is applied, allowing nationwide and overseas US federal awards. This is not comprehensive international opportunity coverage. Existing founder credentials and data remain unchanged.
+
+Render deployment: see DEPLOYMENT.md for port binding, exact HTTPS origin, private first-run HQ_SETUP_CODE and npm build settings. Render free web storage is ephemeral: founder credentials and business data do not survive reliably without a durable storage solution. Local operation remains the free durable option.
