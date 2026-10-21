@@ -1,3 +1,428 @@
-<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI Headquarters</title><link rel="stylesheet" href="/style.css"><body><header><span class="brand">AI / HQ</span><span id="company-title">Your headquarters</span><span>OWNER WORKSPACE · SUPERVISED</span></header><main><p class="eyebrow">YOUR BUSINESS COMMAND CENTER</p><h1>Your office. Your direction.</h1><section id="auth"><h2>Founder access</h2><p id="setupHint"></p><form id="login"><label>One-time setup code (first launch only)<input name="code" autocomplete="off"></label><label>Password<input name="password" type="password" required minlength="14" autocomplete="current-password"></label><button>Unlock headquarters</button></form></section><div id="workspace" hidden><section class="command"><button id="setup-open">Set up this computer / local AI</button><button id="owner-computer">Open owner computer · Notes <span id="note-count">0</span></button><div><p class="eyebrow">OFFICE CONTROL</p><h2 id="office-status">Office clocked out</h2><p id="shift-help">Clock in to process queued assignments. If the queue is empty, your standing goal starts a research assignment.</p></div><div><button id="clock-in">Clock in</button><button id="clock-out">Clock out</button><button id="view-3d">3D office</button><button id="view-2d">Clerical view</button><button id="view-terminal">Terminal view</button></div><p>While clocked in, the standing goal is researched again every six hours when the queue is clear. Opening your signed-in office starts work automatically unless you explicitly clock out. Closing the tab does not clock out. Clock out stops new work; an active source request may finish. On free Render, work pauses when the service sleeps; closing the browser does not keep the host awake. No email, purchasing or external submissions are enabled.</p></section>
-<section id="office-section"><h2>Research floor</h2><p id="manager-status" role="status">Manager will patrol after clock-in.</p><div id="manager-issues"></div><p>Click a desk to inspect that employee. Active indicators appear only for running assignments. Johnson’s marker moves to the employee selected by the latest real queue patrol; this is a visualization of that check. Roles awaiting tools are marked Setup required.</p><label id="angle-label">Rotate office<input id="office-angle" type="range" min="-40" max="40" value="-18"></label><p>Your assistant delivers saved work to your owner computer. The notes badge shows unread reports.</p><div id="office-viewport"><div id="office-room" class="office-room"></div></div></section>
-</div><dialog id="owner-dialog"><button id="close-computer">Close computer</button><h2>Owner computer</h2><nav id="computer-tabs" aria-label="Computer applications"><button data-pane="inbox">Inbox</button><button data-pane="assistant">Assistant</button><button data-pane="contacts">Contacts & drafts</button><button data-pane="files">Company & research</button><button data-pane="packets">Print-ready packets</button></nav><button id="open-files">Open company & research files</button><p>Saved research, CRM updates, qualification checks and unsent drafts. No email or phone contacts are invented.</p><div data-computer-pane="assistant" hidden><section><h3>Ask your assistant</h3><p id="owner-bid-status"></p><p>Real model analysis runs on the computer hosting this app, using saved evidence. Generated advice can be wrong; no external actions are executed.</p><form id="assistant-form"><label>Employee<select id="assistant-agent" name="agent"></select></label><label>What do you need?<textarea name="prompt" maxlength="6000" required>Explain which researched companies fit our services, what I should do next to get legitimate profitable work, and what I must verify first.</textarea></label><button>Ask assistant</button><button type="button" id="marketing-prompt">Plan a marketing video</button></form><div id="ai-activity"></div><button id="assistant-setup">Connect local AI</button></section></div><div data-computer-pane="contacts" hidden><section><h3>Public business-contact research</h3><p>Provide a public company/vendor contact page. Only published email/phone text is collected; company ownership, named decision-makers and deliverability remain unverified. No sending or bulk crawling.</p><form id="contact-form"><label>Company<input name="company" required maxlength="200"></label><label>Public HTTPS contact page<input name="url" type="url" required placeholder="https://company.example/contact"></label><button>Research published contacts</button></form><div id="contact-results"></div><h3>Owner-reviewed email drafts</h3><p>Opening your mail application does not send a message. You make the final send decision there. Published contacts are not verified recipients or permission to send.</p><div id="email-drafts"></div></section></div><div data-computer-pane="inbox"><div id="owner-notes"></div></div><div data-computer-pane="files" hidden><details id="clerical"><summary>Company settings, employees & research files</summary><section><h2>Standing business goal</h2><p id="goal"></p><p id="health">Checking system health…</p><button id="backup">Create database backup</button><a href="/api/export/database" download>Download private database backup / transfer to local app</a><button id="logout">Sign out</button></section><div class="grid"><section><h2>Company & direction</h2><p>Set the company and standing objective once. Clock in to start work without writing a fresh assignment each time.</p><form id="company-form"><label>Company name<input name="name" required maxlength="120"></label><label>Legal name<input name="legalName" maxlength="120"></label><label>Standing objective<textarea name="goal" required maxlength="4000"></textarea></label><button>Save company & direction</button></form></section><section><h2>Assign research</h2><p>Search public federal contract awards for potential partners. All states and overseas locations remain eligible. Up to three pages are collected per assignment; these are historical awards, not open bids.</p><form id="task"><label>Business objective<textarea name="goal" required maxlength="4000">Find commercial IT installation opportunities for American Power Global nationwide.</textarea></label><button>Queue assignment</button></form></section></div><section><h2>Your employees</h2><p>Your owner workspace has no subscription employee limit. Built-in employees have bounded research and administrative tools. New custom roles need tool implementations before they execute. Evidence collection and administrative checks use deterministic tools. Employees can also run genuine local-model analysis when Ollama is connected; AI output is labeled and saved separately.</p><div id="employee-list"></div><form id="employee-form"><input type="hidden" name="id"><label>Employee name<input name="name" required maxlength="80"></label><label>Role<input name="role" required maxlength="160"></label><button>Save employee</button><button type="reset">New employee</button></form></section><section><h2>Assignments & handoffs</h2><div id="tasks"></div></section><section><h2>Current notices to review for bidding</h2><p>These are separate from historical awards. Active status and a future confirmed deadline only qualify a notice for review—not proof that your company is eligible.</p><p id="solicitation-status"></p><button id="search-notices">Check current SAM.gov notices</button><div id="solicitation-records"></div><h2>Historical award research</h2><p>An award is a government contract already issued to the named company, not money or an open job for your company.</p><p>Historical awards identify potential partners. Source review does not verify contacts, eligibility, subcontracting interest or current availability.</p><div id="opportunities"></div><h3>Research sources</h3><div id="sources"></div></section><section><h2>Activity journal</h2><div id="audit"></div></section></details></div><div data-computer-pane="packets" hidden><h3>Assignment packets</h3><p>Saved evidence, source links and assistant recommendations in a company-branded document. Print or choose Save as PDF in your browser’s print window.</p><div id="packet-list"></div></div></dialog><dialog id="setup-dialog"><button id="setup-close">Close setup</button><h2>Set up your own computer</h2><p id="device-info"></p><section><h3>1 · Run locally and keep your data</h3><p>On Windows 10/11 (64-bit), download and open <strong>AI-Headquarters-Setup.exe</strong>, then choose Install / open office. A native setup window installs the verified runtime and opens your local office without a PowerShell script or terminal. Your data stays in your Windows user folder across updates.</p><p><a href="/api/download/windows" download>Download Windows setup (.exe)</a></p><p>This native installer is currently unsigned and Windows may show an unknown-publisher warning. Actual installation on Windows still needs device validation. Keep the computer awake for background work. No software can work while it is powered off.</p></section><section><h3>2 · Built-in local AI — automatic</h3><p>The latest Windows download installs its own private AI engine, chooses a starter model for your computer and tests the connection automatically. You do not install Ollama separately, choose a model or enter an AI API key. First setup downloads roughly 2–5 GB and needs a computer with at least 4 GB RAM and 12 GB free disk space. Model quality and speed depend on your hardware.</p><button id="ai-check">Check built-in AI</button><p id="ai-setup-status"></p><p id="hardware-info"></p><p>If your existing local app predates automatic AI setup, download and open the latest Windows setup to upgrade. Saved business data stays separate.</p><details><summary>Advanced model controls (optional)</summary><label>Installed model<select id="model-select"></select></label><button id="model-save">Use selected model</button><button id="model-download">Download small fallback model</button><p>These controls are optional. The installer normally handles model installation and selection. A small fallback model uses roughly 0.5–0.7 GB; larger models need more memory.</p></details></section><section><h3>3 · Enable current federal bid notices (optional free account)</h3><p>Historical award research works without a SAM key. Current federal opportunities use SAM.gov’s official API and require your free account’s key. <a href="https://open.gsa.gov/api/get-opportunities-public-api/" target="_blank" rel="noopener noreferrer">Official free-account and key instructions</a>. In the Windows launcher, use the optional masked SAM key field; it is protected for your Windows user. If staying on Render, add SAM_API_KEY in Render Environment settings. Never paste the key in chat. Reopen the local office after saving a key.</p><p>No key means Setup required, not a list of invented open jobs.</p></section><section><h3>4 · Choose your direction</h3><p>Save your company name, services and standing objective under company files. Opening the signed-in app starts work unless you explicitly clock out. Closing the tab does not erase work or clock out. Keep private backups of the data folder.</p><button id="setup-company">Open company settings</button></section></dialog><p id="message" role="status"></p></main><script type="module" src="/app.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI Headquarters</title>
+<link rel="stylesheet" href="/style.css">
+<body>
+<header class="app-bar">
+<a class="wordmark" href="/" aria-label="AI Headquarters home">
+<span class="brand-mark">HQ</span>
+<span>HEADQUARTERS<small>YOUR BUSINESS, IN MOTION</small>
+</span>
+</a>
+<div class="company-heading">
+<span id="company-title">Your headquarters</span>
+<span class="owner-tag">OWNER WORKSPACE</span>
+</div>
+<div class="bar-right">
+<span id="connection-status" class="connection-status">Private workspace</span>
+<time id="office-time" aria-label="Current time">
+</time>
+</div>
+</header>
+<main>
+<p class="eyebrow">YOUR BUSINESS COMMAND CENTER</p>
+<h1>Your office. Your direction.</h1>
+<section id="auth">
+<h2>Founder access</h2>
+<p id="setupHint">
+</p>
+<form id="login">
+<label>One-time setup code (first launch only)<input name="code" autocomplete="off">
+</label>
+<label>Password<input name="password" type="password" required minlength="14" autocomplete="current-password">
+</label>
+<button>Unlock headquarters</button>
+<a class="auth-download" href="/download">Download for Windows ↗</a>
+</form>
+</section>
+<div id="workspace" hidden>
+<div class="office-hud">
+<div class="shift-chip">
+<span class="status-light" id="shift-light">
+</span>
+<div>
+<h2 id="office-status">Office clocked out</h2>
+<p id="shift-help">Your saved work is here.</p>
+</div>
+<button id="hud-toggle" class="icon-button" title="Minimize business guidance" aria-label="Minimize business guidance">−</button>
+</div>
+<section id="office-brief" class="office-brief">
+<p class="eyebrow">YOUR NEXT MOVE</p>
+<h2 id="next-move-title">Your assistant is ready.</h2>
+<p id="next-move-summary">Open your computer for a clear next step based on your saved work.</p>
+<button id="next-move-action">Open my computer <span aria-hidden="true">↗</span>
+</button>
+</section>
+</div>
+<nav class="office-dock" aria-label="Office controls">
+<button id="owner-computer" class="dock-primary">
+<span class="dock-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8m-4-4v4"/></svg></span>
+<span>My computer</span>
+</button>
+<button id="notification-open" aria-expanded="false" aria-controls="notifications-panel">
+<span class="dock-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg></span>
+<span>Inbox</span>
+<span id="note-count" class="count-badge">0</span>
+</button>
+<button id="team-open">
+<span class="dock-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m20 0v-2a4 4 0 0 0-3-3.87"/><circle cx="9" cy="7" r="4"/><path d="M16 3a4 4 0 0 1 0 8"/></svg></span>
+<span>Team</span>
+</button>
+<button id="packets-open">
+<span class="dock-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M8 13h8m-8 4h8"/></svg></span>
+<span>Reports</span>
+</button>
+<span class="dock-divider">
+</span>
+<button id="clock-in">
+<span class="dock-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m10 8 6 4-6 4Z"/></svg></span>
+<span>Clock in</span>
+</button>
+<button id="clock-out">
+<span class="dock-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 8v8m6-8v8"/></svg></span>
+<span>Clock out</span>
+</button>
+<span class="dock-divider">
+</span>
+<button id="view-toggle" aria-expanded="false" aria-controls="view-menu">
+<span class="dock-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 10 6-10 6L2 9Zm-9 9 9 6 9-6m-18 6 9 5 9-5"/></svg></span>
+<span>View</span>
+</button>
+<button id="setup-open">
+<span class="dock-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 3-.5 3L6 7 3 6l-2 4 2.5 2v2L1 16l2 4 3-1 2.5 1 .5 3h5l.5-3 2.5-1 3 1 2-4-2.5-2v-2L22 10l-2-4-3 1-2.5-1L14 3Z" transform="translate(1 -1) scale(.92)"/><circle cx="12" cy="12" r="3"/></svg></span>
+<span>Settings</span>
+</button>
+<button id="fullscreen-office" title="Expand office" aria-label="Expand office">
+<span class="dock-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg></span>
+<span>Expand</span>
+</button>
+</nav>
+<div id="view-menu" class="view-menu" hidden>
+<p class="eyebrow">CHOOSE YOUR WORKSPACE</p>
+<button id="reset-office">Reset camera</button>
+<button id="view-3d">3D office</button>
+<button id="view-2d">Clerical view</button>
+<button id="view-terminal">Terminal view</button>
+</div>
+<aside id="notifications-panel" class="notifications-panel" aria-label="Office notifications" hidden>
+<div class="panel-heading">
+<div>
+<p class="eyebrow">OWNER INBOX</p>
+<h2>Needs your attention</h2>
+</div>
+<button id="notifications-close" class="icon-button" aria-label="Close notifications">×</button>
+</div>
+<div id="notification-items">
+</div>
+<button id="all-notes">Open all saved notes</button>
+</aside>
+<section id="office-section" aria-label="Interactive virtual office">
+<div class="floor-label">
+<span>THE OFFICE</span>
+<span id="floor-caption">Drag to look around · Click a desk to inspect</span>
+</div>
+<div id="office-viewport">
+<div id="office-room" class="office-room">
+</div>
+</div>
+<label id="angle-label" hidden>Rotate office<input id="office-angle" type="range" min="-40" max="40" value="-18">
+</label>
+<details class="office-supervision">
+<summary>Manager’s latest check</summary>
+<p id="manager-status" role="status">Manager will check saved assignments after clock-in.</p>
+<div id="manager-issues">
+</div>
+<p>Closing this window keeps local work running while the computer is awake. Clock out pauses new tasks. A sleeping or powered-off host cannot work.</p>
+</details>
+</section>
+</div>
+<dialog id="owner-dialog" aria-labelledby="computer-title">
+<div class="computer-titlebar">
+<div class="window-brand">
+<span class="window-logo">HQ</span>
+<div>
+<strong id="computer-title">Owner computer</strong>
+<small id="computer-company">Your private business workspace</small>
+</div>
+</div>
+<div class="window-controls">
+<button id="computer-home" aria-label="Computer home" title="Computer home">⌂</button>
+<button id="close-computer" aria-label="Close computer" title="Close computer">×</button>
+</div>
+</div>
+<div class="computer-shell">
+<nav id="computer-tabs" aria-label="Computer applications">
+<p class="sidebar-label">WORKSPACE</p>
+<button data-pane="home">
+<span aria-hidden="true">⌂</span> Today</button>
+<button data-pane="inbox">
+<span aria-hidden="true">✉</span> Inbox <span id="computer-unread" class="mini-count">
+</span>
+</button>
+<button data-pane="assistant">
+<span aria-hidden="true">✧</span> Assistant</button>
+<button data-pane="contacts">
+<span aria-hidden="true">☷</span> Contacts & drafts</button>
+<button data-pane="files" id="open-files">
+<span aria-hidden="true">▱</span> Company & research</button>
+<button data-pane="pricing"><span aria-hidden="true">⌗</span> Price a job</button>
+<button data-pane="packets">
+<span aria-hidden="true">▤</span> Print-ready reports</button>
+<div class="sidebar-bottom">
+<span class="saved-dot">
+</span> Work stays saved</div>
+</nav>
+<div class="computer-content"><p id="computer-message" class="window-message" role="status" aria-live="polite" hidden></p>
+<div data-computer-pane="home">
+<div class="welcome-heading">
+<p class="eyebrow">YOUR OWNER BRIEFING</p>
+<h2>Make your next move count.</h2>
+<p>One useful step at a time, grounded in the work your team has saved.</p>
+</div>
+<section id="business-guide">
+<p class="eyebrow">RECOMMENDED NEXT STEP</p>
+<h3 id="guide-headline">Give your team a clear direction.</h3>
+<p id="guide-summary">Choose your services and delivery coverage so the team can focus its research.</p>
+<div id="guide-primary">
+</div>
+</section>
+<div id="business-pipeline" class="business-pipeline">
+</div>
+<div class="home-columns">
+<section>
+<h3>After that</h3>
+<div id="guide-actions">
+</div>
+</section>
+<section>
+<h3>Business readiness</h3>
+<p id="readiness-summary">Confirm what your business can deliver.</p>
+<div id="business-readiness">
+</div>
+<p class="fine-print">These are your confirmations. They do not independently verify licenses, insurance or eligibility.</p>
+</section>
+</div>
+<p class="fine-print">Research is the first step toward a client, not revenue. Qualify the need, agree scope and payment terms, deliver accepted work, then collect payment.</p>
+</div>
+<div data-computer-pane="assistant" hidden>
+<section>
+<h3>Ask your assistant</h3>
+<p id="owner-bid-status">
+</p>
+<p>Real model analysis runs on the computer hosting this app, using saved evidence. Generated advice can be wrong; no external actions are executed.</p>
+<form id="assistant-form">
+<label>Employee<select id="assistant-agent" name="agent">
+</select>
+</label>
+<label>What do you need?<textarea name="prompt" maxlength="6000" required>Explain which researched companies fit our services, what I should do next to get legitimate profitable work, and what I must verify first.</textarea>
+</label>
+<button>Ask assistant</button>
+<button type="button" id="marketing-prompt">Plan a marketing video</button>
+</form>
+<div id="ai-activity">
+</div>
+<button id="assistant-setup" class="secondary-button">Check built-in AI</button>
+</section>
+</div>
+<div data-computer-pane="contacts" hidden>
+<section>
+<p class="eyebrow">FROM EVIDENCE TO A CONVERSATION</p>
+<h3>Find a published business contact</h3>
+<p>Provide a public company/vendor contact page. Only published email/phone text is collected; company ownership, named decision-makers and deliverability remain unverified. No sending or bulk crawling.</p>
+<form id="contact-form">
+<label>Company<input name="company" required maxlength="200">
+</label>
+<label>Public HTTPS contact page<input name="url" type="url" required placeholder="https://company.example/contact">
+</label>
+<button>Research published contacts</button>
+</form>
+<div id="contact-results">
+</div>
+<h3>Owner-reviewed email drafts</h3>
+<p>Opening your mail application does not send a message. You make the final send decision there. Published contacts are not verified recipients or permission to send.</p>
+<div id="email-drafts">
+</div>
+</section>
+</div>
+<div data-computer-pane="inbox">
+<div class="pane-heading">
+<p class="eyebrow">DELIVERED BY YOUR TEAM</p>
+<h2>Your saved notes</h2>
+<p>Read the evidence, add your judgment and choose the next action.</p>
+</div>
+<div id="owner-notes">
+</div>
+</div>
+<div data-computer-pane="files" hidden>
+<div class="pane-heading">
+<p class="eyebrow">THE FILING CABINET</p>
+<h2>Company & research</h2>
+</div>
+<nav id="file-folders" aria-label="Company folders">
+<button data-folder="company">Company</button>
+<button data-folder="employees">Employees</button>
+<button data-folder="assignments">Assignments</button>
+<button data-folder="research">Research</button>
+<button data-folder="journal">Activity</button>
+</nav>
+<details id="clerical" open>
+<summary>Company files</summary>
+<section data-file-folder="company">
+<h2>Standing business goal</h2>
+<p id="goal">
+</p>
+<p id="health">Checking system health…</p>
+<button id="backup">Create database backup</button>
+<a href="/api/export/database" download>Download private database backup / transfer to local app</a>
+<button id="logout">Sign out</button>
+</section>
+<div class="grid" data-file-folder="company">
+<section>
+<h2>Company & direction</h2>
+<p>Set the company and standing objective once. Clock in to start work without writing a fresh assignment each time.</p>
+<form id="company-form">
+<label>Company name<input name="name" required maxlength="120">
+</label>
+<label>Legal name<input name="legalName" maxlength="120">
+</label>
+<label>Standing objective<textarea name="goal" required maxlength="4000">
+</textarea>
+</label>
+<button>Save company & direction</button>
+</form>
+</section>
+<section>
+<h2>Assign research</h2>
+<p>Search public federal contract awards for potential partners. All states and overseas locations remain eligible. Up to three pages are collected per assignment; these are historical awards, not open bids.</p>
+<form id="task">
+<label>Business objective<textarea name="goal" required maxlength="4000">Find commercial IT installation opportunities for American Power Global nationwide.</textarea>
+</label>
+<button>Queue assignment</button>
+</form>
+</section>
+</div>
+<section data-file-folder="employees" hidden>
+<h2>Your employees</h2>
+<p>Your owner workspace has no subscription employee limit. Built-in employees have bounded research and administrative tools. New custom roles need tool implementations before they execute. Evidence collection and administrative checks use deterministic tools. Employees can also run genuine local-model analysis when Ollama is connected; AI output is labeled and saved separately.</p>
+<div id="employee-list">
+</div>
+<form id="employee-form">
+<input type="hidden" name="id">
+<label>Employee name<input name="name" required maxlength="80">
+</label>
+<label>Role<input name="role" required maxlength="160">
+</label>
+<button>Save employee</button>
+<button type="reset">New employee</button>
+</form>
+</section>
+<section data-file-folder="assignments" hidden>
+<h2>Assignments & handoffs</h2>
+<div id="tasks">
+</div>
+</section>
+<section data-file-folder="research" hidden>
+<h2>Current notices to review for bidding</h2>
+<p>These are separate from historical awards. Active status and a future confirmed deadline only qualify a notice for review—not proof that your company is eligible.</p>
+<p id="solicitation-status">
+</p>
+<button id="search-notices">Check current SAM.gov notices</button>
+<div id="solicitation-records">
+</div>
+<h2>Historical award research</h2>
+<p>An award is a government contract already issued to the named company, not money or an open job for your company.</p>
+<p>Historical awards identify potential partners. Source review does not verify contacts, eligibility, subcontracting interest or current availability.</p>
+<div id="opportunities">
+</div>
+<h3>Research sources</h3>
+<div id="sources">
+</div>
+</section>
+<section data-file-folder="journal" hidden>
+<h2>Activity journal</h2>
+<div id="audit">
+</div>
+</section>
+</details>
+</div>
+<div data-computer-pane="pricing" hidden><div class="pane-heading"><p class="eyebrow">KNOW THE COST BEFORE YOU QUOTE</p><h2>Price a job</h2><p>Build a saved working estimate. Confirm the scope and every cost before offering a price.</p></div><section><form id="pricing-form"><div class="grid"><label>Customer or project<input name="customer" maxlength="200" placeholder="Company / project name"></label><label>Brief scope<input name="scope" maxlength="2000" placeholder="What work are you pricing?"></label></div><div class="pricing-fields"><label>Labor hours<input name="laborHours" type="number" min="0" max="100000" step="0.01" required placeholder="0"></label><label>Cost per labor hour ($)<input name="laborRate" type="number" min="0" max="100000" step="0.01" required placeholder="0"></label><label>Materials cost ($)<input name="materials" type="number" min="0" max="100000000" step="0.01" required value="0"></label></div><details><summary>Travel, overhead and target margin</summary><div class="pricing-fields"><label>Travel cost ($)<input name="travel" type="number" min="0" max="100000000" step="0.01" value="0" required></label><label>Overhead allocation ($)<input name="overhead" type="number" min="0" max="100000000" step="0.01" value="0" required></label><label>Contingency (%)<input name="contingencyPercent" type="number" min="0" max="100" step="0.01" value="0" required></label><label>Target gross margin (%)<input name="marginPercent" type="number" min="0" max="95" step="0.01" value="0" required></label></div></details><p class="fine-print">Start with your own verified costs. A zero value is not an assumption that the expense will be free. Taxes, fees, financing and actual collected profit are not calculated.</p><button>Save working estimate</button></form></section><div id="pricing-estimates"></div></div>
+<div data-computer-pane="packets" hidden>
+<h3>Assignment packets</h3>
+<p>Saved evidence, source links and assistant recommendations in a company-branded document. Print or choose Save as PDF in your browser’s print window.</p>
+<div id="packet-list">
+</div>
+</div>
+</div>
+</div>
+</dialog>
+<dialog id="setup-dialog">
+<div class="setup-heading">
+<div>
+<p class="eyebrow">YOUR WORKSPACE, YOUR DEVICE</p>
+<h2>Settings & installation</h2>
+</div>
+<button id="setup-close" class="icon-button" aria-label="Close settings">×</button>
+</div>
+<p id="setup-message" class="window-message" role="status" aria-live="polite" hidden></p><p id="device-info">
+</p>
+<section>
+<h3>1 · Run locally and keep your data</h3>
+<p>On Windows 10/11 (64-bit), download and open <strong>AI-Headquarters-Setup.exe</strong>. Setup starts automatically. A native setup window installs the verified runtime and opens your local office without a PowerShell script or terminal. Your data stays in your Windows user folder across updates.</p>
+<p>
+<a href="/api/download/windows" download>Download Windows setup (.exe)</a>
+</p>
+<p>This native installer is currently unsigned and Windows may show an unknown-publisher warning. Actual installation on Windows still needs device validation. Keep the computer awake for background work. No software can work while it is powered off.</p>
+</section>
+<section>
+<h3>2 · Built-in local AI — automatic</h3>
+<p>The latest Windows download installs its own private AI engine, chooses a starter model for your computer and tests the connection automatically. You do not install Ollama separately, choose a model or enter an AI API key. First setup downloads roughly 2–5 GB and needs a computer with at least 4 GB RAM and 12 GB free disk space. Model quality and speed depend on your hardware.</p>
+<button id="ai-check">Check built-in AI</button>
+<p id="ai-setup-status">
+</p>
+<details class="technical-details">
+<summary>Device details</summary>
+<p id="hardware-info">
+</p>
+</details>
+<p>If your existing local app predates automatic AI setup, download and open the latest Windows setup to upgrade. Saved business data stays separate.</p>
+<details>
+<summary>Advanced model controls (optional)</summary>
+<label>Installed model<select id="model-select">
+</select>
+</label>
+<button id="model-save">Use selected model</button>
+<button id="model-download">Download small fallback model</button>
+<p>These controls are optional. The installer normally handles model installation and selection. A small fallback model uses roughly 0.5–0.7 GB; larger models need more memory.</p>
+</details>
+</section>
+<section>
+<h3>Optional · Current federal bid notices</h3>
+<p>Historical award research works without a SAM key. Current federal opportunities use SAM.gov’s official API and require your free account’s key. <a href="https://open.gsa.gov/api/get-opportunities-public-api/" target="_blank" rel="noopener noreferrer">Official free-account and key instructions</a>. In the Windows launcher, use the optional masked SAM key field; it is protected for your Windows user. If staying on Render, add SAM_API_KEY in Render Environment settings. Never paste the key in chat. Reopen the local office after saving a key.</p>
+<p>No key means Setup required, not a list of invented open jobs.</p>
+</section>
+<section>
+<h3>4 · Choose your direction</h3>
+<p>Save your company name, services and standing objective under company files. Opening the signed-in app starts work unless you explicitly clock out. Closing the tab does not erase work or clock out. Keep private backups of the data folder.</p>
+<button id="setup-company">Open company settings</button>
+</section>
+</dialog>
+<div id="toast" class="notification-toast" hidden>
+<span class="toast-mark" aria-hidden="true">✉</span>
+<div>
+<strong id="toast-title">
+</strong>
+<p id="toast-body">
+</p>
+<button id="toast-action" hidden>Open</button>
+</div>
+<button id="toast-dismiss" class="icon-button" aria-label="Dismiss notification">×</button>
+</div>
+<p id="message" role="status" aria-live="polite">
+</p>
+</main>
+<script type="module" src="/app.js">
+</script>
+</body>
+</html>

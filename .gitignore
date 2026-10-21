@@ -11,3 +11,5 @@ server-state.json
 *.sqlite-shm
 installer/payload.zip
 installer/*.syso
+
+dist/

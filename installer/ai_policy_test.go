@@ -2,6 +2,8 @@ package main
 
 import (
 	"archive/zip"
+	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -37,5 +39,33 @@ func TestAutomaticModelAndArchiveSafety(t *testing.T) {
 	os.WriteFile(p, []byte("not a verified runtime"), 0600)
 	if checkHash(p, ollamaArchiveSHA) == nil {
 		t.Fatal("unverified runtime accepted")
+	}
+}
+
+func TestProductionManifestAndCancellation(t *testing.T) {
+	root := t.TempDir()
+	files := map[string]string{}
+	for _, name := range []string{"runtime/server.mjs", "public/index.html", "scripts/configure-local-ai.mjs", "vendor/three.module.js"} {
+		p := filepath.Join(root, filepath.FromSlash(name))
+		os.MkdirAll(filepath.Dir(p), 0700)
+		os.WriteFile(p, []byte("production fixture"), 0600)
+		files[name], _ = hashFile(p)
+	}
+	data, _ := json.Marshal(map[string]any{"format": 1, "entry": "runtime/server.mjs", "files": files})
+	os.WriteFile(filepath.Join(root, "application-manifest.json"), data, 0600)
+	if e := verifyApplication(context.Background(), root); e != nil {
+		t.Fatal(e)
+	}
+	os.WriteFile(filepath.Join(root, "runtime", "server.mjs"), []byte("corrupted"), 0600)
+	if e := verifyApplication(context.Background(), root); e == nil {
+		t.Fatal("corrupted application accepted")
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if e := verifyApplication(ctx, root); e != context.Canceled {
+		t.Fatalf("cancelled verification returned %v", e)
+	}
+	if _, e := hashFileContext(ctx, filepath.Join(root, "runtime", "server.mjs")); e != context.Canceled {
+		t.Fatalf("cancelled hashing returned %v", e)
 	}
 }

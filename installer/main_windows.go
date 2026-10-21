@@ -5,6 +5,7 @@ package main
 import (
 	"archive/zip"
 	"bytes"
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	_ "embed"
@@ -44,8 +45,14 @@ var root string
 var window *walk.MainWindow
 var statusLabel *walk.Label
 var keyInput *walk.LineEdit
-var startButton, stopButton *walk.PushButton
+var startButton, stopButton, cancelButton *walk.PushButton
+var progressBar *walk.ProgressBar
+var operationContext = context.Background()
+var cancelOperation context.CancelFunc
+var closeAfterCancel bool
+var operationStartedAI, operationStartedOffice bool
 var shortcut *walk.CheckBox
+var samOptions *walk.GroupBox
 var busy atomic.Bool
 var client = &http.Client{Timeout: 3 * time.Minute}
 
@@ -66,10 +73,30 @@ func progress(s string) { window.Synchronize(func() { statusLabel.SetText(s) }) 
 func info(s string) {
 	window.Synchronize(func() { walk.MsgBox(window, "AI Headquarters", s, walk.MsgBoxIconInformation) })
 }
+func pauseSetup(duration time.Duration) error {
+	select {
+	case <-operationContext.Done():
+		return operationContext.Err()
+	case <-time.After(duration):
+		return nil
+	}
+}
+func stopSetup() {
+	if cancelOperation != nil {
+		cancelOperation()
+		cancelButton.SetEnabled(false)
+		statusLabel.SetText("Stopping setup safely. Your saved office and completed downloads are kept.")
+	}
+}
 func runOperation(f func() error) {
 	if !busy.CompareAndSwap(false, true) {
 		return
 	}
+	operationContext, cancelOperation = context.WithCancel(context.Background())
+	operationStartedAI = false
+	operationStartedOffice = false
+	cancelButton.SetEnabled(true)
+	progressBar.SetMarqueeMode(true)
 	startButton.SetEnabled(false)
 	stopButton.SetEnabled(false)
 	if keyInput != nil {
@@ -77,14 +104,37 @@ func runOperation(f func() error) {
 	}
 	go func() {
 		err := f()
+		cancelled := operationContext.Err() != nil
+		if cancelled {
+			if operationStartedOffice {
+				if s := readState(); owned(s) {
+					if p, e := os.FindProcess(s.PID); e == nil {
+						p.Kill()
+					}
+				}
+			}
+			if operationStartedAI {
+				stopManagedAI()
+			}
+		}
+		cancelOperation()
 		window.Synchronize(func() {
 			busy.Store(false)
+			cancelButton.SetEnabled(false)
+			progressBar.SetMarqueeMode(false)
+			if cancelled {
+				statusLabel.SetText("Setup paused safely. Choose Install / open office to continue. Your business data was kept.")
+				if closeAfterCancel {
+					window.Close()
+					return
+				}
+			}
 			startButton.SetEnabled(true)
 			stopButton.SetEnabled(true)
 			if keyInput != nil {
 				keyInput.SetEnabled(true)
 			}
-			if err != nil {
+			if err != nil && !cancelled {
 				statusLabel.SetText("Setup needs attention. Saved business data was kept.")
 				walk.MsgBox(window, "Action needed", err.Error(), walk.MsgBoxIconError)
 			}
@@ -121,7 +171,7 @@ func protectFolder() error {
 	if e != nil {
 		return e
 	}
-	cmd := exec.Command(filepath.Join(os.Getenv("SystemRoot"), "System32", "icacls.exe"), root, "/inheritance:r", "/grant:r", "*"+user.User.Sid.String()+":(OI)(CI)F", "*S-1-5-18:(OI)(CI)F", "*S-1-5-32-544:(OI)(CI)F")
+	cmd := exec.CommandContext(operationContext, filepath.Join(os.Getenv("SystemRoot"), "System32", "icacls.exe"), root, "/inheritance:r", "/grant:r", "*"+user.User.Sid.String()+":(OI)(CI)F", "*S-1-5-18:(OI)(CI)F", "*S-1-5-32-544:(OI)(CI)F")
 	hidden(cmd)
 	if e = cmd.Run(); e != nil {
 		return errors.New("Windows could not protect your private local folder. No permissions were relaxed.")
@@ -239,10 +289,14 @@ func openOffice(s state, st localStatus) error {
 		s.Setup = ""
 		saveState(s)
 	}
-	return openItem(url)
+	return openOfficeBrowser(url)
 }
 func fetch(url, path string, max int64) error {
-	r, e := client.Get(url)
+	request, e := http.NewRequestWithContext(operationContext, "GET", url, nil)
+	if e != nil {
+		return e
+	}
+	r, e := client.Do(request)
 	if e != nil {
 		return errors.New("The official HTTPS download could not be reached. Check internet access; TLS verification was not disabled")
 	}
@@ -271,6 +325,9 @@ func unzip(data []byte, destination string) error {
 		return e
 	}
 	for _, entry := range reader.File {
+		if e := operationContext.Err(); e != nil {
+			return e
+		}
 		p := filepath.Join(destination, filepath.FromSlash(entry.Name))
 		relative, e := filepath.Rel(destination, p)
 		if e != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) || entry.Mode()&os.ModeSymlink != 0 {
@@ -325,7 +382,7 @@ type wintrustData struct {
 	Signature             uintptr
 }
 
-func verifyNode(path string) error {
+func verifySignedExecutable(path string) error {
 	file := wintrustFile{Path: utf(path)}
 	file.Size = uint32(unsafe.Sizeof(file))
 	data := wintrustData{UI: 2, Revocation: 1, Union: 1, File: uintptr(unsafe.Pointer(&file)), Action: 1}
@@ -336,9 +393,15 @@ func verifyNode(path string) error {
 	data.Action = 2
 	verify.Call(0, uintptr(unsafe.Pointer(&action)), uintptr(unsafe.Pointer(&data)))
 	if r != 0 {
-		return fmt.Errorf("Windows did not validate the official Node signature (0x%x). Setup stopped without bypassing verification", r)
+		return fmt.Errorf("Windows did not validate the executable signature (0x%x). Verification was not bypassed", r)
 	}
-	c := exec.Command(path, "--version")
+	return nil
+}
+func verifyNode(path string) error {
+	if e := verifySignedExecutable(path); e != nil {
+		return fmt.Errorf("Official runtime signature check failed: %w", e)
+	}
+	c := exec.CommandContext(operationContext, path, "--version")
 	hidden(c)
 	b, e := c.Output()
 	if e != nil || strings.TrimSpace(string(b)) != "v"+nodeVersion {
@@ -409,14 +472,43 @@ func ensureNode() (string, error) {
 	}
 	return node, nil
 }
-func installApp(node string) (string, string, error) {
+func installLauncher() (string, error) {
+	self, e := os.Executable()
+	if e != nil {
+		return "", e
+	}
+	sum, e := fileSHA(self)
+	if e != nil {
+		return "", e
+	}
+	installer := filepath.Join(root, "launchers", sum[:20], "AI-Headquarters.exe")
+	if strings.EqualFold(self, installer) {
+		return installer, nil
+	}
+	if existing, e := fileSHA(installer); e == nil && existing == sum {
+		return installer, nil
+	}
+	b, e := os.ReadFile(self)
+	if e != nil {
+		return "", e
+	}
+	if e = os.MkdirAll(filepath.Dir(installer), 0700); e != nil {
+		return "", e
+	}
+	if e = os.WriteFile(installer, b, 0600); e != nil {
+		return "", e
+	}
+	return installer, nil
+}
+func installApp(_ string) (string, string, error) {
 	hash := sha256.Sum256(payload)
 	version := hex.EncodeToString(hash[:])[:20]
 	app := filepath.Join(root, "versions", version)
-	installer := filepath.Join(root, "launchers", version, "AI-Headquarters.exe")
-	if _, e := os.Stat(filepath.Join(app, "node_modules", "three", "package.json")); e != nil {
-		progress("Installing the bundled application and locked free dependencies. Saved business data stays separate.")
-		os.MkdirAll(filepath.Dir(app), 0700)
+	if e := verifyApplication(operationContext, app); e != nil {
+		progress("Installing your complete application. No development tools or dependency setup are needed.")
+		if e = os.MkdirAll(filepath.Dir(app), 0700); e != nil {
+			return "", "", e
+		}
 		stage, e := os.MkdirTemp(filepath.Dir(app), "stage-")
 		if e != nil {
 			return "", "", e
@@ -425,41 +517,23 @@ func installApp(node string) (string, string, error) {
 		if e = unzip(payload, stage); e != nil {
 			return "", "", e
 		}
-		npm := filepath.Join(filepath.Dir(node), "node_modules", "npm", "bin", "npm-cli.js")
-		c := exec.Command(node, npm, "ci", "--ignore-scripts", "--no-audit", "--no-fund")
-		hidden(c)
-		c.Dir = stage
-		c.Env = append(os.Environ(), "npm_config_cache="+filepath.Join(root, "npm-cache"))
-		log, e := os.OpenFile(filepath.Join(root, "install.log"), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
-		if e != nil {
+		if e = verifyApplication(operationContext, stage); e != nil {
 			return "", "", e
 		}
-		c.Stdout = log
-		c.Stderr = log
-		e = c.Run()
-		log.Close()
-		if e != nil {
-			return "", "", errors.New("Locked dependency installation failed. Open local folder to inspect install.log; integrity verification was not disabled")
+		if _, e = os.Stat(app); e == nil {
+			if e = os.Rename(app, app+"-incomplete-"+time.Now().Format("20060102-150405.000000000")); e != nil {
+				return "", "", e
+			}
 		}
 		if e = os.Rename(stage, app); e != nil {
 			return "", "", e
 		}
 	}
-	if _, e := os.Stat(installer); e != nil {
-		self, e := os.Executable()
-		if e != nil {
-			return "", "", e
-		}
-		b, e := os.ReadFile(self)
-		if e != nil {
-			return "", "", e
-		}
-		os.MkdirAll(filepath.Dir(installer), 0700)
-		if e = os.WriteFile(installer, b, 0600); e != nil {
-			return "", "", e
-		}
+	launcher, e := installLauncher()
+	if e != nil {
+		return "", "", e
 	}
-	return app, installer, nil
+	return app, launcher, nil
 }
 func makeShortcut(target string) error {
 	runtime.LockOSThread()
@@ -508,12 +582,50 @@ func startOffice(wantShortcut bool) error {
 		return e
 	}
 	s := readState()
-	if st, e := getStatus(); e == nil {
-		if !owned(s) {
+	existing, existingError := getStatus()
+	runningOwned := existingError == nil && owned(s)
+	hash := sha256.Sum256(payload)
+	expectedApp := filepath.Join(root, "versions", hex.EncodeToString(hash[:])[:20])
+	if existingError == nil {
+		if !runningOwned {
 			progress("Opening the existing local office. No account or data was replaced.")
-			return openOffice(s, st)
+			return openOffice(s, existing)
 		}
-		// An explicit open/update repairs the owned app and AI together; no foreign process is killed.
+		if strings.EqualFold(s.App, expectedApp) && owned(aiState()) {
+			if models, e := aiGetTags(); e == nil && len(models) > 0 {
+				if wantShortcut {
+					if launcher, e := installLauncher(); e == nil {
+						makeShortcut(launcher)
+					}
+				}
+				progress("Your saved office and built-in AI are already running. Opening your computer.")
+				return openOffice(s, existing)
+			}
+		}
+	}
+	if !runningOwned {
+		if connection, e := net.DialTimeout("tcp", "127.0.0.1:4310", time.Second); e == nil {
+			connection.Close()
+			return errors.New("Port 4310 is occupied by another app. It was not stopped. If this is an older office, close it with its original launcher")
+		}
+		if owned(s) {
+			return errors.New("Your local office is still starting. Wait a moment and choose Install / open office again")
+		}
+	}
+	node, e := ensureNode()
+	if e != nil {
+		return e
+	}
+	app, self, e := installApp(node)
+	if e != nil {
+		return e
+	}
+	model, e := prepareBuiltInAI()
+	if e != nil {
+		return e
+	}
+	// Prepare downloads before replacing a healthy owned office, so a network failure leaves it available.
+	if runningOwned {
 		p, e := os.FindProcess(s.PID)
 		if e != nil {
 			return e
@@ -524,28 +636,18 @@ func startOffice(wantShortcut bool) error {
 		for i := 0; i < 30; i++ {
 			if c, e := net.DialTimeout("tcp", "127.0.0.1:4310", 100*time.Millisecond); e == nil {
 				c.Close()
-				time.Sleep(100 * time.Millisecond)
+				if e = pauseSetup(100 * time.Millisecond); e != nil {
+					return e
+				}
 			} else {
 				break
 			}
 		}
 	}
-	if connection, e := net.DialTimeout("tcp", "127.0.0.1:4310", time.Second); e == nil {
-		connection.Close()
-		return errors.New("Port 4310 is occupied. No application was stopped or replaced. If this is your older office, stop it with its original launcher first")
-	}
-	if owned(s) {
-		return errors.New("The owned office process exists but is not ready. Use Stop office before starting another copy")
-	}
-	node, e := ensureNode()
-	if e != nil {
+	if e = verifyAIConfiguration(node, app, model); e != nil {
 		return e
 	}
-	app, self, e := installApp(node)
-	if e != nil {
-		return e
-	}
-	if e = configureBuiltInAI(node, app); e != nil {
+	if e = operationContext.Err(); e != nil {
 		return e
 	}
 	codeBytes := make([]byte, 24)
@@ -557,7 +659,7 @@ func startOffice(wantShortcut bool) error {
 	if e != nil {
 		return e
 	}
-	c := exec.Command(node, filepath.Join(app, "src", "server.ts"))
+	c := exec.Command(node, filepath.Join(app, "runtime", "server.mjs"))
 	hidden(c)
 	c.Dir = app
 	environment := []string{}
@@ -592,12 +694,15 @@ func startOffice(wantShortcut bool) error {
 	log.Close()
 	exe, created, e := processIdentity(c.Process.Pid)
 	if e != nil {
+		c.Process.Kill()
 		return e
 	}
 	s = state{PID: c.Process.Pid, Executable: exe, App: app, Created: created, Setup: encrypted}
 	if e = saveState(s); e != nil {
+		c.Process.Kill()
 		return e
 	}
+	operationStartedOffice = true
 	c.Process.Release()
 	for i := 0; i < 40; i++ {
 		if st, e := getStatus(); e == nil {
@@ -609,7 +714,9 @@ func startOffice(wantShortcut bool) error {
 			progress("Office installed and running locally. No Render required. Clock out to pause or Stop office here.")
 			return openOffice(s, st)
 		}
-		time.Sleep(500 * time.Millisecond)
+		if e = pauseSetup(500 * time.Millisecond); e != nil {
+			return e
+		}
 	}
 	return errors.New("Office is not ready yet. Do not start another copy; inspect server-native.log in the private local folder")
 }
@@ -668,7 +775,7 @@ func importBackup(source string) error {
 		return e
 	}
 	copyDB := func(from, to string) error {
-		c := exec.Command(node, helper, "copy", from, to)
+		c := exec.CommandContext(operationContext, node, helper, "copy", from, to)
 		hidden(c)
 		if e := c.Run(); e != nil {
 			return errors.New("Database integrity/schema validation or consistent backup failed. Choose a trusted complete AI Headquarters SQLite backup. Source contents were not displayed")
@@ -690,6 +797,9 @@ func importBackup(source string) error {
 			return e
 		}
 	} else if !os.IsNotExist(e) {
+		return e
+	}
+	if e = operationContext.Err(); e != nil {
 		return e
 	}
 	moved := []string{}
@@ -736,12 +846,12 @@ func main() {
 	}
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
-	err := (MainWindow{AssignTo: &window, Title: "AI Headquarters — local app setup", MinSize: Size{Width: 760, Height: 720}, Layout: VBox{Margins: Margins{Left: 24, Top: 20, Right: 24, Bottom: 20}}, Children: []Widget{
+	err := (MainWindow{AssignTo: &window, Title: "AI Headquarters — local app setup", MinSize: Size{Width: 720, Height: 470}, Layout: VBox{Margins: Margins{Left: 24, Top: 20, Right: 24, Bottom: 20}}, Children: []Widget{
 		Label{Text: "Your company. Your computer.", Font: Font{Family: "Segoe UI", PointSize: 19, Bold: true}},
-		Label{Text: "This native Windows setup does not run a PowerShell script or open a terminal.\nBusiness records stay privately in your Windows user folder, outside application updates.\nInternet is used for official runtime/dependency downloads and authorized research. Free local AI and a suitable starter model are included automatically. First setup downloads about 2–5 GB. No paid services are connected."},
-		Label{Text: "Private data folder: " + filepath.Join(root, "data")},
+		Label{Text: "We set up your private business office and free local AI automatically.\nFirst setup needs internet and downloads about 2–5 GB. Your work stays saved between app updates.\nNo terminal, separate AI installation or paid AI account is needed."},
+		Label{Text: "Your business records stay in your private Windows account."},
 		CheckBox{AssignTo: &shortcut, Text: "Create a desktop shortcut", Checked: true},
-		Composite{Layout: HBox{}, Children: []Widget{PushButton{AssignTo: &startButton, Text: "Install / open office", OnClicked: func() { wanted := shortcut.Checked(); runOperation(func() error { return startOffice(wanted) }) }}, PushButton{AssignTo: &stopButton, Text: "Stop local office", OnClicked: func() {
+		Composite{Layout: HBox{}, Children: []Widget{PushButton{AssignTo: &startButton, Text: "Install / open office", OnClicked: func() { wanted := shortcut.Checked(); runOperation(func() error { return startOffice(wanted) }) }}, PushButton{AssignTo: &cancelButton, Text: "Cancel setup", Enabled: false, OnClicked: stopSetup}, PushButton{AssignTo: &stopButton, Text: "Stop local office", OnClicked: func() {
 			if walk.MsgBox(window, "Stop local office?", "Saved data is retained. Active research/model requests stop and can recover after restart.", walk.MsgBoxYesNo|walk.MsgBoxIconQuestion) == walk.DlgCmdYes {
 				runOperation(stopOffice)
 			}
@@ -762,7 +872,13 @@ func main() {
 				runOperation(func() error { return importBackup(source) })
 			}
 		}},
-		GroupBox{Title: "Optional free SAM.gov current-bid access", Layout: VBox{}, Children: []Widget{Label{Text: "Historical awards need no key. Current federal bid search requires your own free SAM.gov API key.\nThis field is optional, masked, and saved using Windows-user encryption. Never share the key in chat."}, LineEdit{AssignTo: &keyInput, PasswordMode: true}, Composite{Layout: HBox{}, Children: []Widget{PushButton{Text: "Save private SAM key", OnClicked: func() {
+		PushButton{Text: "Optional: add federal bid access", OnClicked: func() {
+			samOptions.SetVisible(!samOptions.Visible())
+			if samOptions.Visible() {
+				window.SetSize(walk.Size{Width: 760, Height: 740})
+			}
+		}},
+		GroupBox{AssignTo: &samOptions, Visible: false, Title: "Optional free SAM.gov current-bid access", Layout: VBox{}, Children: []Widget{Label{Text: "Historical awards need no key. Current federal bid search requires your own free SAM.gov API key.\nThis field is optional, masked, and saved using Windows-user encryption. Never share the key in chat."}, LineEdit{AssignTo: &keyInput, PasswordMode: true}, Composite{Layout: HBox{}, Children: []Widget{PushButton{Text: "Save private SAM key", OnClicked: func() {
 			if busy.Load() {
 				return
 			}
@@ -787,7 +903,8 @@ func main() {
 				return nil
 			})
 		}}, PushButton{Text: "Official free account / key instructions", OnClicked: func() { openItem("https://open.gsa.gov/api/get-opportunities-public-api/") }}}}}},
-		Label{AssignTo: &statusLabel, Text: "Preparing setup. Local AI installation, model selection and connection are automatic. This computer must remain awake for background work.\nA verified publisher certificate is not included; this app is unsigned. Only run the download from your own repository or authenticated owner workspace."},
+		ProgressBar{AssignTo: &progressBar},
+		Label{AssignTo: &statusLabel, Text: "Starting automatic setup… You can cancel safely and continue later.\nKeep this computer awake for background work. This download is currently unsigned."},
 	}}).Create()
 	if err != nil {
 		syscall.NewLazyDLL("user32.dll").NewProc("MessageBoxW").Call(0, uintptr(unsafe.Pointer(utf("The setup window could not open: "+err.Error()))), uintptr(unsafe.Pointer(utf("AI Headquarters"))), 0x10)
@@ -796,7 +913,8 @@ func main() {
 	window.Closing().Attach(func(cancel *bool, reason walk.CloseReason) {
 		if busy.Load() {
 			*cancel = true
-			walk.MsgBox(window, "Setup in progress", "Wait for the operation to finish before closing setup.", walk.MsgBoxIconInformation)
+			closeAfterCancel = true
+			stopSetup()
 		}
 	})
 	window.Starting().Attach(func() { runOperation(func() error { return startOffice(shortcut.Checked()) }) })

@@ -2,9 +2,9 @@
 
 Use the **native Windows x64 setup executable**, not GitHub’s source ZIP or the old `.cmd` launcher. The old PowerShell launcher can be rejected by Windows signing policy; the native setup does not execute PowerShell or change that policy.
 
-1. Sign in to your current office. Open **Set up this computer / local AI** and choose **Download Windows setup (.exe)**. A direct repository copy is also in `downloads/AI-Headquarters-Setup.exe` (choose Download raw file on GitHub).
-2. Open `AI-Headquarters-Setup.exe`. It is unsigned: Windows may show an unknown-publisher warning. Only use the file from your own repository or authenticated owner workspace. Actual Windows installation remains unvalidated in this Linux development environment.
-3. Setup starts automatically when the downloaded executable opens; **Install / open office** is available for reopening/retry. It downloads official portable Node, verifies SHA-256 and Windows Authenticode, installs integrity-locked npm dependencies and opens your browser at `http://127.0.0.1:4310`. Downloads require internet; no terminal or administrator install is needed.
+1. Visit your app website’s **/download** page and choose **Download for Windows**. Existing host: https://leax-office.onrender.com/download . No sign-in, ZIP extraction or project-folder browsing is needed.
+2. Open `AI-Headquarters-Setup.exe`. It is unsigned: Windows may show an unknown-publisher warning. Only use the app owner’s official download site or your own repository. Actual Windows installation remains unvalidated in this Linux development environment.
+3. Setup starts automatically when the downloaded executable opens; **Install / open office** is available for reopening/retry. It downloads official portable Node, verifies SHA-256 and Windows Authenticode, verifies the complete production app and opens a local app-style browser window at `http://127.0.0.1:4310`. Downloads require internet; no terminal or administrator install is needed.
 4. Existing local data is reused. For a new office, choose your founder password; setup supplies the private one-time code in a local fragment and the app clears it from the address. No code is published or sent in a query string.
 5. To preserve your Render office, first download its private SQLite backup in Owner computer → Company & research, stop the local office, then choose **Import saved office from Render / backup** in native setup. Confirm replacement after choosing your trusted backup. The helper validates schema/integrity and stages a consistent copy. Existing local data receives a verified recovery backup and an archive before replacement; failed replacement restores originals. Start again and use the imported founder password. No automatic cloud sync occurs.
 
@@ -19,7 +19,7 @@ Everything is user scoped under:
 - `data`: durable SQLite database and local backups. **Keep this folder.** It is outside application versions, so updating code does not create a fresh founder account or erase prior work.
 - `versions`: separate application versions. Existing versions and any edits are not overwritten. Old versions are retained for recovery.
 - `runtimes`: portable Node 24.19.0, selected for your Windows architecture. No system Node installation or PATH change is required.
-- `downloads` / `npm-cache`: verified runtime download and dependency cache.
+- `downloads`: runtime download cache. Customer setup no longer installs npm dependencies; an old `npm-cache` folder may remain from an earlier version.
 - `sam-native.dpapi` (native setup; old script uses `sam-api-key.dpapi`): optional SAM.gov API credential encrypted with Windows DPAPI for the current user. It is separate from process state and is never loaded into the visible wizard field.
 - `native-state.json` (native setup; old script uses `server-state.json`): process identity and, only during first setup, a setup code encrypted for your Windows user with DPAPI. It is not portable to another Windows user.
 - `recovery`: verified pre-import database backups and archived original SQLite files kept when you explicitly import a backup.
@@ -31,7 +31,7 @@ The server binds only to `127.0.0.1:4310`; it is not opened to your Wi-Fi networ
 
 ## Updating and stopping
 
-To update, use **Stop local office**, close the old setup window, download the newer executable and choose **Install / open office**. A new app version is prepared while the data folder stays unchanged. The wizard will not overwrite an app that is already running; it opens the existing instance instead. Keep a verified database backup before major updates.
+To update, use **Stop local office**, close the old setup window, download the newer executable and choose **Install / open office**. A new app version is prepared while the data folder stays unchanged. A healthy current version opens immediately; an update prepares its verified dependencies before replacing the owned running server. Keep a verified database backup before major updates.
 
 Closing the browser or setup window leaves the local server running while Windows is awake. Use **Clock out** inside the app to pause new work. Use **Stop office** in this launcher to stop the process completely. The launcher verifies the saved process ID, executable, start time before stopping it; it never kills an unknown process occupying the port. Interrupted read-only work can recover from saved checkpoints after restart.
 
@@ -76,7 +76,7 @@ First setup needs HTTPS access to `nodejs.org` and the npm registry/dependency d
 
 ## Current validation limits
 
-The script passed PowerShell parser syntax validation in this Linux development environment (PowerShell 7.4.6, downloaded from the official release with its SHA-256 verified); a real Windows install, OS certificate validation, local startup/stop and shortcut creation must still be tested on Windows. This is a guided source-package launcher, not a published/signed desktop executable, macOS/Linux installer or automatic cloud-data migration. Do not call it a verified Windows release until that test is completed.
+Historical note: the older PowerShell source launcher passed parser checks only. It is no longer the customer install path. The current native executable cross-compiles and production/browser tests pass, but Windows OS certificate checks, DPAPI, startup/stop and shortcuts still need actual Windows validation. The executable remains unsigned; macOS/Linux packaging and automatic cloud synchronization are not implemented.
 
 
 ## Rebuilding the native setup (developers only)
@@ -91,3 +91,6 @@ Opening the executable starts setup automatically. It verifies and extracts offi
 The engine is app-private under `ai/`, models remain under `ai/models/`, and `ai-process.json` tracks only the owned engine. A pre-existing system Ollama service is neither stopped nor reconfigured. Stop local office stops the owned app and owned engine; closing the browser/setup leaves them running while Windows is awake. No Windows service/startup registration or cloud AI is enabled. The SAM key remains optional and owner-provided because it belongs to a personal SAM.gov account; it is not needed for historical awards or local AI.
 
 The native Windows flow remains cross-compiled and unexecuted here. Pinned release metadata/checksum were fetched from official GitHub release assets, but downloading/running the Windows AI engine and actual model inference have not been validated on a Windows device. The app executable remains unsigned.
+
+
+The office now opens in a separate app-style window with a trusted installed Edge/Chrome browser where available; otherwise it uses your normal browser. Setup does not read or modify browser profiles. Cancel setup pauses downloads/foreground helpers safely and preserves saved records and completed model downloads. The production package includes no original project folders or personal business database; executable/browser internals are still inspectable, as with installed software generally.

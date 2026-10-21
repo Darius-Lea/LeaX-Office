@@ -7,3 +7,5 @@
 6. Add verified automatic backup rotation and durable hosting/synchronization; improve 3D office incrementally while measured business outputs remain the priority.
 
 2026-10-21 follow-up: Native x64 GUI setup and consolidated owner-computer packets implemented; next prerequisite is actual Windows installation/import validation and a connected local Ollama model/free SAM key. Broader construction/news/private bid sources and automated official-site/decision-maker discovery remain incomplete, not simulated.
+
+0.2.0 preview: controlled desktop, richer full-screen office, business guide/pricing worksheet and production single-file download delivered. Next release gates are Windows-device execution/signing and actual connected-model/source validation. Broader source discovery, contact verification, authorized sending/replies, accepted proposals, contracts/invoices and revenue collection are still incomplete; do not market them as implemented.

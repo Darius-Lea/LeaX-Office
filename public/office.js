@@ -1,4 +1,4 @@
-// CSS 3D office. Manager movement represents recorded server-side patrols only.
+// The lightweight desk list and 3D office share the same real saved activity.
 const room=document.querySelector('#office-room');
 const viewport=document.querySelector('#office-viewport');
 const webglHost=document.createElement('div');webglHost.className='office-webgl';webglHost.hidden=true;viewport.prepend(webglHost);
@@ -12,7 +12,7 @@ async function ensure3D(){
  renderer=createOffice3D(webglHost,{onEmployee:id=>latestInspect?.(id),onOwner:(pane)=>{document.querySelector('#owner-computer').click();if(pane==='packets')document.querySelector('[data-pane=packets]').click();}});
  viewport.classList.add('webgl-ready');webglHost.hidden=document.body.dataset.view!=='3d';
  renderer.update(latestState);renderer.setEnabled(document.body.dataset.view==='3d');
- message.textContent='Drag to look around · Scroll to zoom · Click an employee or your owner computer. Keyboard: focus the office, use arrows and + / −. Clerical view provides standard controls.';
+ message.textContent='Drag to look around · Scroll or pinch to zoom · Click your computer, a desk or the printer.';
  }catch(error){
  message.textContent='3D rendering is unavailable on this device. Your office continues in the lightweight clerical view.';
  setOfficeView('2d');
@@ -26,12 +26,14 @@ const figure=document.createElement('span');figure.className='person';figure.inn
 const caption=document.createElement('span');caption.className='patrol-caption';patrol.append(figure,caption);
 export function setOfficeView(view){
  if(!['3d','2d','terminal'].includes(view))view='3d';
- document.body.dataset.view=view;document.querySelector('#clerical').open=view!=='3d';localStorage.setItem('hq-view',view);
- document.querySelector('#angle-label').hidden=view!=='3d';
- for(const name of ['3d','2d','terminal'])document.querySelector('#view-'+name).setAttribute('aria-pressed',String(name===view));
+ document.body.dataset.view=view;const files=document.querySelector('#clerical');if(files)files.open=view!=='3d';try{localStorage.setItem('hq-view',view);}catch{};
+ const angleLabel=document.querySelector('#angle-label');if(angleLabel)angleLabel.hidden=true;
+ for(const name of ['3d','2d','terminal'])document.querySelector('#view-'+name)?.setAttribute('aria-pressed',String(name===view));
  webglHost.hidden=view!=='3d';renderer?.setEnabled(view==='3d');if(view==='3d')ensure3D();
 }
-document.querySelector('#office-angle').oninput=e=>{room.style.setProperty('--angle',e.target.value+'deg');renderer?.setAngle(e.target.value);};
+const legacyAngle=document.querySelector('#office-angle');if(legacyAngle)legacyAngle.oninput=e=>{room.style.setProperty('--angle',e.target.value+'deg');renderer?.setAngle(e.target.value);};
+export function resetOfficeCamera(){renderer?.resetCamera();}
+const resetButton=document.querySelector('#reset-office');if(resetButton)resetButton.onclick=resetOfficeCamera;
 export function renderOffice(state,inspect){
  latestState=state;latestInspect=inspect;renderer?.update(state);ensure3D();
  for(const [id,desk] of desks)if(!state.employees.some(e=>e.id===id)){desk.remove();desks.delete(id);}

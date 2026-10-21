@@ -121,7 +121,7 @@ func ensureAIRuntime() (string, error) {
 			if e != nil || strings.HasPrefix(rel, "..") || strings.Contains(name, ":") {
 				return "", errors.New("Invalid AI runtime manifest path")
 			}
-			if e = checkHash(p, sum); e != nil {
+			if e = checkHashContext(operationContext, p, sum); e != nil {
 				return "", e
 			}
 		}
@@ -133,13 +133,13 @@ func ensureAIRuntime() (string, error) {
 	downloads := filepath.Join(root, "downloads")
 	os.MkdirAll(downloads, 0700)
 	archive := filepath.Join(downloads, "ollama-"+ollamaVersion+"-windows-amd64.zip")
-	if e := checkHash(archive, ollamaArchiveSHA); e != nil {
+	if e := checkHashContext(operationContext, archive, ollamaArchiveSHA); e != nil {
 		progress("Downloading the built-in local AI engine (about 1.5 GB). You do not need to install or connect another app.")
 		if e = downloadAI(archive); e != nil {
 			return "", e
 		}
 		progress("Verifying the official AI engine download before running it.")
-		if e = checkHash(archive, ollamaArchiveSHA); e != nil {
+		if e = checkHashContext(operationContext, archive, ollamaArchiveSHA); e != nil {
 			os.Remove(archive)
 			return "", e
 		}
@@ -151,7 +151,7 @@ func ensureAIRuntime() (string, error) {
 	}
 	defer os.RemoveAll(stage)
 	progress("Preparing the verified local AI engine. Your business files remain separate.")
-	if e = extractAIArchive(archive, stage); e != nil {
+	if e = extractAIArchiveContext(operationContext, archive, stage); e != nil {
 		return "", e
 	}
 	if _, e = os.Stat(filepath.Join(stage, "ollama.exe")); e != nil {
@@ -169,7 +169,7 @@ func ensureAIRuntime() (string, error) {
 		if e != nil {
 			return e
 		}
-		sum, e := hashFile(p)
+		sum, e := hashFileContext(operationContext, p)
 		if e != nil {
 			return e
 		}
@@ -202,12 +202,16 @@ func (p *downloadProgress) Write(b []byte) (int, error) {
 	p.done += int64(len(b))
 	if time.Since(p.last) > time.Second {
 		p.last = time.Now()
-		progress(fmt.Sprintf("Installing built-in AI: downloaded %.0f MB of %.0f MB. Keep setup open; no separate connection is needed.", float64(p.done)/1048576, float64(p.total)/1048576))
+		if p.total > 0 {
+			progress(fmt.Sprintf("Installing built-in AI: %.0f MB of %.0f MB. This is automatic; you can safely cancel and retry.", float64(p.done)/1048576, float64(p.total)/1048576))
+		} else {
+			progress(fmt.Sprintf("Installing built-in AI: %.0f MB downloaded. This is automatic; you can safely cancel and retry.", float64(p.done)/1048576))
+		}
 	}
 	return len(b), nil
 }
 func downloadAI(path string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Hour)
+	ctx, cancel := context.WithTimeout(operationContext, 2*time.Hour)
 	defer cancel()
 	request, e := http.NewRequestWithContext(ctx, "GET", ollamaArchiveURL, nil)
 	if e != nil {
@@ -249,7 +253,9 @@ func ensureAIProcess() error {
 			if _, e := aiGetTags(); e == nil {
 				return nil
 			}
-			time.Sleep(time.Second)
+			if e := pauseSetup(time.Second); e != nil {
+				return e
+			}
 		}
 		progress("Repairing the app’s unresponsive AI process. Other applications are left alone.")
 		if e := stopManagedAI(); e != nil {
@@ -258,7 +264,9 @@ func ensureAIProcess() error {
 		for i := 0; i < 30; i++ {
 			if c, e := net.DialTimeout("tcp", "127.0.0.1:"+managedAIPort, 100*time.Millisecond); e == nil {
 				c.Close()
-				time.Sleep(100 * time.Millisecond)
+				if e := pauseSetup(100 * time.Millisecond); e != nil {
+					return e
+				}
 			} else {
 				break
 			}
@@ -303,12 +311,15 @@ func ensureAIProcess() error {
 		c.Process.Kill()
 		return e
 	}
+	operationStartedAI = true
 	c.Process.Release()
 	for i := 0; i < 60; i++ {
 		if _, e = aiGetTags(); e == nil {
 			return nil
 		}
-		time.Sleep(time.Second)
+		if e := pauseSetup(time.Second); e != nil {
+			return e
+		}
 	}
 	return errors.New("Local AI engine did not become ready. Research records were retained; setup can be reopened to retry")
 }
@@ -323,7 +334,7 @@ func pullAIModel(model string) error {
 		}
 	}
 	data, _ := json.Marshal(map[string]any{"model": model, "stream": true})
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Hour)
+	ctx, cancel := context.WithTimeout(operationContext, 2*time.Hour)
 	defer cancel()
 	request, e := http.NewRequestWithContext(ctx, "POST", aiURL+"/api/pull", bytes.NewReader(data))
 	if e != nil {
@@ -383,27 +394,30 @@ func pullAIModel(model string) error {
 	}
 	return errors.New("AI engine did not confirm the installed model")
 }
-func configureBuiltInAI(node, app string) error {
+func prepareBuiltInAI() (string, error) {
 	memory, e := deviceMemory()
 	if e != nil {
-		return errors.New("Windows could not detect available device memory for automatic AI setup")
+		return "", errors.New("Windows could not detect available device memory for automatic AI setup")
 	}
 	model, e := starterModel(memory)
 	if e != nil {
-		return e
+		return "", e
 	}
 	if e = ensureAIProcess(); e != nil {
-		return e
+		return "", e
 	}
 	if e = pullAIModel(model); e != nil {
-		return e
+		return "", e
 	}
+	return model, nil
+}
+func verifyAIConfiguration(node, app, model string) error {
 	progress("Testing genuine local AI, then saving the automatic connection. First startup may take several minutes.")
 	helper := filepath.Join(app, "scripts", "configure-local-ai.mjs")
-	c := exec.Command(node, helper, filepath.Join(root, "data", "headquarters.sqlite"), model)
+	c := exec.CommandContext(operationContext, node, helper, filepath.Join(root, "data", "headquarters.sqlite"), model)
 	hidden(c)
 	c.Env = append(os.Environ(), "HQ_OLLAMA_PORT="+managedAIPort)
-	if e = c.Run(); e != nil {
+	if e := c.Run(); e != nil {
 		return errors.New("The model installed but its local inference check did not complete. Reopen setup to retry; no successful AI work was invented")
 	}
 	return nil

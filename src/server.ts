@@ -1,7 +1,9 @@
+import {pricingState,saveEstimate} from './pricing.ts';
+import {businessGuide,saveReadiness} from './business-guide.ts';
 import {assignmentReport} from './reports.ts';
 import {createServer} from 'node:http';
-import {readFileSync} from 'node:fs';
-import {randomBytes} from 'node:crypto';
+import {readFileSync,existsSync,createReadStream,statSync} from 'node:fs';
+import {randomBytes,createHash} from 'node:crypto';
 import {backup} from 'node:sqlite';
 import {join} from 'node:path';
 import {db,directory,setup,login,authenticated,enqueue,snapshot,audit,clock,setting,setSetting,editTask} from './store.ts';
@@ -29,15 +31,21 @@ const needsSetup=!db.prepare('SELECT id FROM founder').get();
 if(publicBinding&&needsSetup&&(!process.env.HQ_SETUP_CODE||process.env.HQ_SETUP_CODE.length<32))throw Error('First public startup requires a private HQ_SETUP_CODE of at least 32 characters in service environment settings');
 const bootstrap=process.env.HQ_SETUP_CODE || randomBytes(24).toString('hex');
 if(needsSetup&&!publicBinding&&!process.env.HQ_SETUP_CODE)console.log('One-time local setup code: '+bootstrap);
+function vendorFile(name:string,original:string){const packed=new URL('../vendor/'+name,import.meta.url);return readFileSync(existsSync(packed)?packed:new URL('../node_modules/three/'+original,import.meta.url));}
 const attempts=new Map<string,{count:number,time:number}>();
 const server=createServer(async(req,res)=>{
  res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; frame-ancestors 'none'");res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Cache-Control','no-store');
  const send=(status:number,data:any)=>{res.writeHead(status,{'Content-Type':'application/json'});res.end(JSON.stringify(data));};
  try{
  const url=new URL(req.url||'/',`http://127.0.0.1:${port}`);
- if(req.method==='GET' && ['/', '/app.js','/office.js','/office3d.js','/style.css','/report.css','/report.js'].includes(url.pathname)){const file=url.pathname==='/'?'index.html':url.pathname.slice(1);res.setHeader('Content-Type',file.endsWith('html')?'text/html':file.endsWith('js')?'text/javascript':'text/css');res.end(readFileSync(new URL('../public/'+file,import.meta.url)));return;}
- if(req.method==='GET'&&['/vendor/three.module.js','/vendor/three.core.js'].includes(url.pathname)){res.setHeader('Content-Type','text/javascript');res.setHeader('Cache-Control','public, max-age=86400');res.end(readFileSync(new URL('../node_modules/three/build/'+url.pathname.split('/').pop(),import.meta.url)));return;}
- if(req.method==='GET'&&['/vendor/FontLoader.js','/vendor/TextGeometry.js','/vendor/office-font.json'].includes(url.pathname)){const paths:Record<string,string>={'/vendor/FontLoader.js':'loaders/FontLoader.js','/vendor/TextGeometry.js':'geometries/TextGeometry.js','/vendor/office-font.json':'../fonts/helvetiker_regular.typeface.json'};const raw=readFileSync(new URL('../node_modules/three/examples/jsm/'+paths[url.pathname],import.meta.url),'utf8');res.setHeader('Content-Type',url.pathname.endsWith('json')?'application/json':'text/javascript');res.end(raw.replace(/from 'three'/g,"from '/vendor/three.module.js'"));return;}
+ if(req.method==='GET' && ['/', '/download','/download.css','/app.js','/office.js','/office3d.js','/style.css','/report.css','/report.js'].includes(url.pathname)){const file=url.pathname==='/'?'index.html':url.pathname==='/download'?'download.html':url.pathname.slice(1);res.setHeader('Content-Type',file.endsWith('html')?'text/html':file.endsWith('js')?'text/javascript':'text/css');res.end(readFileSync(new URL('../public/'+file,import.meta.url)));return;}
+ if(req.method==='GET'&&['/vendor/three.module.js','/vendor/three.core.js'].includes(url.pathname)){res.setHeader('Content-Type','text/javascript');res.setHeader('Cache-Control','public, max-age=86400');res.end(vendorFile(url.pathname.split('/').pop()!,'build/'+url.pathname.split('/').pop()));return;}
+ if(req.method==='GET'&&['/vendor/FontLoader.js','/vendor/TextGeometry.js','/vendor/office-font.json'].includes(url.pathname)){const paths:Record<string,string>={'/vendor/FontLoader.js':'loaders/FontLoader.js','/vendor/TextGeometry.js':'geometries/TextGeometry.js','/vendor/office-font.json':'../fonts/helvetiker_regular.typeface.json'};const raw=vendorFile(url.pathname.split('/').pop()!,'examples/jsm/'+paths[url.pathname]).toString('utf8');res.setHeader('Content-Type',url.pathname.endsWith('json')?'application/json':'text/javascript');res.end(raw.replace(/from 'three'/g,"from '/vendor/three.module.js'"));return;}
+ if(req.method==='GET'&&['/download/windows','/download/windows.sha256'].includes(url.pathname)){
+ const file=process.env.HQ_INSTALLER_PATH||new URL('../downloads/AI-Headquarters-Setup.exe',import.meta.url);
+ if(!existsSync(file))return send(503,{error:'The Windows setup file is not available on this host yet. Contact the app owner.'});
+ if(url.pathname.endsWith('.sha256')){res.setHeader('Content-Type','text/plain');res.end(createHash('sha256').update(readFileSync(file)).digest('hex')+'  AI-Headquarters-Setup.exe\n');return;}
+ res.setHeader('Content-Type','application/vnd.microsoft.portable-executable');res.setHeader('Content-Disposition','attachment; filename="AI-Headquarters-Setup.exe"');res.setHeader('Content-Length',statSync(file).size);const stream=createReadStream(file);stream.on('error',()=>res.destroy());res.on('close',()=>stream.destroy());stream.pipe(res);return;}
  if(req.method==='GET' && url.pathname==='/api/status')return send(200,{product:'ai-headquarters',setupRequired:!db.prepare('SELECT id FROM founder').get()});
  const localPort=(server.address() as any)?.port||port;
  const allowedOrigins=publicBinding?[publicOrigin]:[`http://127.0.0.1:${localPort}`,`http://localhost:${localPort}`,...(publicOrigin?[publicOrigin]:[])];
@@ -53,9 +61,11 @@ const server=createServer(async(req,res)=>{
  if(req.method==='GET'&&url.pathname.startsWith('/api/reports/')){const html=assignmentReport(decodeURIComponent(url.pathname.slice('/api/reports/'.length)),url.searchParams.get('download')==='1');res.setHeader('Content-Type','text/html; charset=utf-8');if(url.searchParams.get('download')==='1')res.setHeader('Content-Disposition','attachment; filename="Assignment-packet.html"');res.end(html);return;}
  if(req.method==='GET'&&url.pathname==='/api/download/windows'){res.setHeader('Content-Type','application/vnd.microsoft.portable-executable');res.setHeader('Content-Disposition','attachment; filename="AI-Headquarters-Setup.exe"');res.end(readFileSync(process.env.HQ_INSTALLER_PATH||new URL('../downloads/AI-Headquarters-Setup.exe',import.meta.url)));return;}
  if(req.method==='GET'&&url.pathname==='/api/state'){
- const state=snapshot();return send(200,{...state,opportunities:state.opportunities.map(record=>({...record,advice:awardAdvice(record,state.company.name)})),...teamState(),roleCharters:ROLE_CHARTERS,manager:managerState(),aiRuns:agentRuns(),aiConfigured:!!setting('ollama_model'),contactResearch:contactState(),drafts:draftState(),solicitations:solicitationState()});}
+ const state=snapshot();return send(200,{...state,businessGuide:businessGuide(),pricing:pricingState(),opportunities:state.opportunities.map(record=>({...record,advice:awardAdvice(record,state.company.name)})),...teamState(),roleCharters:ROLE_CHARTERS,manager:managerState(),aiRuns:agentRuns(),aiConfigured:!!setting('ollama_model'),contactResearch:contactState(),drafts:draftState(),solicitations:solicitationState()});}
  if(req.method==='GET'&&url.pathname==='/api/export/database'){
  const path=join(directory,'transfer-'+Date.now()+'.sqlite');await backup(db,path);res.setHeader('Content-Type','application/vnd.sqlite3');res.setHeader('Content-Disposition','attachment; filename="AI-Headquarters-backup.sqlite"');res.end(readFileSync(path));return;}
+ if(req.method==='POST'&&url.pathname==='/api/pricing/save')return send(201,saveEstimate(body));
+ if(req.method==='POST'&&url.pathname==='/api/business/readiness')return send(200,saveReadiness(body));
  if(req.method==='POST'&&url.pathname==='/api/solicitations/search'){return send(200,await searchSolicitations(setting('standing_goal')));}
  if(req.method==='POST'&&url.pathname==='/api/contacts/research'){return send(200,await researchContacts(body.url,body.company));}
  if(req.method==='POST'&&url.pathname==='/api/drafts/notice'){return send(201,{id:prepareNoticeDraft(body.noticeid,body.address)});}

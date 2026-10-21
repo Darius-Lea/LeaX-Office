@@ -11,3 +11,5 @@
 - Current app is single-founder; public multi-tenant security audit/isolation, account recovery and production deployment hardening remain incomplete.
 
 Native Windows setup is now cross-compiled and replaces the unsigned PowerShell launcher for normal downloads. It remains unsigned and has not been executed on Windows. Validate native UI, runtime download signature checks, DPAPI, shortcuts, existing-process ownership and backup recovery on Windows before treating installation as verified. Code signing requires a legitimate publisher certificate; none is present. Broad private construction/news/rollout feeds and autonomous decision-maker discovery are not implemented.
+
+0.2.0 preview distribution excludes source project folders and personal records but is not reverse-engineering protection. Public download is now intentional; shared personal credentials must never be embedded. Signing and actual Windows-device release validation remain blockers to calling this market-ready. Target customer-service screening is still APG-oriented, not general-purpose industry qualification. Pricing worksheets are owner drafts only, not contracts/revenue.
