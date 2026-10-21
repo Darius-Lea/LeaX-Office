@@ -1,3 +1,5 @@
+import {profileState} from './business-profile.ts';
+import {fundingState,FUNDING_SOURCE} from './funding.ts';
 import {db,enqueue,audit} from './store.ts';
 import {searchSolicitations,solicitationState} from './solicitations.ts';
 
@@ -46,6 +48,8 @@ export function evidenceReceipt(run:string){const events=toolEvents(run) as any[
 export function validateAdvisoryReferences(output:string,ownerPrompt:string){
  const material=[ownerPrompt,...(db.prepare('SELECT url,evidence FROM opportunities').all() as any[]).map(r=>r.url+' '+r.evidence),...(db.prepare('SELECT url,contacts FROM solicitations').all() as any[]).map(r=>r.url+' '+r.contacts)];
  if(db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='contact_research'").get())material.push(...(db.prepare("SELECT url,contacts FROM contact_research WHERE status='Completed'").all() as any[]).map(r=>r.url+' '+r.contacts));
+ const owner=profileState();material.push(owner.profile.email+' '+owner.profile.website);
+ const funding=fundingState();material.push(FUNDING_SOURCE.url,...funding.records.filter(record=>record.source===FUNDING_SOURCE.id&&/^https:\/\/www\.grants\.gov\/search-results-detail\/\d+$/.test(record.url)).map(record=>record.url));
  const text=material.join('\n');const emails=(s:string)=>s.match(/[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi)||[];
  const knownEmails=new Set(emails(text).map(s=>s.toLowerCase()));
  if(emails(output).some(email=>!knownEmails.has(email.toLowerCase())))throw Error('Model introduced an email address absent from saved source evidence or owner input; output blocked for review');

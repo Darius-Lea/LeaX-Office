@@ -1,6 +1,7 @@
 import {createHash} from 'node:crypto';
 import {db,setting,setSetting,audit} from './store.ts';
 import './team.ts';
+import {observeExpiredClaim,observeMissingOutput} from './accountability.ts';
 
 const FOLLOW_UP_ROLES=['Juliet','Hotel','Delta','Einstein'];
 const PATROL_INTERVAL=60000;
@@ -19,8 +20,9 @@ export function managerPatrol(now=Date.now()):ManagerStatus{
  const issues:ManagerIssue[]=[];const recovered:string[]=[];
  db.exec('BEGIN IMMEDIATE');
  try{
-  const abandoned=db.prepare("SELECT id,agent,attempts FROM tasks WHERE status='Running' AND lease<=?").all(now) as any[];
+  const abandoned=db.prepare("SELECT id,agent,attempts,lease FROM tasks WHERE status='Running' AND lease<=?").all(now) as any[];
   for(const task of abandoned){
+   const incident=observeExpiredClaim(task,now);if(incident)issues.push({type:'execution_strike',task:task.id,agent:task.agent,message:'Get back to work! Repeated interrupted execution recorded; CEO review requested. This is not intentional slacking.'});
    if(task.attempts<3){
     db.prepare("UPDATE tasks SET status='Queued',lease=0,error=NULL WHERE id=? AND status='Running'").run(task.id);
     recovered.push(String(task.id));audit(task.id,'Johnson recovered an expired worker claim; checkpoint and objective preserved');
@@ -48,6 +50,7 @@ export function managerPatrol(now=Date.now()):ManagerStatus{
      issues.push({type:'handoff_repaired',task:task.id,agent,message:'Missing follow-up assignment queued; output is not yet complete'});
      audit(task.id,'Johnson restored missing follow-up assignment for '+agent);
     }else if(job.status==='Completed'&&!note){
+     const incident=observeMissingOutput(task.id,agent,now);if(incident)issues.push({type:'execution_strike',task:task.id,agent,message:'Get back to work! A promised report is missing again after recovery; CEO review requested.'});
      db.prepare("UPDATE team_jobs SET status='Queued' WHERE task=? AND agent=?").run(task.id,agent);
      issues.push({type:'missing_output',task:task.id,agent,message:'Completed stage had no saved report; stage requeued to produce its output'});
      audit(task.id,'Johnson requeued '+agent+' because its completed stage had no saved report');

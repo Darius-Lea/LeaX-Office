@@ -26,6 +26,7 @@ test('HTTP auth, origin protection, retry, saved account across restart, and log
  assert.equal((await call('contacts/research',{url:'https://127.0.0.1/private',company:'Blocked target'})).status,400);assert.equal((await call('ai/run',{agent:'Einstein',prompt:'What next?'})).status,400);assert.equal((await call('ai/install',{confirm:false})).status,400);
  assert.equal((await call('company',{name:'Test Company',legalName:'Test LLC',goal:'Nationwide cabling research'})).status,200);
  assert.equal((await call('employees',{name:'New Assistant',role:'Operations'})).status,200);
+ assert.equal((await call('business/profile',{services:'s'.repeat(4000),coverage:'c'.repeat(2000),idealCustomers:'i'.repeat(2000),strengths:'s'.repeat(3000),proof:'p'.repeat(4000),website:'https://example.test/'+'p'.repeat(1900)})).status,200);assert.equal((await call('connections/status')).status,200);assert.equal((await call('business/profile/print')).status,200);
  let office=await (await call('state')).json();assert.equal(office.company.name,'Test Company');assert.equal(office.employees.length,8);assert.equal(office.clock,'out');
  assert.equal((await call('employees',{id:'Alpha',name:'Alex',role:'Research'})).status,200);
  assert.equal((await call('company',{name:'',legalName:'',goal:''})).status,400);

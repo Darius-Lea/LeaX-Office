@@ -830,6 +830,9 @@ func importBackup(source string) error {
 	return nil
 }
 func main() {
+	if handleCredentialCommand() {
+		return
+	}
 	mutex, e := windows.CreateMutex(nil, true, utf("Local\\LeaXAIHeadquartersNativeSetup"))
 	if e == windows.ERROR_ALREADY_EXISTS {
 		walk.MsgBox(nil, "AI Headquarters", "A setup window is already open. Use that window to avoid overlapping installation or database changes.", walk.MsgBoxIconInformation)

@@ -48,8 +48,8 @@ function parsed(row:any,now=Date.now()){
 }
 export function solicitationState(){
  let metadata:Metadata;try{metadata=JSON.parse(setting(STATUS_KEY)||'null');}catch{metadata=null as any;}
- if(!metadata)metadata={status:process.env.SAM_API_KEY?.trim()?'Ready':'Setup required',message:process.env.SAM_API_KEY?.trim()?'No current-notice search has run yet.':'Add SAM_API_KEY securely from a free SAM.gov account to search current notices.',checkedAt:null};
- if(!process.env.SAM_API_KEY?.trim())metadata={...metadata,status:'Setup required',message:'Add SAM_API_KEY securely from a free SAM.gov account to search current notices.'};
+ if(!metadata)metadata={status:process.env.SAM_API_KEY?.trim()?'Ready':'Setup required',message:process.env.SAM_API_KEY?.trim()?'No current-notice search has run yet.':'Open Connections and add the free access key from your own SAM.gov account to search current federal jobs.',checkedAt:null};
+ if(!process.env.SAM_API_KEY?.trim())metadata={...metadata,status:'Setup required',message:'Open Connections and add the free access key from your own SAM.gov account to search current federal jobs.'};
  else if(metadata.status==='Setup required')metadata={...metadata,status:'Ready',message:'SAM API key is configured; run a bounded search to validate access.',checkedAt:null};
  if(metadata.status==='Running'&&!busy)metadata={...metadata,status:'Blocked',message:'The previous current-notice search was interrupted. Retry after restoring access.'};
  return {...metadata,source:SOLICITATION_SOURCE,keyConfigured:!!process.env.SAM_API_KEY?.trim(),records:db.prepare('SELECT * FROM solicitations ORDER BY lastChecked DESC,postedDate DESC LIMIT 100').all().map(row=>parsed(row))};

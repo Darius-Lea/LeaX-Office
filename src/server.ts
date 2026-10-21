@@ -1,3 +1,8 @@
+import {profileState,saveProfile,profileDocument} from './business-profile.ts';
+import {connectionState,saveSAMKey} from './connections.ts';
+import {accountabilityState,resolveIncident} from './accountability.ts';
+import {outcomeState,saveOutcome,correctOutcome} from './outcomes.ts';
+import {fundingState,saveFundingProfile,searchFunding} from './funding.ts';
 import {pricingState,saveEstimate} from './pricing.ts';
 import {businessGuide,saveReadiness} from './business-guide.ts';
 import {assignmentReport} from './reports.ts';
@@ -50,7 +55,7 @@ const server=createServer(async(req,res)=>{
  const localPort=(server.address() as any)?.port||port;
  const allowedOrigins=publicBinding?[publicOrigin]:[`http://127.0.0.1:${localPort}`,`http://localhost:${localPort}`,...(publicOrigin?[publicOrigin]:[])];
  if(req.method==='POST' && !allowedOrigins.includes(req.headers.origin))return send(403,{error:'Invalid origin'});
- let body:any={};if(req.method==='POST'){let raw='';for await(const part of req){raw+=part;if(raw.length>16384)return send(413,{error:'Request too large'});}body=JSON.parse(raw||'{}');}
+ let body:any={};if(req.method==='POST'){let raw='';for await(const part of req){raw+=part;if(raw.length>(url.pathname==='/api/business/profile'?32768:16384))return send(413,{error:'Request too large'});}body=JSON.parse(raw||'{}');}
  if(['/api/setup','/api/login'].includes(url.pathname)&&req.method==='POST'){
  const key=req.socket.remoteAddress||'local';const a=attempts.get(key);if(a && Date.now()-a.time<60000 && a.count>=10)return send(429,{error:'Try again in one minute'});attempts.set(key,{count:a&&Date.now()-a.time<60000?a.count+1:1,time:a?.time&&Date.now()-a.time<60000?a.time:Date.now()});
  if(typeof body.password!=='string' || body.password.length>1024)return send(400,{error:'Invalid password'});
@@ -61,9 +66,18 @@ const server=createServer(async(req,res)=>{
  if(req.method==='GET'&&url.pathname.startsWith('/api/reports/')){const html=assignmentReport(decodeURIComponent(url.pathname.slice('/api/reports/'.length)),url.searchParams.get('download')==='1');res.setHeader('Content-Type','text/html; charset=utf-8');if(url.searchParams.get('download')==='1')res.setHeader('Content-Disposition','attachment; filename="Assignment-packet.html"');res.end(html);return;}
  if(req.method==='GET'&&url.pathname==='/api/download/windows'){res.setHeader('Content-Type','application/vnd.microsoft.portable-executable');res.setHeader('Content-Disposition','attachment; filename="AI-Headquarters-Setup.exe"');res.end(readFileSync(process.env.HQ_INSTALLER_PATH||new URL('../downloads/AI-Headquarters-Setup.exe',import.meta.url)));return;}
  if(req.method==='GET'&&url.pathname==='/api/state'){
- const state=snapshot();return send(200,{...state,businessGuide:businessGuide(),pricing:pricingState(),opportunities:state.opportunities.map(record=>({...record,advice:awardAdvice(record,state.company.name)})),...teamState(),roleCharters:ROLE_CHARTERS,manager:managerState(),aiRuns:agentRuns(),aiConfigured:!!setting('ollama_model'),contactResearch:contactState(),drafts:draftState(),solicitations:solicitationState()});}
+ const state=snapshot();return send(200,{...state,businessGuide:businessGuide(),businessProfile:profileState(),accountability:accountabilityState(),outcomes:outcomeState(),funding:fundingState(),pricing:pricingState(),opportunities:state.opportunities.map(record=>({...record,advice:awardAdvice(record,state.company.name)})),...teamState(),roleCharters:ROLE_CHARTERS,manager:managerState(),aiRuns:agentRuns(),aiConfigured:!!setting('ollama_model'),contactResearch:contactState(),drafts:draftState(),solicitations:solicitationState()});}
  if(req.method==='GET'&&url.pathname==='/api/export/database'){
  const path=join(directory,'transfer-'+Date.now()+'.sqlite');await backup(db,path);res.setHeader('Content-Type','application/vnd.sqlite3');res.setHeader('Content-Disposition','attachment; filename="AI-Headquarters-backup.sqlite"');res.end(readFileSync(path));return;}
+ if(req.method==='POST'&&url.pathname==='/api/business/profile')return send(200,saveProfile(body));
+ if(req.method==='GET'&&url.pathname==='/api/business/profile/print'){const download=url.searchParams.get('download')==='1';res.setHeader('Content-Type','text/html; charset=utf-8');if(download)res.setHeader('Content-Disposition','attachment; filename="Company-capability-statement.html"');res.end(profileDocument(download));return;}
+ if(req.method==='GET'&&url.pathname==='/api/connections/status')return send(200,connectionState());
+ if(req.method==='POST'&&url.pathname==='/api/connections/sam'){if(publicBinding)return send(403,{error:'Open the installed Windows app to save this access key privately on your computer.'});return send(200,await saveSAMKey(body.key));}
+ if(req.method==='POST'&&url.pathname==='/api/accountability/resolve')return send(200,resolveIncident(body));
+ if(req.method==='POST'&&url.pathname==='/api/outcomes/save')return send(201,saveOutcome(body));
+ if(req.method==='POST'&&url.pathname==='/api/outcomes/correct')return send(200,correctOutcome(body));
+ if(req.method==='POST'&&url.pathname==='/api/funding/profile')return send(200,saveFundingProfile(body));
+ if(req.method==='POST'&&url.pathname==='/api/funding/search')return send(200,await searchFunding());
  if(req.method==='POST'&&url.pathname==='/api/pricing/save')return send(201,saveEstimate(body));
  if(req.method==='POST'&&url.pathname==='/api/business/readiness')return send(200,saveReadiness(body));
  if(req.method==='POST'&&url.pathname==='/api/solicitations/search'){return send(200,await searchSolicitations(setting('standing_goal')));}

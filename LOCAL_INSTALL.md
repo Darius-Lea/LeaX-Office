@@ -94,3 +94,7 @@ The native Windows flow remains cross-compiled and unexecuted here. Pinned relea
 
 
 The office now opens in a separate app-style window with a trusted installed Edge/Chrome browser where available; otherwise it uses your normal browser. Setup does not read or modify browser profiles. Cancel setup pauses downloads/foreground helpers safely and preserves saved records and completed model downloads. The production package includes no original project folders or personal business database; executable/browser internals are still inspectable, as with installed software generally.
+
+## Add federal access inside your office
+
+Open Owner computer → Connections. It explains why current federal jobs need your free SAM.gov account’s key and how to request it. Paste a replacement key into the masked field and choose Save private access, then Check federal opportunity access. No terminal, host settings or app restart is needed. On installed Windows, the native helper encrypts it for your Windows user; neither the visible app state, database, logs nor shared download receives the value. The key is used in memory for the running office and decrypted privately on later starts. This path remains Windows-device unvalidated in this Linux workspace. Historical award research, built-in AI and the public funding connector do not require this key. Do not share keys in chat.
