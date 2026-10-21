@@ -9,7 +9,7 @@ const {pulse}=await import('../src/office.ts');
 test('clock-in starts standing work, survives failure, supports edits, clock-out prevents claims',async()=>{
  try{
  assert.equal(setting('clock'),undefined);assert.equal(await pulse(),false);
- assert.equal(snapshot().employees.length,6);assert.equal(snapshot().company.name,'American Power Global');
+ assert.equal(snapshot().employees.length,7);assert.equal(snapshot().company.name,'American Power Global');
  setSetting('standing_goal','Find nationwide and overseas cabling partners');clock(true);
  let state=snapshot();assert.equal(state.tasks.length,1);assert.equal(state.tasks[0].goal,setting('standing_goal'));
  clock(true);assert.equal(snapshot().tasks.length,1);

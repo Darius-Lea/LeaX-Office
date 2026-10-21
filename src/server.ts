@@ -4,6 +4,8 @@ import {randomBytes} from 'node:crypto';
 import {backup} from 'node:sqlite';
 import {join} from 'node:path';
 import {db,directory,setup,login,authenticated,enqueue,snapshot,audit,clock,setting,setSetting,editTask} from './store.ts';
+import {managerState} from './manager.ts';
+import {ROLE_CHARTERS} from './roles.ts';
 import {teamState} from './team.ts';
 import {startOffice} from './office.ts';
 const port=Number(process.env.PORT||4310);
@@ -40,7 +42,7 @@ const server=createServer(async(req,res)=>{
  const token=login(body.password);if(!token)return send(401,{error:'Invalid credentials'});res.setHeader('Set-Cookie',`hq_session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800${publicOrigin?'; Secure':''}`);return send(200,{ok:true});}
  const token=(req.headers.cookie||'').split('; ').find(v=>v.startsWith('hq_session='))?.slice(11)||'';
  if(!authenticated(token))return send(401,{error:'Sign in required'});
- if(req.method==='GET'&&url.pathname==='/api/state')return send(200,{...snapshot(),...teamState()});
+ if(req.method==='GET'&&url.pathname==='/api/state')return send(200,{...snapshot(),...teamState(),roleCharters:ROLE_CHARTERS,manager:managerState()});
  if(req.method==='GET'&&url.pathname==='/api/health'){
  let ollama:any={available:false};try{const r=await fetch('http://127.0.0.1:11434/api/tags',{signal:AbortSignal.timeout(1500)});if(r.ok)ollama={available:true,...await r.json() as object};}catch{}
  return send(200,{database:db.prepare('PRAGMA quick_check').get(),ollama,...snapshot()});}

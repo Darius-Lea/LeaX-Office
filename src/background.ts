@@ -1,0 +1,13 @@
+import {db,clock,setting} from './store.ts';
+import {pulse} from './office.ts';
+// Launching this entry is explicit authorization for background execution.
+// An explicit saved clock-out is still respected.
+if(!setting('clock'))clock(true);
+let stopping=false;
+process.on('SIGTERM',()=>{stopping=true;});
+process.on('SIGINT',()=>{stopping=true;});
+while(!stopping){
+ try{await pulse();}catch(error){console.error('Background office failure:',String(error));}
+ if(!stopping)await new Promise(resolve=>setTimeout(resolve,1000));
+}
+db.close();

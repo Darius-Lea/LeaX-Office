@@ -1,0 +1,83 @@
+import {createHash} from 'node:crypto';
+import {db,setting,setSetting,audit} from './store.ts';
+import './team.ts';
+
+const FOLLOW_UP_ROLES=['Juliet','Hotel','Delta','Einstein'];
+const PATROL_INTERVAL=60000;
+export type ManagerIssue={type:string;task:string;agent:string;message:string};
+export type ManagerStatus={checkedAt:number;visitedAgent:string|null;summary:string;issues:ManagerIssue[];nextCheckAt:number;recovered:string[]};
+
+export function managerState():ManagerStatus|null{
+ const saved=setting('manager_status');return saved?JSON.parse(saved):null;
+}
+
+// The office caller authorizes patrols while clocked in. No network requests or
+// consequential actions occur here; only expired local claims and handoffs recover.
+export function managerPatrol(now=Date.now()):ManagerStatus{
+ const previous=managerState();
+ if(previous&&now<previous.nextCheckAt)return previous;
+ const issues:ManagerIssue[]=[];const recovered:string[]=[];
+ db.exec('BEGIN IMMEDIATE');
+ try{
+  const abandoned=db.prepare("SELECT id,agent,attempts FROM tasks WHERE status='Running' AND lease<=?").all(now) as any[];
+  for(const task of abandoned){
+   if(task.attempts<3){
+    db.prepare("UPDATE tasks SET status='Queued',lease=0,error=NULL WHERE id=? AND status='Running'").run(task.id);
+    recovered.push(String(task.id));audit(task.id,'Johnson recovered an expired worker claim; checkpoint and objective preserved');
+   }else{
+    db.prepare("UPDATE tasks SET status='Blocked',lease=0,error='Interrupted worker claim exhausted its retry limit; owner review required' WHERE id=? AND status='Running'").run(task.id);
+    audit(task.id,'Johnson blocked exhausted interrupted claim; no external retry attempted');
+   }
+  }
+  const completed=db.prepare("SELECT id,checkpoint FROM tasks WHERE status='Completed' ORDER BY created,id").all() as any[];
+  for(const task of completed){
+   if(task.checkpoint){
+    try{
+     const checkpoint=JSON.parse(task.checkpoint);
+     const linked=Number((db.prepare('SELECT count(*) AS n FROM task_findings WHERE task=?').get(task.id) as any).n);
+     if(Number(checkpoint.collected)>0&&!linked)issues.push({type:'missing_evidence',task:task.id,agent:'Bravo',message:'Completed research reports collected records, but no saved evidence is linked; owner review required'});
+    }catch{
+     issues.push({type:'invalid_checkpoint',task:task.id,agent:'Bravo',message:'Completed research has an unreadable checkpoint; owner review required'});
+    }
+   }
+   for(const agent of FOLLOW_UP_ROLES){
+    const job=db.prepare('SELECT status FROM team_jobs WHERE task=? AND agent=?').get(task.id,agent) as any;
+    const note=db.prepare('SELECT id FROM office_notes WHERE task=? AND agent=?').get(task.id,agent);
+    if(!job){
+     db.prepare('INSERT OR IGNORE INTO team_jobs(task,agent) VALUES(?,?)').run(task.id,agent);
+     issues.push({type:'handoff_repaired',task:task.id,agent,message:'Missing follow-up assignment queued; output is not yet complete'});
+     audit(task.id,'Johnson restored missing follow-up assignment for '+agent);
+    }else if(job.status==='Completed'&&!note){
+     db.prepare("UPDATE team_jobs SET status='Queued' WHERE task=? AND agent=?").run(task.id,agent);
+     issues.push({type:'missing_output',task:task.id,agent,message:'Completed stage had no saved report; stage requeued to produce its output'});
+     audit(task.id,'Johnson requeued '+agent+' because its completed stage had no saved report');
+    }else if(job.status==='Blocked'||job.status==='Failed'){
+     issues.push({type:'followup_blocked',task:task.id,agent,message:'Internal follow-up requires review; no retry forced'});
+    }
+   }
+  }
+  const blocked=db.prepare("SELECT id,agent,error FROM tasks WHERE status IN ('Blocked','Failed') ORDER BY id").all() as any[];
+  for(const task of blocked)issues.push({type:'research_blocked',task:task.id,agent:task.agent,message:task.error||'Assignment needs owner review'});
+  const stalled=db.prepare("SELECT id,agent FROM tasks WHERE status='Queued' AND created<? ORDER BY id").all(now-300000) as any[];
+  for(const task of stalled)issues.push({type:'queue_wait',task:task.id,agent:task.agent,message:'Older assignment is still queued (created over five minutes ago); inspect queue and source availability'});
+  const employees=db.prepare("SELECT id FROM employees WHERE id<>'Johnson' ORDER BY rowid").all() as any[];
+  const lastIndex=employees.findIndex(employee=>employee.id===previous?.visitedAgent);
+  const visitedAgent=employees.length?String(employees[(lastIndex+1)%employees.length].id):null;
+  const running=Number((db.prepare("SELECT count(*) AS n FROM tasks WHERE status='Running'").get() as any).n);
+  const pending=Number((db.prepare("SELECT count(*) AS n FROM tasks WHERE status='Queued'").get() as any).n);
+  const followups=Number((db.prepare("SELECT count(*) AS n FROM team_jobs WHERE status='Queued'").get() as any).n);
+  const summary=issues.length?`${issues.length} items need attention; ${recovered.length} interrupted claims recovered. ${running} running, ${pending} queued research assignments, ${followups} follow-up stages pending.`:
+   running||pending||followups?`No supervision exceptions found. ${running} running, ${pending} queued research assignments, ${followups} follow-up stages pending.`:
+   'No pending assignments or supervision exceptions; waiting for scheduled research. Idle employees are not reported as working.';
+  const status:ManagerStatus={checkedAt:now,visitedAgent,summary,issues,nextCheckAt:now+PATROL_INTERVAL,recovered};
+  const stableIssues=issues.map(issue=>JSON.stringify(issue)).sort();
+  const signature=createHash('sha256').update(JSON.stringify(stableIssues)).digest('hex');
+  if(issues.length&&signature!==setting('manager_issue_signature')){
+   const episode=Number(setting('manager_alert_episode')||0)+1;setSetting('manager_alert_episode',String(episode));
+   const body=summary+'\n\n'+issues.map(issue=>`${(db.prepare('SELECT name FROM employees WHERE id=?').get(issue.agent) as any)?.name||issue.agent} · ${issue.task}\n${issue.message}`).join('\n\n')+'\n\nResearch records, contact identities, qualifications and sales outcomes are not verified by this patrol. No emails were sent and no external actions were retried.';
+   db.prepare('INSERT OR IGNORE INTO office_notes(task,agent,title,body,created) VALUES(?,?,?,?,?)').run(`manager:${episode}:${signature}`,'Johnson','Manager attention report',body,now);
+  }
+  setSetting('manager_issue_signature',signature);setSetting('manager_status',JSON.stringify(status));
+  db.exec('COMMIT');return status;
+ }catch(error){db.exec('ROLLBACK');throw error;}
+}

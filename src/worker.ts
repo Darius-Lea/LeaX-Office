@@ -29,7 +29,7 @@ export async function tick(fetcher:typeof fetch=fetch){
  db.prepare("UPDATE tasks SET agent=?,status='Queued',checkpoint=?,attempts=0,lease=0,error=NULL WHERE id=?").run(more?'Alpha':'Bravo',JSON.stringify(checkpoint),t.id);
  audit(t.id,`Alpha saved source page ${saved.page} (${page.findings.length} historical award records)${more?'':'; handed evidence to Bravo'}`);
  db.exec('COMMIT');}catch(e){db.exec('ROLLBACK');throw e;}
- }else{
+ }else if(t.agent==='Bravo'){
  const checkpoint=JSON.parse(t.checkpoint||'{}');
  if(checkpoint.source!==SOURCE.id)throw Error('Legacy evidence requires a new research task');
  const rows=db.prepare('SELECT o.* FROM opportunities o JOIN task_findings f ON f.opportunity=o.id WHERE f.task=?').all(t.id) as any[];
@@ -39,7 +39,7 @@ export async function tick(fetcher:typeof fetch=fetch){
  db.prepare("UPDATE tasks SET status='Completed',lease=0,error=NULL WHERE id=?").run(t.id);
  audit(t.id,`Bravo reviewed provenance of ${rows.length} historical award records. Not open bids or verified business qualifications.${checkpoint.truncated?' Search capped at 3 pages.':''}`);
  db.exec('COMMIT');}catch(e){db.exec('ROLLBACK');throw e;}
- }
+ }else{throw Error('No research tool is implemented for employee '+t.agent);}
  }catch(e){db.prepare("UPDATE tasks SET status='Blocked',lease=0,error=? WHERE id=?").run('Research unavailable: '+String(e),t.id);audit(t.id,'Research blocked; saved evidence and page checkpoint preserved');}
  return true;
 }

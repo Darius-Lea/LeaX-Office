@@ -29,7 +29,8 @@ export function setSetting(key:string,value:string){db.prepare('INSERT OR REPLAC
 for(const [id,name,role,capability] of [
  ['Alpha','Alpha','Research analyst','research'],['Bravo','Bravo','Evidence reviewer','review'],
  ['Einstein','Einstein','Executive coordinator','planned'],['Delta','Delta','Outreach specialist','planned'],
- ['Juliet','Juliet','CRM administrator','planned'],['Hotel','Hotel','Dispatch coordinator','planned']]){
+ ['Juliet','Juliet','CRM administrator','planned'],['Hotel','Morgan','Operations readiness coordinator','planned'],
+ ['Johnson','Johnson','Office operations manager','manager']]){
  db.prepare('INSERT OR IGNORE INTO employees VALUES(?,?,?,?)').run(id,name,role,capability);
 }
 if(!setting('company'))setSetting('company',JSON.stringify({name:'American Power Global',legalName:'LeaX LLC'}));
@@ -44,3 +45,7 @@ export function editTask(id:string,goal:string){
  if(!result.changes)throw Error('Only queued, blocked or paused assignments can be edited');
  audit(id,'Founder changed objective to: '+goal.trim()+'; previous linked evidence retained');
 }
+
+// Stable internal id preserves history; update only the original display defaults.
+db.prepare("UPDATE employees SET name='Morgan' WHERE id='Hotel' AND name='Hotel'").run();
+db.prepare("UPDATE employees SET role='Operations readiness coordinator' WHERE id='Hotel' AND role='Dispatch coordinator'").run();

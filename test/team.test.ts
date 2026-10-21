@@ -10,6 +10,11 @@ test('completed research produces deduplicated CRM, checks, unsent drafts and br
  try{
  const id=enqueue('Find installation partners');db.prepare("UPDATE tasks SET status='Completed' WHERE id=?").run(id);
  db.prepare('INSERT INTO opportunities VALUES(?,?,?,?,?,1)').run('test',id,'Fixture Contractor','https://example.test/award',JSON.stringify({description:'Synthetic cabling record',state:'CA',country:'USA'}));db.prepare('INSERT INTO task_findings VALUES(?,?)').run(id,'test');
+ // A premature executive stage cannot claim that predecessor outputs exist.
+ db.prepare("INSERT INTO team_jobs(task,agent,status) VALUES(?,'Einstein','Queued')").run(id);
+ for(const agent of ['Juliet','Hotel','Delta'])db.prepare("INSERT INTO team_jobs(task,agent,status) VALUES(?,?,'Blocked')").run(id,agent);
+ assert.equal(teamPulse(),false);assert.equal(teamState().notes.length,0);
+ db.prepare("UPDATE team_jobs SET status='Queued' WHERE task=? AND agent<>'Einstein'").run(id);
  for(let i=0;i<4;i++)assert.equal(teamPulse(),true);
  assert.equal(teamPulse(),false);const state=teamState();assert.equal(state.notes.length,4);assert.equal(state.prospects.length,1);assert.ok(state.teamJobs.every(j=>j.status==='Completed'));
  const draft=state.notes.find(n=>n.agent==='Delta')!;assert.match(String(draft.body),/NOT FOUND/);assert.match(String(draft.title),/NOT SENT/);assert.match(String(state.notes.find(n=>n.agent==='Einstein')!.body),/No open solicitations/);

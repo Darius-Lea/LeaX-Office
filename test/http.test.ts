@@ -24,7 +24,7 @@ test('HTTP auth, origin protection, retry, saved account across restart, and log
  const auth=await call('setup',{code:server.code,password:'test founder passphrase'});assert.equal(auth.status,200);cookie=auth.headers.get('set-cookie')!.split(';')[0];
  assert.equal((await call('company',{name:'Test Company',legalName:'Test LLC',goal:'Nationwide cabling research'})).status,200);
  assert.equal((await call('employees',{name:'New Assistant',role:'Operations'})).status,200);
- let office=await (await call('state')).json();assert.equal(office.company.name,'Test Company');assert.equal(office.employees.length,7);assert.equal(office.clock,'out');
+ let office=await (await call('state')).json();assert.equal(office.company.name,'Test Company');assert.equal(office.employees.length,8);assert.equal(office.clock,'out');
  assert.equal((await call('employees',{id:'Alpha',name:'Alex',role:'Research'})).status,200);
  assert.equal((await call('company',{name:'',legalName:'',goal:''})).status,400);
  assert.equal((await call('tasks',{goal:''})).status,400);
@@ -38,7 +38,7 @@ test('HTTP auth, origin protection, retry, saved account across restart, and log
  await stop(server.child);server=await launch(directory);assert.equal(server.code,undefined);
  assert.equal((await (await call('status')).json()).setupRequired,false);
  assert.equal((await call('state')).status,200); // durable session
- state=await (await call('state')).json();assert.equal(state.tasks[0].id,id);assert.equal(state.company.name,'Test Company');assert.equal(state.opportunities[0].note,'Owner qualification check pending');assert.equal(state.employees.length,7);assert.equal(state.employees.find(e=>e.id==='Alpha').name,'Alex');assert.equal(state.clock,'out');
+ state=await (await call('state')).json();assert.equal(state.tasks[0].id,id);assert.equal(state.company.name,'Test Company');assert.equal(state.opportunities[0].note,'Owner qualification check pending');assert.equal(state.employees.length,8);assert.equal(state.employees.find(e=>e.id==='Alpha').name,'Alex');assert.equal(state.clock,'out');
  assert.equal((await call('office/open',{})).status,200);assert.equal((await (await call('state')).json()).clock,'in');
  await stop(server.child);server=await launch(directory);assert.equal((await (await call('state')).json()).clock,'in');
  assert.equal((await call('office/clock',{active:false})).status,200);await call('office/open',{});assert.equal((await (await call('state')).json()).clock,'out');
