@@ -2,7 +2,7 @@
 const room=document.querySelector('#office-room');
 export function setOfficeView(view){
  if(!['3d','2d','terminal'].includes(view))view='3d';
- document.body.dataset.view=view;localStorage.setItem('hq-view',view);
+ document.body.dataset.view=view;document.querySelector('#clerical').open=view!=='3d';localStorage.setItem('hq-view',view);
  document.querySelector('#angle-label').hidden=view!=='3d';
  for(const name of ['3d','2d','terminal'])document.querySelector('#view-'+name).setAttribute('aria-pressed',String(name===view));
 }
@@ -15,7 +15,7 @@ export function renderOffice(state,inspect){
  const desk=document.createElement('button');desk.className='office-desk';desk.dataset.active=String(!!task);desk.onclick=()=>inspect(employee.id);
  const furniture=document.createElement('span');furniture.className='furniture';
  const monitor=document.createElement('span');monitor.className='monitor';monitor.textContent=task?'PROCESSING':employee.capability==='planned'?'SETUP':'READY';
- const person=document.createElement('span');person.className='person';person.setAttribute('aria-hidden','true');person.textContent='●';
+ const person=document.createElement('span');person.className='person';person.setAttribute('aria-hidden','true');person.innerHTML='<i class=avatar-head><i class=avatar-eyes>••</i></i><i class=avatar-body></i><i class=avatar-arms></i><i class=avatar-legs></i>';
  const name=document.createElement('b');name.textContent=employee.name;
  const status=document.createElement('span');status.className='desk-status';status.textContent=task?task.goal:employee.capability==='planned'?'Setup required':queued?'Assignment queued':state.clock==='in'?'Available':'Clocked out';
  furniture.append(monitor,person);desk.append(furniture,name,status);room.append(desk);

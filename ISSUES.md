@@ -10,3 +10,5 @@
 - Missing/invalid source identity or description blocks the page instead of inventing evidence; failed tasks retain earlier pages and allow manual retry.
 
 Office update: web processing now starts from Clock in, with no separate service needed. Remaining limitations include no full walking-avatar 3D simulation and no tools for custom/extra employee roles. On Render free, idle sleep still halts work; temporary SQLite still risks total data loss on replacement. Source failures remain blocked and visible. Clock-in state resets after web-process restarts by design. Run one normal web service; multi-instance office coordination is not supported.
+
+Latest UI/clock behavior: persistent clock and automatic authenticated opening replace restart-clock-out. Four extra built-in roles now have deterministic output jobs, but custom roles still lack tools. The current historical-award source does not provide decision-maker emails or phone numbers, and drafts correctly remain unaddressed/unsent. Recent modification sorting is not evidence of a new project. New live source validation needed after sort change. CSS body/face markers are not a realistic walk-through simulation.

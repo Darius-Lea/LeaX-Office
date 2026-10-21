@@ -4,6 +4,7 @@ import {randomBytes} from 'node:crypto';
 import {backup} from 'node:sqlite';
 import {join} from 'node:path';
 import {db,directory,setup,login,authenticated,enqueue,snapshot,audit,clock,setting,setSetting,editTask} from './store.ts';
+import {teamState} from './team.ts';
 import {startOffice} from './office.ts';
 const port=Number(process.env.PORT||4310);
 const host=process.env.HOST || (process.env.RENDER==='true'?'0.0.0.0':'127.0.0.1');
@@ -39,13 +40,19 @@ const server=createServer(async(req,res)=>{
  const token=login(body.password);if(!token)return send(401,{error:'Invalid credentials'});res.setHeader('Set-Cookie',`hq_session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800${publicOrigin?'; Secure':''}`);return send(200,{ok:true});}
  const token=(req.headers.cookie||'').split('; ').find(v=>v.startsWith('hq_session='))?.slice(11)||'';
  if(!authenticated(token))return send(401,{error:'Sign in required'});
- if(req.method==='GET'&&url.pathname==='/api/state')return send(200,snapshot());
+ if(req.method==='GET'&&url.pathname==='/api/state')return send(200,{...snapshot(),...teamState()});
  if(req.method==='GET'&&url.pathname==='/api/health'){
  let ollama:any={available:false};try{const r=await fetch('http://127.0.0.1:11434/api/tags',{signal:AbortSignal.timeout(1500)});if(r.ok)ollama={available:true,...await r.json() as object};}catch{}
  return send(200,{database:db.prepare('PRAGMA quick_check').get(),ollama,...snapshot()});}
+ if(req.method==='POST'&&url.pathname==='/api/office/open'){
+ if(setting('manual_pause')!=='yes'&&setting('clock')!=='in')clock(true);
+ return send(200,{ok:true});}
+ if(req.method==='POST'&&url.pathname==='/api/notes/seen'){
+ if(!Number.isInteger(body.id))return send(400,{error:'Note ID required'});
+ db.prepare('UPDATE office_notes SET seen=1 WHERE id=?').run(body.id);return send(200,{ok:true});}
  if(req.method==='POST'&&url.pathname==='/api/office/clock'){
  if(typeof body.active!=='boolean')return send(400,{error:'Choose clock in or clock out'});
- clock(body.active);return send(200,{ok:true});}
+ setSetting('manual_pause',body.active?'no':'yes');clock(body.active);return send(200,{ok:true});}
  if(req.method==='POST'&&url.pathname==='/api/company'){
  if(typeof body.name!=='string'||!body.name.trim()||body.name.length>120||typeof body.goal!=='string'||!body.goal.trim()||body.goal.length>4000||typeof body.legalName!=='string'||body.legalName.length>120)return send(400,{error:'Company name, legal name and standing goal required (120/120/4000 character limits)'});
  setSetting('company',JSON.stringify({name:body.name.trim(),legalName:body.legalName.trim()}));setSetting('standing_goal',body.goal.trim());audit('office','Founder updated company profile and standing goal');return send(200,{ok:true});}

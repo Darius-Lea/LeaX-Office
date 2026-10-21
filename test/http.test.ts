@@ -39,6 +39,9 @@ test('HTTP auth, origin protection, retry, saved account across restart, and log
  assert.equal((await (await call('status')).json()).setupRequired,false);
  assert.equal((await call('state')).status,200); // durable session
  state=await (await call('state')).json();assert.equal(state.tasks[0].id,id);assert.equal(state.company.name,'Test Company');assert.equal(state.opportunities[0].note,'Owner qualification check pending');assert.equal(state.employees.length,7);assert.equal(state.employees.find(e=>e.id==='Alpha').name,'Alex');assert.equal(state.clock,'out');
+ assert.equal((await call('office/open',{})).status,200);assert.equal((await (await call('state')).json()).clock,'in');
+ await stop(server.child);server=await launch(directory);assert.equal((await (await call('state')).json()).clock,'in');
+ assert.equal((await call('office/clock',{active:false})).status,200);await call('office/open',{});assert.equal((await (await call('state')).json()).clock,'out');
  assert.equal((await call('logout',{})).status,200);assert.equal((await call('state')).status,401);
  }finally{if(server?.child.exitCode===null)await stop(server.child);rmSync(directory,{recursive:true});}
 });

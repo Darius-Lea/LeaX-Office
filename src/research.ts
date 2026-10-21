@@ -13,8 +13,8 @@ export function termsFor(goal:string):string[] {
 }
 export function requestBody(goal:string,page:number){
  return {filters:{award_type_codes:['A','B','C','D'],keywords:termsFor(goal)},
- fields:['generated_internal_id','Award ID','Recipient Name','Award Amount','Description','Awarding Agency','Place of Performance State Code','Place of Performance Country Code'],
- page,limit:20,sort:'Award Amount',order:'desc',subawards:false};
+ fields:['Last Modified Date','generated_internal_id','Award ID','Recipient Name','Award Amount','Description','Awarding Agency','Place of Performance State Code','Place of Performance Country Code'],
+ page,limit:20,sort:'Last Modified Date',order:'desc',subawards:false};
 }
 export type Finding={awardId:string;title:string;url:string;evidence:Record<string,unknown>};
 export function parsePage(payload:any,goal:string,now=Date.now()):{findings:Finding[],hasNext:boolean}{
@@ -24,7 +24,7 @@ export function parsePage(payload:any,goal:string,now=Date.now()):{findings:Find
  const id=record?.generated_internal_id,recipient=record?.['Recipient Name'],description=record?.Description;
  if(typeof id!=='string'||!/^CONT_[A-Za-z0-9_.:-]+$/.test(id)||typeof recipient!=='string'||!recipient.trim()||typeof description!=='string')throw Error('Award missing valid identity, recipient or description');
  if(description.length>50000||recipient.length>1000)throw Error('Source record exceeds size limit');
- findings.push({awardId:id,title:recipient,url:'https://www.usaspending.gov/award/'+encodeURIComponent(id),evidence:{source:SOURCE.id,endpoint:SOURCE.endpoint,awardId:id,recipient,description,awardNumber:record['Award ID']??null,amount:record['Award Amount']??null,agency:record['Awarding Agency']??null,state:record['Place of Performance State Code']??null,country:record['Place of Performance Country Code']??null,collectedAt:now,searchTerms:termsFor(goal),classification:SOURCE.kind,qualification:'Unverified: contact availability, subcontracting interest, service territory, insurance, licenses and delivery capacity require human review.'}});
+ findings.push({awardId:id,title:recipient,url:'https://www.usaspending.gov/award/'+encodeURIComponent(id),evidence:{source:SOURCE.id,endpoint:SOURCE.endpoint,awardId:id,recipient,description,awardNumber:record['Award ID']??null,amount:record['Award Amount']??null,agency:record['Awarding Agency']??null,modified:record['Last Modified Date']??null,state:record['Place of Performance State Code']??null,country:record['Place of Performance Country Code']??null,collectedAt:now,searchTerms:termsFor(goal),classification:SOURCE.kind,qualification:'Unverified: contact availability, subcontracting interest, service territory, insurance, licenses and delivery capacity require human review.'}});
  }
  return {findings,hasNext:payload.page_metadata.hasNext};
 }

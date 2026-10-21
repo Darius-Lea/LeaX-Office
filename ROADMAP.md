@@ -6,3 +6,5 @@
 5. Validate Windows restart/background behavior and browser workflows; then incrementally improve UI and remaining Phase 1 requirements.
 
 Clock-in milestone completed: integrated web processing, company/employee customization, supervision, initial CSS 3D and alternate views. Next focus: free durable cloud storage strategy; live source validation and additional executable employee tools; Ollama; then richer WebGL/walking avatars tied to backend events. Never substitute decorative animation for missing execution.
+
+Connected internal team now delivers CRM/checklists/unsent drafts/briefings to owner inbox. Immediate missing business-value work: permitted public vendor-services contact discovery with source provenance, verified current tender/rollout feeds, freshness/relevance checks; then model inference and richer 3D avatar simulation. Never fill unknown contact fields or fake continuous activity.
