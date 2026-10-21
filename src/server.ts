@@ -8,7 +8,7 @@ import {db,directory,setup,login,authenticated,enqueue,snapshot,audit,clock,sett
 import {solicitationState,searchSolicitations} from './solicitations.ts';
 import {contactState,researchContacts} from './contacts.ts';
 import {draftState,prepareContactDraft,prepareNoticeDraft,reviewDraft,composerLink} from './drafts.ts';
-import {aiStatus,configureModel,queueAgent,processAgent,retryAgent,agentRuns,installRecommendedModel} from './ai.ts';
+import {OLLAMA,aiStatus,configureModel,queueAgent,processAgent,retryAgent,agentRuns,installRecommendedModel} from './ai.ts';
 import {awardAdvice} from './advice.ts';
 import {managerState} from './manager.ts';
 import {ROLE_CHARTERS} from './roles.ts';
@@ -77,7 +77,7 @@ const server=createServer(async(req,res)=>{
  const id=queueAgent(body.agent,body.prompt,body.contextTask);if(setting('clock')==='in')void processAgent().catch(error=>console.error('AI queue:',String(error)));return send(202,{id});}
  if(req.method==='POST'&&url.pathname==='/api/ai/retry'){retryAgent(body.id);return send(200,{ok:true});}
  if(req.method==='GET'&&url.pathname==='/api/health'){
- let ollama:any={available:false};try{const r=await fetch('http://127.0.0.1:11434/api/tags',{signal:AbortSignal.timeout(1500)});if(r.ok)ollama={available:true,...await r.json() as object};}catch{}
+ let ollama:any={available:false};try{const r=await fetch(OLLAMA+'/api/tags',{signal:AbortSignal.timeout(1500)});if(r.ok)ollama={available:true,...await r.json() as object};}catch{}
  return send(200,{database:db.prepare('PRAGMA quick_check').get(),ollama,...snapshot()});}
  if(req.method==='POST'&&url.pathname==='/api/office/open'){
  if(setting('manual_pause')!=='yes'&&setting('clock')!=='in')clock(true);

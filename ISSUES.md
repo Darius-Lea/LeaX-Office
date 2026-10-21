@@ -1,6 +1,6 @@
 # Known issues and blockers
 - SAM_API_KEY absent in development environment and saved cloud requirements; current notices are not live-validated. Official schema/credentials/deadline behavior tested with fixtures. No open-bid success or APG eligibility claimed.
-- Ollama/models absent here. Adapter performs real inference when configured, but only mocked protocol/persistence has been validated in this workspace. Starter model is small and quality limited; output is advisory.
+- Native setup now installs/configures private local AI automatically. Ollama/models remain absent in this Linux validation workspace. Adapter performs real inference when configured, but only mocked protocol/persistence has been validated in this workspace. Starter model is small and quality limited; output is advisory.
 - Current research is bounded federal coverage, not every live regional/national/private/international rollout. Historical awards do not establish current need or subcontracting interest. Keyword screening can still miss or misrank records.
 - Public contact extraction reads an owner-supplied page, not an autonomous universal prospect search. Publicly listed emails/tel links and official notice contacts are not verified decision-maker identities or permission to send.
 - No email sender, bid submission, browser-control agent, account login automation, rendered advertising video or external provider integration. Mail composer requires owner approval and final send remains manual.

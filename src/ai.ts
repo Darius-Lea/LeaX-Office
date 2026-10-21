@@ -4,7 +4,7 @@ import {db,setting,setSetting,audit} from './store.ts';
 import {AGENT_TOOLS,executeAgentTool,toolEvents,evidenceReceipt,validateAdvisoryReferences} from './agent-tools.ts';
 import {solicitationState} from './solicitations.ts';
 
-const OLLAMA='http://127.0.0.1:11434';
+export const OLLAMA='http://127.0.0.1:'+(process.env.HQ_OLLAMA_PORT==='11435'?'11435':'11434');
 const MAX_OUTPUT=20000;
 const STALE_AFTER=180000;
 const ATTEMPTS=3;
@@ -60,7 +60,7 @@ export async function aiStatus(fetcher:typeof fetch=fetch){
  try{models=await installedModels(fetcher);available=true;}catch(cause){error='Local AI setup required: '+String(cause).slice(0,300);}
  const configuredModel=setting('ollama_model')||null;
  const setupRequired=!available||!configuredModel||!models.some(model=>model.name===configuredModel);
- return {available,configuredModel,models,hardware,recommendedModel,setupRequired,error,installation:setting('ollama_install_status')?JSON.parse(setting('ollama_install_status')):null,runs:agentRuns(),scope:'Inference runs on this server machine. A hosted server cannot use the browser computer\'s localhost model.'};
+ return {available,configuredModel,models,hardware,recommendedModel,setupRequired,error,installation:setting('ollama_install_status')?JSON.parse(setting('ollama_install_status')):null,runs:agentRuns(),managedSetup:setting('managed_ai_setup')?JSON.parse(setting('managed_ai_setup')):null,scope:'Inference runs on this server machine. A hosted server cannot use the browser computer\'s localhost model.'};
 }
 export async function configureModel(name:string,fetcher:typeof fetch=fetch){
  if(typeof name!=='string'||!name.trim()||name.length>256)throw Error('Choose an installed model');
@@ -124,7 +124,7 @@ export async function processAgent(fetcher:typeof fetch=fetch){
    let result:any;let output='';let calls=0;
    for(let round=0;round<4;round++){
     db.prepare("UPDATE ai_runs SET updated=? WHERE id=? AND status='Running'").run(Date.now(),run.id);
-    const response=await fetcher(OLLAMA+'/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:run.model,stream:false,messages,tools:AGENT_TOOLS,options:{temperature:0.2,num_predict:1500,num_ctx:8192},keep_alive:'2m'}),signal:AbortSignal.timeout(120000),redirect:'error'});
+    const response=await fetcher(OLLAMA+'/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:run.model,stream:false,think:false,messages,tools:AGENT_TOOLS,options:{temperature:0.2,num_predict:1500,num_ctx:8192},keep_alive:'2m'}),signal:AbortSignal.timeout(120000),redirect:'error'});
     result=await boundedJSON(response,200000);
     if(result.done===false)throw Error('Model returned no completed text output');
     const requests=result.message?.tool_calls;

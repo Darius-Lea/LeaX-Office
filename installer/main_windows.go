@@ -72,12 +72,18 @@ func runOperation(f func() error) {
 	}
 	startButton.SetEnabled(false)
 	stopButton.SetEnabled(false)
+	if keyInput != nil {
+		keyInput.SetEnabled(false)
+	}
 	go func() {
 		err := f()
 		window.Synchronize(func() {
 			busy.Store(false)
 			startButton.SetEnabled(true)
 			stopButton.SetEnabled(true)
+			if keyInput != nil {
+				keyInput.SetEnabled(true)
+			}
 			if err != nil {
 				statusLabel.SetText("Setup needs attention. Saved business data was kept.")
 				walk.MsgBox(window, "Action needed", err.Error(), walk.MsgBoxIconError)
@@ -503,8 +509,26 @@ func startOffice(wantShortcut bool) error {
 	}
 	s := readState()
 	if st, e := getStatus(); e == nil {
-		progress("Opening the existing local office. No account or data was replaced.")
-		return openOffice(s, st)
+		if !owned(s) {
+			progress("Opening the existing local office. No account or data was replaced.")
+			return openOffice(s, st)
+		}
+		// An explicit open/update repairs the owned app and AI together; no foreign process is killed.
+		p, e := os.FindProcess(s.PID)
+		if e != nil {
+			return e
+		}
+		if e = p.Kill(); e != nil {
+			return e
+		}
+		for i := 0; i < 30; i++ {
+			if c, e := net.DialTimeout("tcp", "127.0.0.1:4310", 100*time.Millisecond); e == nil {
+				c.Close()
+				time.Sleep(100 * time.Millisecond)
+			} else {
+				break
+			}
+		}
 	}
 	if connection, e := net.DialTimeout("tcp", "127.0.0.1:4310", time.Second); e == nil {
 		connection.Close()
@@ -519,6 +543,9 @@ func startOffice(wantShortcut bool) error {
 	}
 	app, self, e := installApp(node)
 	if e != nil {
+		return e
+	}
+	if e = configureBuiltInAI(node, app); e != nil {
 		return e
 	}
 	codeBytes := make([]byte, 24)
@@ -536,11 +563,11 @@ func startOffice(wantShortcut bool) error {
 	environment := []string{}
 	for _, value := range os.Environ() {
 		key := strings.ToUpper(strings.SplitN(value, "=", 2)[0])
-		if key != "HOST" && key != "PORT" && key != "HQ_DATA_DIR" && key != "HQ_SETUP_CODE" && key != "RENDER" && key != "PUBLIC_ORIGIN" && key != "RENDER_EXTERNAL_URL" && key != "NODE_OPTIONS" && key != "SAM_API_KEY" && key != "HQ_INSTALLER_PATH" {
+		if key != "HOST" && key != "PORT" && key != "HQ_DATA_DIR" && key != "HQ_SETUP_CODE" && key != "RENDER" && key != "PUBLIC_ORIGIN" && key != "RENDER_EXTERNAL_URL" && key != "NODE_OPTIONS" && key != "SAM_API_KEY" && key != "HQ_INSTALLER_PATH" && key != "HQ_OLLAMA_PORT" {
 			environment = append(environment, value)
 		}
 	}
-	environment = append(environment, "HOST=127.0.0.1", "PORT=4310", "HQ_DATA_DIR="+filepath.Join(root, "data"), "HQ_SETUP_CODE="+code, "HQ_INSTALLER_PATH="+self)
+	environment = append(environment, "HOST=127.0.0.1", "PORT=4310", "HQ_DATA_DIR="+filepath.Join(root, "data"), "HQ_SETUP_CODE="+code, "HQ_INSTALLER_PATH="+self, "HQ_OLLAMA_PORT="+managedAIPort)
 	if protected, e := os.ReadFile(filepath.Join(root, "sam-native.dpapi")); e == nil {
 		key, e := unseal(string(protected))
 		if e != nil {
@@ -589,7 +616,11 @@ func startOffice(wantShortcut bool) error {
 func stopOffice() error {
 	s := readState()
 	if !owned(s) {
-		return errors.New("No running office owned by this native launcher was found. No other process was stopped")
+		if e := stopManagedAI(); e != nil {
+			return e
+		}
+		progress("Owned AI engine stopped; saved data was kept. No unknown process was stopped.")
+		return nil
 	}
 	p, e := os.FindProcess(s.PID)
 	if e != nil {
@@ -598,7 +629,10 @@ func stopOffice() error {
 	if e = p.Kill(); e != nil {
 		return e
 	}
-	progress("Local office stopped. Founder login, research and notes were kept.")
+	if e = stopManagedAI(); e != nil {
+		return e
+	}
+	progress("Local office and its owned AI engine stopped. Founder login, research and notes were kept.")
 	return nil
 }
 func importBackup(source string) error {
@@ -704,7 +738,7 @@ func main() {
 	defer runtime.UnlockOSThread()
 	err := (MainWindow{AssignTo: &window, Title: "AI Headquarters — local app setup", MinSize: Size{Width: 760, Height: 720}, Layout: VBox{Margins: Margins{Left: 24, Top: 20, Right: 24, Bottom: 20}}, Children: []Widget{
 		Label{Text: "Your company. Your computer.", Font: Font{Family: "Segoe UI", PointSize: 19, Bold: true}},
-		Label{Text: "This native Windows setup does not run a PowerShell script or open a terminal.\nBusiness records stay privately in your Windows user folder, outside application updates.\nInternet is used for official runtime/dependency downloads and authorized research. No paid services or AI models install automatically."},
+		Label{Text: "This native Windows setup does not run a PowerShell script or open a terminal.\nBusiness records stay privately in your Windows user folder, outside application updates.\nInternet is used for official runtime/dependency downloads and authorized research. Free local AI and a suitable starter model are included automatically. First setup downloads about 2–5 GB. No paid services are connected."},
 		Label{Text: "Private data folder: " + filepath.Join(root, "data")},
 		CheckBox{AssignTo: &shortcut, Text: "Create a desktop shortcut", Checked: true},
 		Composite{Layout: HBox{}, Children: []Widget{PushButton{AssignTo: &startButton, Text: "Install / open office", OnClicked: func() { wanted := shortcut.Checked(); runOperation(func() error { return startOffice(wanted) }) }}, PushButton{AssignTo: &stopButton, Text: "Stop local office", OnClicked: func() {
@@ -729,6 +763,9 @@ func main() {
 			}
 		}},
 		GroupBox{Title: "Optional free SAM.gov current-bid access", Layout: VBox{}, Children: []Widget{Label{Text: "Historical awards need no key. Current federal bid search requires your own free SAM.gov API key.\nThis field is optional, masked, and saved using Windows-user encryption. Never share the key in chat."}, LineEdit{AssignTo: &keyInput, PasswordMode: true}, Composite{Layout: HBox{}, Children: []Widget{PushButton{Text: "Save private SAM key", OnClicked: func() {
+			if busy.Load() {
+				return
+			}
 			key := strings.TrimSpace(keyInput.Text())
 			if key == "" {
 				walk.MsgBox(window, "No key entered", "Paste your own SAM.gov API key if you want current federal bid research.", walk.MsgBoxIconInformation)
@@ -750,7 +787,7 @@ func main() {
 				return nil
 			})
 		}}, PushButton{Text: "Official free account / key instructions", OnClicked: func() { openItem("https://open.gsa.gov/api/get-opportunities-public-api/") }}}}}},
-		Label{AssignTo: &statusLabel, Text: "Ready. First setup needs internet. This computer must remain awake for background work.\nA verified publisher certificate is not included; this app is unsigned. Only run the download from your own repository or authenticated owner workspace."},
+		Label{AssignTo: &statusLabel, Text: "Preparing setup. Local AI installation, model selection and connection are automatic. This computer must remain awake for background work.\nA verified publisher certificate is not included; this app is unsigned. Only run the download from your own repository or authenticated owner workspace."},
 	}}).Create()
 	if err != nil {
 		syscall.NewLazyDLL("user32.dll").NewProc("MessageBoxW").Call(0, uintptr(unsafe.Pointer(utf("The setup window could not open: "+err.Error()))), uintptr(unsafe.Pointer(utf("AI Headquarters"))), 0x10)
@@ -762,5 +799,6 @@ func main() {
 			walk.MsgBox(window, "Setup in progress", "Wait for the operation to finish before closing setup.", walk.MsgBoxIconInformation)
 		}
 	})
+	window.Starting().Attach(func() { runOperation(func() error { return startOffice(shortcut.Checked()) }) })
 	window.Run()
 }

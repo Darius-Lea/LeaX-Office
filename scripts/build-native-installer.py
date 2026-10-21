@@ -7,7 +7,7 @@ parser=argparse.ArgumentParser();parser.add_argument('--go',default='go');args=p
 root=pathlib.Path(__file__).resolve().parents[1];installer=root/'installer';out=root/'downloads';out.mkdir(exist_ok=True)
 files=[]
 for folder in ['src','public','scripts']:
-    files.extend(p for p in (root/folder).rglob('*') if p.is_file() and p.suffix in {'.ts','.js','.html','.css','.ps1','.py'})
+    files.extend(p for p in (root/folder).rglob('*') if p.is_file() and p.suffix in {'.ts','.js','.html','.css','.ps1','.py','.mjs'})
 files.extend(root.glob('*.md'));files.extend([root/'package.json',root/'package-lock.json'])
 with zipfile.ZipFile(installer/'payload.zip','w',zipfile.ZIP_DEFLATED,compresslevel=9) as z:
     for p in sorted(files):

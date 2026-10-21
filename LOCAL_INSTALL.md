@@ -4,7 +4,7 @@ Use the **native Windows x64 setup executable**, not GitHub’s source ZIP or th
 
 1. Sign in to your current office. Open **Set up this computer / local AI** and choose **Download Windows setup (.exe)**. A direct repository copy is also in `downloads/AI-Headquarters-Setup.exe` (choose Download raw file on GitHub).
 2. Open `AI-Headquarters-Setup.exe`. It is unsigned: Windows may show an unknown-publisher warning. Only use the file from your own repository or authenticated owner workspace. Actual Windows installation remains unvalidated in this Linux development environment.
-3. Click **Install / open office** in the native window. It downloads official portable Node, verifies SHA-256 and Windows Authenticode, installs integrity-locked npm dependencies and opens your browser at `http://127.0.0.1:4310`. Downloads require internet; no terminal or administrator install is needed.
+3. Setup starts automatically when the downloaded executable opens; **Install / open office** is available for reopening/retry. It downloads official portable Node, verifies SHA-256 and Windows Authenticode, installs integrity-locked npm dependencies and opens your browser at `http://127.0.0.1:4310`. Downloads require internet; no terminal or administrator install is needed.
 4. Existing local data is reused. For a new office, choose your founder password; setup supplies the private one-time code in a local fragment and the app clears it from the address. No code is published or sent in a query string.
 5. To preserve your Render office, first download its private SQLite backup in Owner computer → Company & research, stop the local office, then choose **Import saved office from Render / backup** in native setup. Confirm replacement after choosing your trusted backup. The helper validates schema/integrity and stages a consistent copy. Existing local data receives a verified recovery backup and an archive before replacement; failed replacement restores originals. Start again and use the imported founder password. No automatic cloud sync occurs.
 
@@ -68,7 +68,7 @@ SAM.gov accounts/API usage are subject to GSA rules and rate limits. The key per
 
 ## AI and resources
 
-No model is automatically downloaded. The local dashboard, SQLite persistence and deterministic research tools work without a paid AI key. To enable model-driven advice, install **Ollama from https://ollama.com/**, choose a model suitable for your computer, and use the app's AI setup controls. Model licenses and hardware requirements differ. This launcher detects architecture/RAM but does not claim it can detect a supported GPU or guarantee model performance. Model inference uses substantially more memory than the app's Node/browser interface.
+The native setup now automatically downloads its private AI engine and RAM-selected starter model and saves the connection after a genuine inference check. Separate Ollama installation and manual model selection are unnecessary. GPU support and model performance are not guaranteed; inference uses more memory than the Node/browser interface. Model controls remain available for advanced users.
 
 The browser/Node architecture avoids bundling a second Chromium runtime, as an Electron app would. Actual memory use depends on your browser, 3D mode, data volume and optional model. Choose the clerical/terminal view on low-powered devices. Work stops when your PC is powered off or asleep; the launcher does not change power settings or prevent sleep.
 
@@ -82,3 +82,12 @@ The script passed PowerShell parser syntax validation in this Linux development 
 ## Rebuilding the native setup (developers only)
 
 Run `python scripts/build-native-installer.py --go /path/to/go` with Go 1.24+ and Python. The build embeds only allowlisted app source/public/scripts/docs and package manifests, excluding databases, secrets, caches and downloads. Go dependencies and resource tool are pinned; the build produces the Windows GUI executable and SHA-256 file. It does not sign or execute the result. Rebuild after changing bundled app code or documentation.
+
+
+## Built-in AI — no separate installation or connection
+
+Opening the executable starts setup automatically. It verifies and extracts official portable Ollama v0.40.7 from the pinned official release SHA-256, starts it on the private `127.0.0.1:11435` endpoint, selects Qwen3 0.6B / 1.7B / 4B based on total RAM, downloads the model, runs an actual short inference check and saves the app connection. No separate Ollama app, API key, model selector or terminal is needed. Allow roughly 2–5 GB of first-time downloads, at least 12 GB free disk and at least 4 GB RAM. Speed/quality vary. Internet failures or unsupported hardware show a setup error; they do not create fake AI outputs. Model pulls can resume; completed models persist.
+
+The engine is app-private under `ai/`, models remain under `ai/models/`, and `ai-process.json` tracks only the owned engine. A pre-existing system Ollama service is neither stopped nor reconfigured. Stop local office stops the owned app and owned engine; closing the browser/setup leaves them running while Windows is awake. No Windows service/startup registration or cloud AI is enabled. The SAM key remains optional and owner-provided because it belongs to a personal SAM.gov account; it is not needed for historical awards or local AI.
+
+The native Windows flow remains cross-compiled and unexecuted here. Pinned release metadata/checksum were fetched from official GitHub release assets, but downloading/running the Windows AI engine and actual model inference have not been validated on a Windows device. The app executable remains unsigned.
