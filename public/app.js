@@ -130,7 +130,41 @@ function renderNotifications(s){
  lastDeliveredNotes=noteKeys;
  const blocked=new Set(s.tasks.filter(t=>t.status==='Blocked').map(t=>t.id));if(lastBlockedKeys&&[...blocked].some(id=>!lastBlockedKeys.has(id)))showToast('An assignment needs attention','Your saved work is safe. Review the source or connection error.',()=>focusSection('files','tasks'));lastBlockedKeys=blocked;
 }
+function renderManagerActivity(s){
+ const tasks=s.tasks||[],teamJobs=s.teamJobs||[],aiRuns=s.aiRuns||[],leadResearch=s.leadResearch||[];
+ const taskById=new Map(tasks.map(task=>[task.id,task]));
+ const items=[
+  ...tasks.filter(task=>['Running','Queued','Blocked','Failed'].includes(task.status)).map(task=>({agent:task.agent,status:task.status,kind:'Research',detail:task.error||task.goal,task:task.id})),
+  ...teamJobs.filter(job=>['Running','Queued','Blocked','Failed'].includes(job.status)).map(job=>({agent:job.agent,status:job.status,kind:'Follow-up',detail:taskById.get(job.task)?.goal||'Saved research handoff',task:job.task})),
+  ...aiRuns.filter(run=>['Running','Queued','Blocked','Failed'].includes(run.status)).map(run=>({agent:run.agent,status:run.status,kind:'Local AI',detail:run.status==='Running'?'Local model response in progress':'Local model work '+run.status.toLowerCase(),task:run.context_task||''})),
+  ...leadResearch.filter(run=>['Running','Queued','Blocked','Needs website','Needs confirmation'].includes(run.status)).map(run=>({agent:'Juliet',status:run.status,kind:'Contact research',detail:run.error||run.message||run.company,task:run.recordId}))
+ ];
+ const running=items.filter(item=>item.status==='Running').length,queued=items.filter(item=>item.status==='Queued').length,review=items.filter(item=>['Blocked','Failed','Needs website','Needs confirmation'].includes(item.status)).length;
+ const cash=s.outcomes?.financials?.cashReceivedCents;
+ const metrics=[['Running items',running],['Queued items',queued],['Needs review',review],['Historical award records',(s.opportunities||[]).length],['Owner-reported cash',money(cash??0)]];
+ $('#manager-metrics').replaceChildren(...metrics.map(([label,value])=>{const card=document.createElement('div');card.className='manager-metric';card.append(text('strong',String(value)),text('span',String(label)));return card;}));
+ $('#manager-activity').replaceChildren(...(s.employees||[]).map(employee=>{
+  const own=items.filter(item=>item.agent===employee.id),active=own.find(item=>item.status==='Running'),blocked=own.find(item=>['Blocked','Failed'].includes(item.status)),needs=own.find(item=>['Needs website','Needs confirmation'].includes(item.status)),pending=own.find(item=>item.status==='Queued');
+  let state='idle',label='Idle · no active assignment',detail='Waiting for scheduled or handed-off work.';
+  if(active){state='running';label='Working now · '+active.kind;detail=active.detail;}
+  else if(blocked){state='blocked';label='Blocked · owner review';detail=blocked.detail;}
+  else if(needs){state='review';label='Needs an owner step';detail=needs.detail;}
+  else if(pending){state='queued';label=s.clock==='in'?'Queued · awaiting worker':'Queued · office clocked out';detail=pending.kind+': '+pending.detail;}
+  else if(s.clock!=='in'){state='paused';label='Clocked out';detail='New work is paused until the office is clocked in.';}
+  else if(employee.capability==='planned'){state='setup';label='Setup required';detail='This role has no execution tool configured.';}
+  else if(employee.id==='Johnson'){state='scheduled';label='Scheduled · manager patrol';detail=s.manager?'Next patrol at '+new Date(s.manager.nextCheckAt).toLocaleTimeString()+'.':'Waiting for the first automatic patrol.';}
+  const row=document.createElement('div');row.className='manager-employee';row.dataset.state=state;row.setAttribute('role','listitem');
+  const copy=document.createElement('div');copy.append(text('strong',employee.name+' · '+employee.role),text('span',label),text('small',detail));
+  const inspect=text('button','Inspect');inspect.type='button';inspect.className='secondary-button';inspect.onclick=()=>inspectEmployee(employee.id);
+  row.append(copy,inspect);return row;
+ }));
+ const m=s.manager;
+ $('#manager-status').textContent=m?employeeName(s,'Johnson')+' · '+m.summary+' · Last patrol '+new Date(m.checkedAt).toLocaleTimeString()+'. Next patrol '+new Date(m.nextCheckAt).toLocaleTimeString()+'.':'Manager will patrol after the office clocks in.';
+ const next=Number(m?.nextResearchAt),researchQueued=tasks.some(task=>['Queued','Running'].includes(task.status));
+ $('#manager-schedule').textContent=s.clock!=='in'?'Clock in to let the office queue and run scheduled research while this computer stays awake.':Number.isFinite(next)&&next>0?(next<=Date.now()?'The next research cycle is eligible now and will queue automatically when existing research clears.':'Next automatic research window: '+new Date(next).toLocaleTimeString()+(researchQueued?' · after existing research clears.':'.')):'The office will queue its standing research automatically when no research assignment is active.';
+}
 function renderExperience(s){
+ renderManagerActivity(s);
  $('#computer-company').textContent=s.company.name+' · Private workspace';$('#shift-light').dataset.active=String(s.clock==='in');$('#connection-status').textContent=['127.0.0.1','localhost','[::1]'].includes(location.hostname)?'On this computer':'Hosted workspace';
  renderNotifications(s);
  const guide=s.businessGuide||{headline:'Confirm what your business can deliver.',summary:'A clear offer and practical delivery coverage help your team find relevant opportunities.',primaryAction:{title:'Set your company direction',why:'Your team works from the services and customers you choose.',pane:'files',section:'company-form'},nextActions:[],pipeline:[],readiness:[]};

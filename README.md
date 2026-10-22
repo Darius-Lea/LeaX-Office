@@ -29,6 +29,8 @@ A genuine locally served Three.js WebGL office provides orbit/zoom, bodies/faces
 
 Seven editable roles have real bounded tools: Alpha research, Bravo provenance, Juliet company register, Morgan qualification checks, Delta unsent drafts, Einstein briefings, Johnson 60-second queue/handoff patrol. Missing tools, blocked work, normal idle time and external approval remain explicit. No owner subscription employee cap. [OPERATING_MODEL.md](OPERATING_MODEL.md) distinguishes current functionality from the full revenue workflow still to build.
 
+The manager report now shows current running, queued and blocked work items from saved tasks, follow-ups, local-model runs and contact jobs; it refreshes with the office state every five seconds. It separates Johnson's one-minute supervision patrol from the automatic six-hour research window. Recorded cash is labeled owner-reported, and historical award records are not shown as open jobs. Idle employees are not labeled as slacking. This activity panel does not create a dedicated language-model agent for each role.
+
 ## Developer startup
 Node 24.19+ within 24.x: `npm ci --ignore-scripts`, `npm test`, `npm start`. `npm run build:app` creates a standalone production application in `dist/application` without customer npm dependencies; start it with `node dist/application/runtime/server.mjs`. Optional standalone `npm run worker` runs the same office loop. Use one processing mode at a time. The app binds loopback by default on port 4310; Render/public mode requires HTTPS origin/private bootstrap settings described in [DEPLOYMENT.md](DEPLOYMENT.md).
 

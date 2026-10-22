@@ -3,6 +3,8 @@
 ## Implemented and exercised
 Founder authentication/session persistence; company and employee customization; durable SQLite tasks/checkpoints/leases; actual-source historical-award connector; four internal follow-up jobs; Johnson management checks; persistent clock/explicit pause; owner notes; unfinished-task edits and annotations; manual consistent backups and authenticated export; explicit source-fit next-action advice. Real WebGL scene and lightweight alternate views.
 
+Added a live manager operations panel that derives employee activity and running/queued/review counts from saved work every five seconds. It labels the next supervision patrol separately from the six-hour automatic research window, distinguishes historical award records from open jobs, and keeps idle time separate from recorded technical faults.
+
 Added current-notice SAM.gov connector, deadline/type/activity/freshness classification and official POC provenance in a separate dataset. Credentials absent: state is Setup required, not live-validated bids.
 
 Added genuine Ollama inference adapter, installed model selection, optional explicitly confirmed starter-model pull, durable runs/retries, cycle-scoped evidence and read-only grounded advice. No model/runtime available here: mocked protocol/storage tests pass; successful live inference is unrun.

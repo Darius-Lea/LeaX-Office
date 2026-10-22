@@ -131,8 +131,16 @@
 <label id="angle-label" hidden>Rotate office<input id="office-angle" type="range" min="-40" max="40" value="-18">
 </label>
 <details class="office-supervision">
-<summary>Manager’s latest check</summary>
+<summary>Manager report · live operations</summary>
+<p class="fine-print">This panel shows saved work, not activity inferred from animation. Johnson checks assignments automatically while clocked in. New research is queued on a separate six-hour schedule; the next time below is his supervision patrol. Scheduled award research shows historical awards, not open jobs. Current federal notices need a validated SAM.gov key.</p>
 <p id="manager-status" role="status">Manager will check saved assignments after clock-in.</p>
+<p id="manager-schedule" class="fine-print">Research is scheduled automatically while the office is clocked in and the computer is awake.</p>
+<div class="manager-live-panel">
+<div class="manager-panel-heading"><strong>Current team activity</strong><span>Updates every 5 seconds</span></div>
+<div id="manager-metrics" class="manager-metrics" aria-label="Current operating statistics"></div>
+<div id="manager-activity" class="manager-activity" role="list" aria-label="Employee activity"></div>
+<p class="fine-print">Idle means no active assignment is due; it is not evidence of slacking. Repeated technical failures are shown separately for review.</p>
+</div>
 <div id="manager-issues">
 </div>
 <p>Closing this window keeps local work running while the computer is awake. Clock out pauses new tasks. A sleeping or powered-off host cannot work.</p>
