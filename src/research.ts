@@ -6,6 +6,7 @@ export const SOURCE = {
  coverage: 'US federal awards, nationwide and overseas performance locations; not a worldwide open-tender feed',
 };
 export const DEFAULT_TERMS = ['structured cabling', 'network installation', 'low voltage'];
+export const RESEARCH_INTERVAL = 6 * 60 * 60 * 1000;
 export function allTermsFor(goal:string):string[] {
  const families:[RegExp,string][]=[[/construction.clean|post.construction|cleanup|clean.up/i,'construction cleanup'],[/medical|nursing|healthcare|hospital/i,'hospital network installation'],[/construction|rollout/i,'technology installation'],[/cabl|cat6/i,'structured cabling'],[/network|wi-fi|wireless/i,'network installation'],[/low.voltage/i,'low voltage'],[/cctv|security/i,'security system installation'],[/data.center|rack/i,'data center'],[/digital.signage|audio|commercial.av/i,'audio visual installation'],[/printer/i,'printer maintenance'],[/point.of.sale|\bpos\b/i,'point of sale']];
  const terms=families.filter(([pattern])=>pattern.test(goal)).map(([,term])=>term);

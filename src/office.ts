@@ -1,15 +1,39 @@
 import './outcomes.ts';
-import {db,setting,clock,enqueue,setSetting} from './store.ts';
+import {db,setting,clock,enqueue,setSetting,audit} from './store.ts';
 import {fundingState,searchFunding} from './funding.ts';
 import {searchSolicitations,solicitationState} from './solicitations.ts';
 import {processAgent,queueAgent} from './ai.ts';
-import {nextResearchGoal} from './research.ts';
+import {nextResearchGoal,RESEARCH_INTERVAL} from './research.ts';
 import {tick} from './worker.ts';
 import {managerPatrol} from './manager.ts';
 import {teamPulse} from './team.ts';
 import {queueTaskLeadResearch,processLeadResearch} from './lead-research.ts';
 // Clock state persists across tab closure and process restarts. Explicit clock-out wins.
 let busy=false;
+function queueResearchCycle(now:number,early=false){
+ if(setting('clock')!=='in')return null;
+ db.exec('BEGIN IMMEDIATE');
+ try{
+  if(db.prepare("SELECT id FROM tasks WHERE status IN ('Queued','Running') LIMIT 1").get()){db.exec('COMMIT');return null;}
+  const last=Number(setting('last_research')||0);
+  if(!early&&Number.isFinite(last)&&last>0&&now-last<RESEARCH_INTERVAL){db.exec('COMMIT');return null;}
+  if(early&&Number.isFinite(last)&&last>0&&now-last<60000){db.exec('COMMIT');return null;}
+  const standingGoal=String(setting('standing_goal')||'').trim();
+  if(!standingGoal){db.exec('COMMIT');return null;}
+  const rawLane=Number(setting('research_lane')||'0'),lane=Number.isSafeInteger(rawLane)&&rawLane>=0?rawLane:0;
+  const task=enqueue(nextResearchGoal(standingGoal,lane));
+  setSetting('research_lane',String(lane+1));setSetting('last_research',String(now));
+  audit(task,early?'Johnson selected the next saved research lane after an owner request':'Johnson automatically selected the next scheduled research lane');
+  db.exec('COMMIT');return {task,lane,queuedAt:now,nextResearchAt:now+RESEARCH_INTERVAL};
+ }catch(error){db.exec('ROLLBACK');throw error;}
+}
+export function requestManagerResearch(now=Date.now()){
+ if(setting('clock')!=='in')throw Error('Clock in the office before asking Johnson to start a research cycle.');
+ const queued=queueResearchCycle(now,true);
+ if(queued)return queued;
+ if(db.prepare("SELECT id FROM tasks WHERE status IN ('Queued','Running') LIMIT 1").get())throw Error('A research assignment is already queued or running; Johnson will continue it automatically.');
+ throw Error('A research cycle ran less than one minute ago, or the saved company goal is missing. Johnson will continue the normal schedule.');
+}
 export async function pulse(fetcher:typeof fetch=fetch){
  if(setting('clock')!=='in')return false;
  // Continue contact work independently of the award fetch and model queues.
@@ -24,11 +48,8 @@ export async function pulse(fetcher:typeof fetch=fetch){
  const funding=fundingState();if(funding.profile.services&&funding.profile.entityType!=='unknown'&&(!funding.checkedAt||Date.now()-funding.checkedAt>=86400000))void searchFunding().catch(()=>console.error('Funding source needs attention; no grant odds were assumed'));
  void processAgent().catch(error=>console.error('AI worker:',String(error)));
  if(busy)return false;
- if(!db.prepare("SELECT id FROM tasks WHERE status IN ('Queued','Running') LIMIT 1").get()&&Date.now()-Number(setting('last_research')||Date.now())>=21600000){
- const lane=Number(setting('research_lane')||'0');enqueue(nextResearchGoal(setting('standing_goal'),lane));setSetting('research_lane',String(lane+1));setSetting('last_research',String(Date.now()));
- }
  busy=true;
- try{managerPatrol();const worked=await tick(fetcher);const teamWorked=teamPulse();
+ try{queueResearchCycle(Date.now());managerPatrol();const worked=await tick(fetcher);const teamWorked=teamPulse();
  if(setting('ollama_model')){
  const brief=db.prepare("SELECT n.task,n.agent FROM office_notes n JOIN tasks t ON t.id=n.task WHERE n.agent='Einstein' AND t.status='Completed' AND NOT EXISTS (SELECT 1 FROM settings s WHERE s.key='ai_cycle:'||n.task) ORDER BY n.id DESC LIMIT 1").get() as any;
  const queued=Number((db.prepare("SELECT count(*) AS n FROM ai_runs WHERE status IN ('Queued','Running')").get() as any).n);

@@ -2,14 +2,21 @@ import {createHash} from 'node:crypto';
 import {db,setting,setSetting,audit} from './store.ts';
 import './team.ts';
 import {observeExpiredClaim,observeMissingOutput} from './accountability.ts';
+import {RESEARCH_INTERVAL} from './research.ts';
 
 const FOLLOW_UP_ROLES=['Juliet','Hotel','Delta','Einstein'];
 const PATROL_INTERVAL=60000;
 export type ManagerIssue={type:string;task:string;agent:string;message:string};
-export type ManagerStatus={checkedAt:number;visitedAgent:string|null;summary:string;issues:ManagerIssue[];nextCheckAt:number;recovered:string[]};
+export type ManagerStatus={checkedAt:number;visitedAgent:string|null;summary:string;issues:ManagerIssue[];nextCheckAt:number;nextResearchAt:number|null;recovered:string[]};
+
+function scheduledResearchAt(){
+ const last=Number(setting('last_research')||0);return Number.isFinite(last)&&last>0?last+RESEARCH_INTERVAL:null;
+}
 
 export function managerState():ManagerStatus|null{
- const saved=setting('manager_status');return saved?JSON.parse(saved):null;
+ const saved=setting('manager_status');if(!saved)return null;const status=JSON.parse(saved) as ManagerStatus;
+ // Keep older saved patrol records readable after adding the explicit research window.
+ if(status.nextResearchAt===undefined)status.nextResearchAt=scheduledResearchAt();return status;
 }
 
 // The office caller authorizes patrols while clocked in. No network requests or
@@ -71,8 +78,8 @@ export function managerPatrol(now=Date.now()):ManagerStatus{
   const followups=Number((db.prepare("SELECT count(*) AS n FROM team_jobs WHERE status='Queued'").get() as any).n);
   const summary=issues.length?`${issues.length} items need attention; ${recovered.length} interrupted claims recovered. ${running} running, ${pending} queued research assignments, ${followups} follow-up stages pending.`:
    running||pending||followups?`No supervision exceptions found. ${running} running, ${pending} queued research assignments, ${followups} follow-up stages pending.`:
-   'No pending assignments or supervision exceptions; waiting for scheduled research. Idle employees are not reported as working.';
-  const status:ManagerStatus={checkedAt:now,visitedAgent,summary,issues,nextCheckAt:now+PATROL_INTERVAL,recovered};
+   setting('clock')==='in'?'No active assignments or supervision exceptions. Johnson will queue the next research cycle automatically when it is due. Idle employees are not reported as working.':'No active assignments or supervision exceptions. The office is clocked out, so automatic research is paused.';
+  const status:ManagerStatus={checkedAt:now,visitedAgent,summary,issues,nextCheckAt:now+PATROL_INTERVAL,nextResearchAt:scheduledResearchAt(),recovered};
   const stableIssues=issues.map(issue=>JSON.stringify(issue)).sort();
   const signature=createHash('sha256').update(JSON.stringify(stableIssues)).digest('hex');
   if(issues.length&&signature!==setting('manager_issue_signature')){

@@ -23,7 +23,7 @@ import {awardAdvice} from './advice.ts';
 import {managerState} from './manager.ts';
 import {ROLE_CHARTERS} from './roles.ts';
 import {teamState} from './team.ts';
-import {startOffice} from './office.ts';
+import {startOffice,requestManagerResearch} from './office.ts';
 const port=Number(process.env.PORT||4310);
 const host=process.env.HOST || (process.env.RENDER==='true'?'0.0.0.0':'127.0.0.1');
 const publicBinding=!['127.0.0.1','localhost','::1'].includes(host);
@@ -125,6 +125,7 @@ const server=createServer(async(req,res)=>{
  if(req.method==='POST'&&url.pathname==='/api/office/clock'){
  if(typeof body.active!=='boolean')return send(400,{error:'Choose clock in or clock out'});
  setSetting('manual_pause',body.active?'no':'yes');clock(body.active);return send(200,{ok:true});}
+ if(req.method==='POST'&&url.pathname==='/api/manager/research')return send(202,requestManagerResearch());
  if(req.method==='POST'&&url.pathname==='/api/company'){
  if(typeof body.name!=='string'||!body.name.trim()||body.name.length>120||typeof body.goal!=='string'||!body.goal.trim()||body.goal.length>4000||typeof body.legalName!=='string'||body.legalName.length>120)return send(400,{error:'Company name, legal name and standing goal required (120/120/4000 character limits)'});
  setSetting('company',JSON.stringify({name:body.name.trim(),legalName:body.legalName.trim()}));setSetting('standing_goal',body.goal.trim());audit('office','Founder updated company profile and standing goal');return send(200,{ok:true});}

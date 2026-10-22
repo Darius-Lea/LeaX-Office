@@ -10,7 +10,8 @@ const {managerPatrol,managerState}=await import('../src/manager.ts');
 test('Johnson patrol recovers expired claims, repairs handoffs, deduplicates reports and respects normal idle',()=>{
  try{
   const now=Date.now();
-  const idle=managerPatrol(now);assert.deepEqual(idle.issues,[]);assert.match(idle.summary,/waiting for scheduled research/);assert.ok(idle.visitedAgent);assert.equal(idle.nextCheckAt,now+60000);
+  const idle=managerPatrol(now);assert.deepEqual(idle.issues,[]);assert.match(idle.summary,/clocked out/);assert.ok(idle.visitedAgent);assert.equal(idle.nextCheckAt,now+60000);
+  assert.equal(idle.nextResearchAt,null);
   assert.deepEqual(managerPatrol(now+1000),idle);assert.equal((db.prepare("SELECT count(*) AS n FROM office_notes WHERE agent='Johnson'").get() as any).n,0);
   const interrupted=enqueue('Owner-edited objective: nationwide installation');const checkpoint='{"source":"saved","page":2}';
   db.prepare("UPDATE tasks SET status='Running',lease=?,attempts=1,checkpoint=? WHERE id=?").run(now-1,checkpoint,interrupted);
@@ -22,7 +23,8 @@ test('Johnson patrol recovers expired claims, repairs handoffs, deduplicates rep
   const invalid=enqueue('Research with unreadable checkpoint');db.prepare("UPDATE tasks SET status='Completed',checkpoint='not valid JSON' WHERE id=?").run(invalid);
   const complete=enqueue('Research with missing follow-up');db.prepare("UPDATE tasks SET status='Completed',checkpoint='{\"collected\":1}' WHERE id=?").run(complete);
   db.prepare("INSERT INTO team_jobs(task,agent,status) VALUES(?,'Juliet','Completed')").run(complete);
-  const patrol=managerPatrol(now+60000);assert.deepEqual(patrol.recovered,[interrupted]);assert.notEqual(patrol.visitedAgent,idle.visitedAgent);
+  setSetting('last_research',String(now-1000));
+  const patrol=managerPatrol(now+60000);assert.deepEqual(patrol.recovered,[interrupted]);assert.notEqual(patrol.visitedAgent,idle.visitedAgent);assert.equal(patrol.nextResearchAt,now-1000+21600000);
   const resumed=db.prepare('SELECT * FROM tasks WHERE id=?').get(interrupted) as any;assert.equal(resumed.status,'Queued');assert.equal(resumed.goal,'Owner-edited objective: nationwide installation');assert.equal(resumed.checkpoint,checkpoint);assert.equal(resumed.attempts,1);
   assert.equal((db.prepare('SELECT status FROM tasks WHERE id=?').get(exhausted) as any).status,'Blocked');
   assert.equal((db.prepare('SELECT count(*) AS n FROM team_jobs WHERE task=?').get(complete) as any).n,4);assert.equal((db.prepare("SELECT status FROM team_jobs WHERE task=? AND agent='Juliet'").get(complete) as any).status,'Queued');

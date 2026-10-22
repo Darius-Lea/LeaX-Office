@@ -46,6 +46,8 @@ test('HTTP auth, origin protection, retry, saved account across restart, and log
  assert.equal((await call('state')).status,200); // durable session
  state=await (await call('state')).json();assert.equal(state.tasks[0].id,id);assert.equal(state.company.name,'Test Company');assert.equal(state.opportunities[0].note,'Owner qualification check pending');assert.equal(state.employees.length,8);assert.equal(state.employees.find(e=>e.id==='Alpha').name,'Alex');assert.equal(state.clock,'out');assert.equal(state.officeDesign.design.wall,'navy');assert.equal(state.officeDesign.design.layout,'studio');assert.equal(state.officeDesign.design.coffee,false);
  assert.equal((await call('office/open',{})).status,200);assert.equal((await (await call('state')).json()).clock,'in');
+ const cycleDB=new DatabaseSync(join(directory,'headquarters.sqlite'));cycleDB.prepare("UPDATE tasks SET status='Completed' WHERE status IN ('Queued','Running','Blocked')").run();cycleDB.prepare("UPDATE settings SET value=? WHERE key='last_research'").run(String(Date.now()-120000));cycleDB.close();
+ const earlyCycle=await call('manager/research',{});assert.equal(earlyCycle.status,202);const cycle=await earlyCycle.json();assert.equal(cycle.lane,0);assert.ok(cycle.task);assert.equal((await call('manager/research',{})).status,400);
  await stop(server.child);server=await launch(directory);assert.equal((await (await call('state')).json()).clock,'in');
  assert.equal((await call('office/clock',{active:false})).status,200);await call('office/open',{});assert.equal((await (await call('state')).json()).clock,'out');
  assert.equal((await call('logout',{})).status,200);assert.equal((await call('state')).status,401);
