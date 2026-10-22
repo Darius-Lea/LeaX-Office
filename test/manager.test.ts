@@ -10,7 +10,7 @@ const {managerPatrol,managerState}=await import('../src/manager.ts');
 test('Johnson patrol recovers expired claims, repairs handoffs, deduplicates reports and respects normal idle',()=>{
  try{
   const now=Date.now();
-  const idle=managerPatrol(now);assert.deepEqual(idle.issues,[]);assert.match(idle.summary,/waiting for scheduled research/);assert.ok(idle.visitedAgent);assert.equal(idle.nextCheckAt,now+60000);
+  const idle=managerPatrol(now);assert.deepEqual(idle.issues,[]);assert.match(idle.summary,/clocked out/);assert.ok(idle.visitedAgent);assert.equal(idle.nextCheckAt,now+60000);
   assert.equal(idle.nextResearchAt,null);
   assert.deepEqual(managerPatrol(now+1000),idle);assert.equal((db.prepare("SELECT count(*) AS n FROM office_notes WHERE agent='Johnson'").get() as any).n,0);
   const interrupted=enqueue('Owner-edited objective: nationwide installation');const checkpoint='{"source":"saved","page":2}';

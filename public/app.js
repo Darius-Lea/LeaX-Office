@@ -134,34 +134,55 @@ function renderManagerActivity(s){
  const tasks=s.tasks||[],teamJobs=s.teamJobs||[],aiRuns=s.aiRuns||[],leadResearch=s.leadResearch||[];
  const taskById=new Map(tasks.map(task=>[task.id,task]));
  const items=[
-  ...tasks.filter(task=>['Running','Queued','Blocked','Failed'].includes(task.status)).map(task=>({agent:task.agent,status:task.status,kind:'Research',detail:task.error||task.goal,task:task.id})),
-  ...teamJobs.filter(job=>['Running','Queued','Blocked','Failed'].includes(job.status)).map(job=>({agent:job.agent,status:job.status,kind:'Follow-up',detail:taskById.get(job.task)?.goal||'Saved research handoff',task:job.task})),
-  ...aiRuns.filter(run=>['Running','Queued','Blocked','Failed'].includes(run.status)).map(run=>({agent:run.agent,status:run.status,kind:'Local AI',detail:run.status==='Running'?'Local model response in progress':'Local model work '+run.status.toLowerCase(),task:run.context_task||''})),
-  ...leadResearch.filter(run=>['Running','Queued','Blocked','Needs website','Needs confirmation'].includes(run.status)).map(run=>({agent:'Juliet',status:run.status,kind:'Contact research',detail:run.error||run.message||run.company,task:run.recordId}))
+  ...tasks.filter(task=>['Running','Queued','Blocked','Failed'].includes(task.status)).map(task=>({agent:task.agent,status:task.status,kind:'Historical award research',detail:task.error||task.goal,task:task.id,time:task.created,source:'USAspending · historical records'})),
+  ...teamJobs.filter(job=>['Running','Queued','Blocked','Failed'].includes(job.status)).map(job=>({agent:job.agent,status:job.status,kind:'Research handoff',detail:taskById.get(job.task)?.goal||'Saved research handoff',task:job.task,time:taskById.get(job.task)?.created,source:'Saved company evidence'})),
+  ...aiRuns.filter(run=>['Running','Queued','Blocked','Failed'].includes(run.status)).map(run=>({agent:run.agent,status:run.status,kind:'Local model inference',detail:run.error||run.prompt||'Local model assignment',task:run.context_task||'',time:run.updated||run.created,source:run.model?'Ollama · '+run.model:'Local model'})),
+  ...leadResearch.filter(run=>['Running','Queued','Blocked','Needs website','Needs confirmation'].includes(run.status)).map(run=>({agent:'Juliet',status:run.status,kind:'Public contact research',detail:run.error||run.message||run.company,task:run.recordId,time:run.checked_at||run.requested_at,source:'Published company pages'}))
  ];
  const running=items.filter(item=>item.status==='Running').length,queued=items.filter(item=>item.status==='Queued').length,review=items.filter(item=>['Blocked','Failed','Needs website','Needs confirmation'].includes(item.status)).length;
  const cash=s.outcomes?.financials?.cashReceivedCents;
- const metrics=[['Running items',running],['Queued items',queued],['Needs review',review],['Historical award records',(s.opportunities||[]).length],['Owner-reported cash',money(cash??0)]];
+ const openNotices=(s.solicitations?.records||[]).filter(notice=>notice.classification==='Open for review').length;
+ const completedAI=aiRuns.filter(run=>run.status==='Completed').length;
+ const metrics=[['Running assignments',running],['Queued assignments',queued],['Needs review',review],['Historical awards',(s.opportunities||[]).length],['Current SAM notices',s.solicitations?.keyConfigured?openNotices:'Key needed'],['Completed AI runs',completedAI],['Owner-reported cash',cash===null||cash===undefined?'Not recorded':money(cash)]];
  $('#manager-metrics').replaceChildren(...metrics.map(([label,value])=>{const card=document.createElement('div');card.className='manager-metric';card.append(text('strong',String(value)),text('span',String(label)));return card;}));
  $('#manager-activity').replaceChildren(...(s.employees||[]).map(employee=>{
   const own=items.filter(item=>item.agent===employee.id),active=own.find(item=>item.status==='Running'),blocked=own.find(item=>['Blocked','Failed'].includes(item.status)),needs=own.find(item=>['Needs website','Needs confirmation'].includes(item.status)),pending=own.find(item=>item.status==='Queued');
-  let state='idle',label='Idle · no active assignment',detail='Waiting for scheduled or handed-off work.';
+  let state='idle',label='Idle · no active assignment',detail='No saved task is due for this employee right now.';
   if(active){state='running';label='Working now · '+active.kind;detail=active.detail;}
   else if(blocked){state='blocked';label='Blocked · owner review';detail=blocked.detail;}
   else if(needs){state='review';label='Needs an owner step';detail=needs.detail;}
   else if(pending){state='queued';label=s.clock==='in'?'Queued · awaiting worker':'Queued · office clocked out';detail=pending.kind+': '+pending.detail;}
   else if(s.clock!=='in'){state='paused';label='Clocked out';detail='New work is paused until the office is clocked in.';}
   else if(employee.capability==='planned'){state='setup';label='Setup required';detail='This role has no execution tool configured.';}
-  else if(employee.id==='Johnson'){state='scheduled';label='Scheduled · manager patrol';detail=s.manager?'Next patrol at '+new Date(s.manager.nextCheckAt).toLocaleTimeString()+'.':'Waiting for the first automatic patrol.';}
+  else if(employee.id==='Johnson'){state='scheduled';label='Supervision schedule · active';detail=s.manager?'Next one-minute patrol at '+new Date(s.manager.nextCheckAt).toLocaleTimeString()+'. Research scheduling is separate.':'Waiting for the first automatic patrol.';}
   const row=document.createElement('div');row.className='manager-employee';row.dataset.state=state;row.setAttribute('role','listitem');
   const copy=document.createElement('div');copy.append(text('strong',employee.name+' · '+employee.role),text('span',label),text('small',detail));
   const inspect=text('button','Inspect');inspect.type='button';inspect.className='secondary-button';inspect.onclick=()=>inspectEmployee(employee.id);
   row.append(copy,inspect);return row;
  }));
+ const queue=$('#manager-work-queue');
+ if(items.length){queue.replaceChildren(...items.slice(0,24).map(item=>{const row=document.createElement('article');row.className='console-work-row';row.dataset.state=['Blocked','Failed','Needs website','Needs confirmation'].includes(item.status)?'review':item.status.toLowerCase();row.setAttribute('role','listitem');const copy=document.createElement('div');const time=Number(item.time);copy.append(text('strong',employeeName(s,item.agent)+' · '+item.kind),text('span',item.status+' · '+item.source),text('small',item.detail),...(Number.isFinite(time)&&time>0?[text('time',new Date(time).toLocaleTimeString())]:[]));row.append(copy);const inspect=text('button','View');inspect.type='button';inspect.className='secondary-button';inspect.onclick=()=>inspectEmployee(item.agent);row.append(inspect);return row;}));}
+ else{queue.replaceChildren(text('p',s.clock==='in'?'No active assignment is due. Johnson will queue the next scheduled research cycle automatically.':'The office is clocked out; saved work will resume when you clock in.'));}
+ const events=(s.audit||[]).slice(0,8);const feed=$('#manager-event-feed');
+ if(events.length)feed.replaceChildren(...events.map(event=>{const row=document.createElement('div');row.className='console-event';row.setAttribute('role','listitem');row.append(text('time',new Date(event.time).toLocaleTimeString()),text('span',event.event));return row;}));
+ else feed.replaceChildren(text('p','No office work events are saved yet.'));
+ const sourceRows=[];
+ sourceRows.push(['Historical award research',(s.opportunities||[]).length+' saved records · USAspending public spending history, not current open jobs.']);
+ const solicitation=s.solicitations||{};
+ sourceRows.push(['Current federal notices',solicitation.keyConfigured?solicitation.status+' · '+openNotices+' notices currently classified open for review; verify amendments and eligibility.':'Setup required · a free personal SAM.gov API key is needed for current notice searches.']);
+ sourceRows.push(['Local machine learning',s.aiConfigured?'Model selected · '+completedAI+' completed saved inference runs. Same installed model can serve several role-specific workers.':'Not configured · local Ollama model setup is needed before AI inference can run.']);
+ $('#manager-sources').replaceChildren(...sourceRows.map(([label,detail])=>{const row=document.createElement('div');row.className='console-source';row.append(text('strong',label),text('span',detail));return row;}));
  const m=s.manager;
  $('#manager-status').textContent=m?employeeName(s,'Johnson')+' · '+m.summary+' · Last patrol '+new Date(m.checkedAt).toLocaleTimeString()+'. Next patrol '+new Date(m.nextCheckAt).toLocaleTimeString()+'.':'Manager will patrol after the office clocks in.';
  const next=Number(m?.nextResearchAt),researchQueued=tasks.some(task=>['Queued','Running'].includes(task.status));
  $('#manager-schedule').textContent=s.clock!=='in'?'Clock in to let the office queue and run scheduled research while this computer stays awake.':Number.isFinite(next)&&next>0?(next<=Date.now()?'The next research cycle is eligible now and will queue automatically when existing research clears.':'Next automatic research window: '+new Date(next).toLocaleTimeString()+(researchQueued?' · after existing research clears.':'.')):'The office will queue its standing research automatically when no research assignment is active.';
+ const start=$('#manager-start-cycle');const help=$('#manager-start-help');
+ const activeResearch=tasks.some(task=>['Queued','Running'].includes(task.status));
+ start.disabled=s.clock!=='in'||activeResearch;
+ start.textContent=s.clock!=='in'?'Clock in to start early research':activeResearch?'Research is already underway':'Start the next research cycle early';
+ help.textContent=s.clock!=='in'?'Clock in to let Johnson manage the research schedule.':activeResearch?'Johnson already has a queued or running research assignment.':`Optional early run: Johnson selects the next saved company research lane. This reads historical federal awards; it does not find every live contract, submit bids or contact anyone.`;
+ start.onclick=async()=>{start.disabled=true;try{await api('manager/research',{});await refresh();$('#message').textContent='Johnson queued the next research lane using your saved company goal.';}catch(error){$('#message').textContent=error.message;await refresh();}};
+ $('#manager-orbit').onclick=()=>{const model=$('#manager-orbit');model.classList.remove('spinning');void model.offsetWidth;model.classList.add('spinning');setTimeout(()=>model.classList.remove('spinning'),1000);};
 }
 function renderExperience(s){
  renderManagerActivity(s);

@@ -132,14 +132,27 @@
 </label>
 <details class="office-supervision">
 <summary>Manager report · live operations</summary>
-<p class="fine-print">This panel shows saved work, not activity inferred from animation. Johnson checks assignments automatically while clocked in. New research is queued on a separate six-hour schedule; the next time below is his supervision patrol. Scheduled award research shows historical awards, not open jobs. Current federal notices need a validated SAM.gov key.</p>
+<p class="fine-print">Live records from the office worker, saved assignments and connected sources. Johnson's one-minute patrol checks execution; his six-hour research schedule is separate and queues work automatically while clocked in. The early-cycle control is optional. USAspending records are historical awards, not open jobs. SAM.gov current notices require a validated free personal key.</p>
 <p id="manager-status" role="status">Manager will check saved assignments after clock-in.</p>
 <p id="manager-schedule" class="fine-print">Research is scheduled automatically while the office is clocked in and the computer is awake.</p>
 <div class="manager-live-panel">
-<div class="manager-panel-heading"><strong>Current team activity</strong><span>Updates every 5 seconds</span></div>
+<div class="manager-console-head">
+<div class="manager-console-brand">
+<button id="manager-orbit" class="manager-molecule" type="button" title="Rotate the molecular workflow model 360 degrees" aria-label="Rotate the molecular workflow model 360 degrees">
+<svg viewBox="0 0 88 88" role="img" aria-hidden="true"><defs><radialGradient id="atom-core"><stop stop-color="#e2fff6"/><stop offset=".42" stop-color="#68edc1"/><stop offset="1" stop-color="#168d77"/></radialGradient></defs><g class="molecule-bonds" fill="none" stroke-linecap="round"><ellipse cx="44" cy="44" rx="33" ry="14" transform="rotate(-28 44 44)"/><ellipse cx="44" cy="44" rx="33" ry="14" transform="rotate(34 44 44)"/><ellipse cx="44" cy="44" rx="14" ry="33" transform="rotate(-12 44 44)"/><path d="M21 24 42 43 65 58M24 62 43 44 68 28"/></g><g class="molecule-atoms"><circle cx="44" cy="44" r="8" fill="url(#atom-core)"/><circle cx="16" cy="29" r="4"/><circle cx="68" cy="25" r="4"/><circle cx="72" cy="58" r="3.5"/><circle cx="25" cy="66" r="3.5"/><circle cx="43" cy="12" r="3"/></g></svg>
+</button>
+<div><p class="eyebrow">LIVE OPERATIONS · EVIDENCE LINKED</p><strong>Johnson's operations console</strong><span>Actual work records · 5-second refresh</span></div>
+</div>
+<span class="console-live"><i></i>LIVE</span>
+</div>
 <div id="manager-metrics" class="manager-metrics" aria-label="Current operating statistics"></div>
 <div id="manager-activity" class="manager-activity" role="list" aria-label="Employee activity"></div>
-<p class="fine-print">Idle means no active assignment is due; it is not evidence of slacking. Repeated technical failures are shown separately for review.</p>
+<section class="console-ledger"><div class="ledger-title"><strong>Assignment terminal</strong><span>Queued · running · blocked</span></div><div id="manager-work-queue" class="manager-work-queue" role="list" aria-label="Current saved assignments"></div></section>
+<section class="console-ledger"><div class="ledger-title"><strong>Recent office log</strong><span>Saved system events</span></div><div id="manager-event-feed" class="manager-event-feed" role="list" aria-label="Recent office activity"></div></section>
+<div id="manager-sources" class="manager-sources"></div>
+<p class="console-note">Idle means no active assignment is due; it is not evidence of slacking. The app reports only saved work and real source status. Local model inference runs on the office host when configured; the model does not guarantee sales or revenue.</p>
+<button id="manager-start-cycle" class="console-start">Start the next research cycle early</button>
+<p id="manager-start-help" class="console-note">The manager normally starts research on schedule. This optional action uses your saved goal and next research lane; it does not submit bids or contact anyone.</p>
 </div>
 <div id="manager-issues">
 </div>
