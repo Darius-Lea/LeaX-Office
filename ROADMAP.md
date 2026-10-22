@@ -14,3 +14,6 @@
 
 
 0.2.0-preview.3 addresses focused next-action explanations, actionable private-access alerts, read-aloud and durable office remodeling. It also lets the authenticated web office save encrypted SAM access without backend settings or a restart. Integrated automated/browser validation and the unsigned native cross-build passed; actual device/source gates remain. Remaining work is unchanged: Windows-device execution/signing, actual connected-model/source verification, broader qualified prospect sources and authorized business execution through collection. Prioritize real customer demand, follow-ups, margins and payments; neither interface changes nor grants listings establish income.
+
+
+Preview.4 implements concise company/contact-first briefs and bounded public-source contact enrichment with a company-confirmation gate. Next validate search-provider access and real company contacts on the target installation, improve verified decision-maker and current-demand coverage, and keep missed/blocked contacts visibly unfinished.

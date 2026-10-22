@@ -7,10 +7,18 @@ import {nextResearchGoal} from './research.ts';
 import {tick} from './worker.ts';
 import {managerPatrol} from './manager.ts';
 import {teamPulse} from './team.ts';
+import {queueTaskLeadResearch,processLeadResearch} from './lead-research.ts';
 // Clock state persists across tab closure and process restarts. Explicit clock-out wins.
 let busy=false;
 export async function pulse(fetcher:typeof fetch=fetch){
  if(setting('clock')!=='in')return false;
+ // Continue contact work independently of the award fetch and model queues.
+ // Backfill only the latest saved cycle, rather than replaying all old research.
+ if(!setting('lead_briefing_bootstrap_v1')){
+ const recent=db.prepare("SELECT task FROM office_notes WHERE agent='Einstein' AND task IN (SELECT id FROM tasks WHERE status='Completed') ORDER BY id DESC LIMIT 1").get() as any;
+ if(recent)queueTaskLeadResearch(recent.task);setSetting('lead_briefing_bootstrap_v1','done');
+ }
+ void processLeadResearch().catch(()=>console.error('Lead contact research needs attention; inspect its saved status'));
  // Inference has its own serialized queue and must not hold up source collection.
  const notices=solicitationState();if(!notices.checkedAt||Date.now()-notices.checkedAt>=21600000||(notices.keyConfigured&&['Setup required','Ready'].includes(notices.status)))void searchSolicitations(setting('standing_goal')).catch(()=>console.error('Current-notice search needs attention; inspect source status'));
  const funding=fundingState();if(funding.profile.services&&funding.profile.entityType!=='unknown'&&(!funding.checkedAt||Date.now()-funding.checkedAt>=86400000))void searchFunding().catch(()=>console.error('Funding source needs attention; no grant odds were assumed'));
@@ -24,7 +32,7 @@ export async function pulse(fetcher:typeof fetch=fetch){
  if(setting('ollama_model')){
  const brief=db.prepare("SELECT n.task,n.agent FROM office_notes n JOIN tasks t ON t.id=n.task WHERE n.agent='Einstein' AND t.status='Completed' AND NOT EXISTS (SELECT 1 FROM settings s WHERE s.key='ai_cycle:'||n.task) ORDER BY n.id DESC LIMIT 1").get() as any;
  const queued=Number((db.prepare("SELECT count(*) AS n FROM ai_runs WHERE status IN ('Queued','Running')").get() as any).n);
- if(brief&&queued<4){const id=queueAgent('Einstein','Review research cycle '+brief.task+'. Prioritize service-fit companies using the saved evidence, explain what an award means, and advise the owner on concrete next steps toward qualified profitable work. Mark missing contacts and capability information; do not invent them or promise income.',brief.task);setSetting('ai_cycle:'+brief.task,id);}
+ if(brief&&queued<4){const id=queueAgent('Einstein','Give the CEO one concise lead brief for research cycle '+brief.task+'. Start with the recommended next step and company name, then published email/phone or Not found, correctly labeled project/company location, a source-backed business reason and one specific question to ask the vendor team. Use the saved leadBrief and contact sources. Separate current need from historical award evidence. Keep it under 180 words. Do not repeat the objective, employee handoffs, general operating instructions or long disclaimers. Unknown decision-makers, weak spots, demand and money stay unknown; do not invent them.',brief.task);setSetting('ai_cycle:'+brief.task,id);}
  const latestResult=db.prepare('SELECT id,revision,updated FROM business_outcomes ORDER BY updated DESC,id DESC LIMIT 1').get() as any;
  let profileUpdated:number|null=null;try{profileUpdated=JSON.parse(setting('business_profile_v1')||'{}').updatedAt||null}catch{}
  const signal=latestResult||profileUpdated?JSON.stringify({result:latestResult?[latestResult.id,latestResult.revision,latestResult.updated]:null,profileUpdated}):null;

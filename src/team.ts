@@ -1,4 +1,6 @@
-import {nextActionBrief,awardAdvice} from './advice.ts';
+import {awardAdvice} from './advice.ts';
+import {taskBriefing,briefingText,enrichBriefingNotes} from './briefings.ts';
+import {queueTaskLeadResearch} from './lead-research.ts';
 import {db,setting,audit} from './store.ts';
 const roles=['Juliet','Hotel','Delta','Einstein'];
 db.exec(`CREATE TABLE IF NOT EXISTS team_jobs(task TEXT REFERENCES tasks(id),agent TEXT,status TEXT DEFAULT 'Queued',PRIMARY KEY(task,agent));
@@ -23,11 +25,10 @@ export function teamPulse(){
  const candidates=records.filter(record=>{const e=JSON.parse(record.evidence),fit=awardAdvice(record,company.name).fit;return e.country==='USA'&&(fit==='strong service match'||fit==='specialist review');});
  title='Vendor introduction drafts — NOT SENT';body=candidates.length?'Service/geography screening held '+(records.length-candidates.length)+' records. Drafts for the first '+Math.min(10,candidates.length)+' of '+candidates.length+' relevant US records (not qualified leads).\n\n'+candidates.slice(0,10).map(r=>`Recipient company: ${r.title}\nTo: NOT FOUND — do not send until vendor-services contact is verified.\nSubject: ${company.name} — installation partner inquiry\nHello Vendor Services team,\nWe would like to learn about your subcontractor onboarding process for commercial technology installation services. Please share your current requirements and authorized application channel. We will confirm coverage and qualifications before proposing work.\nRegards, ${company.name}\nResearch evidence (historical award, not proof of an open job): ${r.url}`).join('\n\n——\n\n'):'No sufficiently described US service matches passed the initial screening. No recipient-specific drafts created. Keep overseas, poor-fit and unclear records on hold until scope and delivery feasibility are confirmed. Contact addresses are NOT FOUND until a source verifies them.';
  }else{
- title='Your research briefing';body=`Objective: ${job.goal}\n${records.length} historical award records reviewed. CRM, qualification checklist and unsent vendor-introduction drafts prepared.\nNext step: verify actual vendor-services contacts and current partnership demand. This source does not provide decision-maker emails or phone numbers. No open solicitations, outreach, work awards or revenue are implied.\nThe office will research again on its bounded schedule while clocked in and the host is awake.`;
+ queueTaskLeadResearch(job.task);const brief=taskBriefing(job.task);title=brief?brief.company+' · Lead briefing':'No suitable lead this cycle';body=brief?briefingText(brief):'No clear service match is ready for contact research. The team will continue the saved research schedule. Existing records remain available in research files.';
  }
- if(job.agent==='Einstein')body+='\n\n'+nextActionBrief(records,company.name);
  db.prepare('INSERT OR IGNORE INTO office_notes(task,agent,title,body,created) VALUES(?,?,?,?,?)').run(job.task,job.agent,title,body,Date.now());
  db.prepare("UPDATE team_jobs SET status='Completed' WHERE task=? AND agent=?").run(job.task,job.agent);audit(job.task,((db.prepare('SELECT name FROM employees WHERE id=?').get(job.agent) as any)?.name||job.agent)+' completed: '+title);db.exec('COMMIT');return true;
  }catch(e){db.exec('ROLLBACK');throw e;}
 }
-export function teamState(){return {notes:db.prepare('SELECT * FROM office_notes ORDER BY id DESC LIMIT 100').all(),teamJobs:db.prepare('SELECT * FROM team_jobs').all(),prospects:db.prepare('SELECT * FROM prospects').all()};}
+export function teamState(){return {notes:enrichBriefingNotes(db.prepare('SELECT * FROM office_notes ORDER BY id DESC LIMIT 100').all()),teamJobs:db.prepare('SELECT * FROM team_jobs').all(),prospects:db.prepare('SELECT * FROM prospects').all()};}

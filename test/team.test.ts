@@ -17,7 +17,7 @@ test('completed research produces deduplicated CRM, checks, unsent drafts and br
  db.prepare("UPDATE team_jobs SET status='Queued' WHERE task=? AND agent<>'Einstein'").run(id);
  for(let i=0;i<4;i++)assert.equal(teamPulse(),true);
  assert.equal(teamPulse(),false);const state=teamState();assert.equal(state.notes.length,4);assert.equal(state.prospects.length,1);assert.ok(state.teamJobs.every(j=>j.status==='Completed'));
- const draft=state.notes.find(n=>n.agent==='Delta')!;assert.match(String(draft.body),/NOT FOUND/);assert.match(String(draft.title),/NOT SENT/);assert.match(String(state.notes.find(n=>n.agent==='Einstein')!.body),/No open solicitations/);
+ const draft=state.notes.find(n=>n.agent==='Delta')!;assert.match(String(draft.body),/NOT FOUND/);assert.match(String(draft.title),/NOT SENT/);const brief=state.notes.find(n=>n.agent==='Einstein')!;assert.match(String(brief.body),/^Recommended next step:/);assert.doesNotMatch(String(brief.body),/Objective:|CRM, qualification|bounded schedule/);assert.equal(brief.briefing.company,'Fixture Contractor');assert.match(brief.briefing.contact.status,/unfinished/);
  assert.equal(state.notes.filter(n=>!n.seen).length,4);db.prepare('UPDATE office_notes SET seen=1 WHERE id=?').run(state.notes[0].id);assert.equal(teamState().notes.filter(n=>!n.seen).length,3);
  assert.equal(teamPulse(),false);assert.equal(teamState().notes.length,4);
  }finally{db.close();rmSync(process.env.HQ_DATA_DIR!,{recursive:true});}

@@ -17,3 +17,6 @@ Local first-run bootstrap uses a private fragment on loopback, consumed and eras
 
 
 Focused advice uses text content rather than executable source markup. Read-aloud is user initiated and selects installed English voices only; it does not send note text to a cloud speech API. Office-design updates are authenticated, origin checked, limited to known enum/boolean fields and stored separately from immutable source evidence. A visual change grants no new employee tools or external-action permissions.
+
+
+Preview.4 contact enrichment uses a fixed public search origin, actual candidate/linked URLs only, exact company-source boundaries, public-IP/TLS pinning and robots checks. Candidate contacts cannot supply a draft ID until company-site identity is owner-confirmed and the page is stored through the contact reader. Confirmation is an owner attestation, not independent corporate verification. No guessed domains, login automation or external sending is enabled. Source quotes use text rendering/escaped print output. Jobs keep prior observations in history on refresh; same-company dated reuse retains its original timestamp. All lead/print/research routes require the founder session, with exact-origin protection for mutations.

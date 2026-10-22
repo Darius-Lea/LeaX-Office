@@ -8,7 +8,7 @@ Ollama: real loopback inference and bounded allowlisted research tools, durable 
 
 Grants.gov: separate bounded public search/detail connector with saved provenance and conservative eligibility/freshness holds. No guessed approval probabilities or default recommendation to apply. Actual API access returned proxy403 here and remains unvalidated.
 
-Public company contact-page reader: owner supplies a public HTTPS page; SSRF/DNS/TLS/robots/size/time boundaries apply. It saves published contacts with sources, not verified decision-maker identity or permission to send.
+Public company contact research: a durable queue can attempt the fixed DuckDuckGo HTML public index under its robots policy, use only actual result links, and record an identity-unverified candidate. The owner confirms the company site before the worker checks its homepage and up to two actual same-origin contact/vendor links. SSRF/DNS/TLS/robots/size/time boundaries apply to every read. It saves published email/phone listings, quotes and business-address source receipts, not verified decision-maker identity or permission to send. Live search access returned proxy CONNECT403 here; no successful real-company lookup is claimed. A confirmed official-site URL is the fallback when discovery is blocked.
 
 Read-aloud: user-initiated browser speech synthesis using installed English device voices only. Availability and sound vary; no cloud speech provider or account is connected.
 

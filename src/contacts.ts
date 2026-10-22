@@ -46,7 +46,7 @@ export async function resolvePublicEndpoint(url:URL,resolver:any=lookup){
  if(!answers.length||answers.some(a=>!isPublicAddress(a.address)))throw Error('Destination resolves to a private or reserved address');
  return answers[0] as {address:string,family:number};
 }
-async function publicRequest(url:URL,kind:'robots'|'page'):Promise<Response>{
+export async function publicRequest(url:URL,kind:'robots'|'page'):Promise<Response>{
  validatePublicUrl(url.href);const pinned=await resolvePublicEndpoint(url);
  return await new Promise((resolve,reject)=>{
   // Custom lookup pins the validated address while original hostname remains
@@ -95,6 +95,12 @@ export function extractContacts(html:string,sourceUrl:string):PublishedContact[]
   let number=match[1].split(/[?;]/)[0];try{number=decodeURIComponent(number);}catch{}
   if(/^[+\d().\s-]{7,40}$/.test(number)&&number.replace(/\D/g,'').length>=7&&number.replace(/\D/g,'').length<=15)add('phone',number);
  }
+ // A visible telephone label is required for non-link numbers, avoiding award IDs,
+ // amounts and unlabeled long digit strings. The original published text is kept.
+ const visible=clean.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');
+ for(const match of visible.matchAll(/(?:phone|telephone|tel\.?|call|office)\s*(?:us)?\s*[:·-]?\s*((?:\+\d{1,3}[ .-]?)?(?:\(\d{2,4}\)[ .-]?|\d{2,4}[ .-])\d{3,4}[ .-]\d{3,4})/gi)){
+  const number=match[1];if(number.replace(/\D/g,'').length>=10&&number.replace(/\D/g,'').length<=15)add('phone',number);
+ }
  return entries.sort((a,b)=>Number(b.roleHint.startsWith('Possible'))-Number(a.roleHint.startsWith('Possible'))).slice(0,20);
 }
 async function getRobots(origin:string,transport:ContactTransport){
@@ -114,6 +120,23 @@ async function getRobots(origin:string,transport:ContactTransport){
 }
 function parseRow(row:any){return {...row,contacts:JSON.parse(row.contacts)};}
 export function contactState(){return db.prepare('SELECT * FROM contact_research ORDER BY fetchedAt DESC LIMIT 30').all().map(parseRow);}
+// Shared reader for bounded lead-source discovery. It returns observed HTML only
+// after the same robots, redirect, TLS/DNS and response checks as contact research.
+export async function readPublicPage(raw:string,transport:ContactTransport=publicRequest){
+ const initial=validatePublicUrl(raw),robots=await getRobots(initial.origin,transport);let current=initial;
+ for(let redirects=0;redirects<=2;redirects++){
+  if(!robotsAllows(robots,current.pathname+current.search))throw Error('robots.txt disallows this page; not fetched');
+  const response=await transport(current,'page');if(response.headers['content-encoding']&&response.headers['content-encoding']!=='identity')throw Error('Source ignored identity encoding; compressed contact content is not processed');if(Buffer.byteLength(response.body)>LIMIT)throw Error('Contact source exceeds 512 KB');
+  if([301,302,303,307,308].includes(response.status)){
+   if(redirects===2)throw Error('Too many contact-source redirects');
+   const next=validatePublicUrl(new URL(response.headers.location||'',current).href);if(next.origin!==initial.origin)throw Error('Cross-origin redirects require a new owner-supplied official URL');current=next;continue;
+  }
+  if(response.status!==200)throw Error('Public contact page unavailable (HTTP '+response.status+')');
+  if(!response.headers['content-type']?.toLowerCase().includes('text/html'))throw Error('Contact source must be a public HTML page');
+  return {url:current.href,html:response.body,contacts:extractContacts(response.body,current.href)};
+ }
+ throw Error('Public source could not be read');
+}
 export async function researchContacts(raw:string,company:string,transport:ContactTransport=publicRequest){
  const initial=validatePublicUrl(raw);if(typeof company!=='string'||!company.trim()||company.length>200)throw Error('Enter a company name of up to 200 characters');
  const prior=db.prepare('SELECT * FROM contact_research WHERE url=?').get(initial.href) as any;
@@ -124,18 +147,7 @@ export async function researchContacts(raw:string,company:string,transport:Conta
  if(prior)db.prepare('INSERT OR IGNORE INTO contact_research_history VALUES(?,?,?,?,?,?,?)').run(prior.id+':'+prior.fetchedAt,prior.url,prior.company,prior.status,prior.contacts,prior.fetchedAt,prior.error);
  db.prepare("INSERT INTO contact_research(id,url,company,status,contacts,fetchedAt,error) VALUES(?,?,?,'Running','[]',?,NULL) ON CONFLICT(url) DO UPDATE SET company=excluded.company,status='Running',contacts='[]',fetchedAt=excluded.fetchedAt,error=NULL").run(id,initial.href,company.trim(),fetchedAt);
  try{
-  const robots=await getRobots(initial.origin,transport);let current=initial;let contacts:PublishedContact[]=[];
-  for(let redirects=0;redirects<=2;redirects++){
-   if(!robotsAllows(robots,current.pathname+current.search))throw Error('robots.txt disallows this page; not fetched');
-   const response=await transport(current,'page');if(response.headers['content-encoding']&&response.headers['content-encoding']!=='identity')throw Error('Source ignored identity encoding; compressed contact content is not processed');if(Buffer.byteLength(response.body)>LIMIT)throw Error('Contact source exceeds 512 KB');
-   if([301,302,303,307,308].includes(response.status)){
-    if(redirects===2)throw Error('Too many contact-source redirects');
-    const next=validatePublicUrl(new URL(response.headers.location||'',current).href);if(next.origin!==initial.origin)throw Error('Cross-origin redirects require a new owner-supplied official URL');current=next;continue;
-   }
-   if(response.status!==200)throw Error('Public contact page unavailable (HTTP '+response.status+')');
-   if(!response.headers['content-type']?.toLowerCase().includes('text/html'))throw Error('Contact source must be a public HTML page');
-   contacts=extractContacts(response.body,current.href);break;
-  }
+  const {contacts}=await readPublicPage(initial.href,transport);
   db.prepare("UPDATE contact_research SET status='Completed',contacts=?,error=NULL WHERE id=?").run(JSON.stringify(contacts),id);
   audit('contacts:'+id,'Public contact page read; '+contacts.length+' published entries saved, identity/deliverability unverified; no message sent');
  }catch(error){db.prepare("UPDATE contact_research SET status='Blocked',error=? WHERE id=?").run(String(error),id);audit('contacts:'+id,'Public contact research blocked; no contact details inferred');}

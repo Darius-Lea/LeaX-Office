@@ -1,4 +1,6 @@
 import {getOfficeDesign,saveOfficeDesign} from './office-design.ts';
+import {leadBriefing} from './briefings.ts';
+import {queueLeadResearch,processLeadResearch,leadResearchState} from './lead-research.ts';
 import {profileState,saveProfile,profileDocument} from './business-profile.ts';
 import {connectionState,saveSAMKey,restoreSavedConnections} from './connections.ts';
 import {accountabilityState,resolveIncident} from './accountability.ts';
@@ -6,7 +8,7 @@ import {outcomeState,saveOutcome,correctOutcome} from './outcomes.ts';
 import {fundingState,saveFundingProfile,searchFunding} from './funding.ts';
 import {pricingState,saveEstimate} from './pricing.ts';
 import {businessGuide,saveReadiness} from './business-guide.ts';
-import {assignmentReport} from './reports.ts';
+import {assignmentReport,leadBriefingReport} from './reports.ts';
 import {createServer} from 'node:http';
 import {readFileSync,existsSync,createReadStream,statSync} from 'node:fs';
 import {randomBytes,createHash} from 'node:crypto';
@@ -68,7 +70,15 @@ const server=createServer(async(req,res)=>{
  if(req.method==='GET'&&url.pathname.startsWith('/api/reports/')){const html=assignmentReport(decodeURIComponent(url.pathname.slice('/api/reports/'.length)),url.searchParams.get('download')==='1');res.setHeader('Content-Type','text/html; charset=utf-8');if(url.searchParams.get('download')==='1')res.setHeader('Content-Disposition','attachment; filename="Assignment-packet.html"');res.end(html);return;}
  if(req.method==='GET'&&url.pathname==='/api/download/windows'){res.setHeader('Content-Type','application/vnd.microsoft.portable-executable');res.setHeader('Content-Disposition','attachment; filename="AI-Headquarters-Setup.exe"');res.end(readFileSync(process.env.HQ_INSTALLER_PATH||new URL('../downloads/AI-Headquarters-Setup.exe',import.meta.url)));return;}
  if(req.method==='GET'&&url.pathname==='/api/state'){
- const state=snapshot();return send(200,{...state,businessGuide:businessGuide(),officeDesign:getOfficeDesign(),businessProfile:profileState(),accountability:accountabilityState(),outcomes:outcomeState(),funding:fundingState(),pricing:pricingState(),opportunities:state.opportunities.map(record=>({...record,advice:awardAdvice(record,state.company.name)})),...teamState(),roleCharters:ROLE_CHARTERS,manager:managerState(),aiRuns:agentRuns(),aiConfigured:!!setting('ollama_model'),contactResearch:contactState(),drafts:draftState(),solicitations:solicitationState()});}
+ const state=snapshot();return send(200,{...state,leadResearch:leadResearchState(),businessGuide:businessGuide(),officeDesign:getOfficeDesign(),businessProfile:profileState(),accountability:accountabilityState(),outcomes:outcomeState(),funding:fundingState(),pricing:pricingState(),opportunities:state.opportunities.map(record=>({...record,advice:awardAdvice(record,state.company.name)})),...teamState(),roleCharters:ROLE_CHARTERS,manager:managerState(),aiRuns:agentRuns(),aiConfigured:!!setting('ollama_model'),contactResearch:contactState(),drafts:draftState(),solicitations:solicitationState()});}
+ if(req.method==='GET'&&url.pathname.startsWith('/api/briefings/')){
+ const path=url.pathname.slice('/api/briefings/'.length);
+ if(path.endsWith('/print')){const download=url.searchParams.get('download')==='1';res.setHeader('Content-Type','text/html; charset=utf-8');if(download)res.setHeader('Content-Disposition','attachment; filename="Lead-briefing.html"');res.end(leadBriefingReport(decodeURIComponent(path.slice(0,-6)),download));return;}
+ return send(200,leadBriefing(decodeURIComponent(path)));}
+ if(req.method==='POST'&&url.pathname==='/api/leads/research'){
+ const result=queueLeadResearch(body.recordId,{website:body.website,confirmCompany:body.confirmCompany});
+ void processLeadResearch(undefined,body.recordId).catch(()=>console.error('Lead contact research needs attention; inspect its saved status'));
+ return send(202,result);}
  if(req.method==='GET'&&url.pathname==='/api/export/database'){
  const path=join(directory,'transfer-'+Date.now()+'.sqlite');await backup(db,path);res.setHeader('Content-Type','application/vnd.sqlite3');res.setHeader('Content-Disposition','attachment; filename="AI-Headquarters-backup.sqlite"');res.end(readFileSync(path));return;}
  if(req.method==='POST'&&url.pathname==='/api/office/design')return send(200,saveOfficeDesign(body));

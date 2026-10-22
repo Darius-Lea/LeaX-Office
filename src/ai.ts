@@ -6,6 +6,7 @@ import {arch,cpus,freemem,platform,totalmem} from 'node:os';
 import {db,setting,setSetting,audit} from './store.ts';
 import {AGENT_TOOLS,executeAgentTool,toolEvents,evidenceReceipt,validateAdvisoryReferences} from './agent-tools.ts';
 import {solicitationState} from './solicitations.ts';
+import {taskBriefing} from './briefings.ts';
 
 export const OLLAMA='http://127.0.0.1:'+(process.env.HQ_OLLAMA_PORT==='11435'?'11435':'11434');
 const MAX_OUTPUT=20000;
@@ -102,15 +103,25 @@ function grounding(agent:string,contextTask:string|null){
  const prior=priorRows.map((row:any)=>({prompt:String(row.prompt).slice(0,500),output:String(row.output).slice(0,1500)}));
  let currentNotices:any[]=[];let publishedContacts:any[]=[];
  currentNotices=solicitationState().records.slice(0,5).map((record:any)=>({title:record.title,url:record.url,responseDeadLine:record.responseDeadLine,classification:record.classification,eligibility:record.eligibility,lastChecked:record.lastChecked,contacts:record.contacts}));
- if(db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='contact_research'").get())publishedContacts=db.prepare("SELECT company,url,contacts,fetchedAt FROM contact_research WHERE status='Completed' ORDER BY fetchedAt DESC LIMIT 3").all();
+ const companyKey=(value:string)=>value.toLowerCase().replace(/[^a-z0-9]/g,'');const selectedCompanies=new Set(evidence.map(row=>companyKey(row.company)));
+ if(db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='contact_research'").get())publishedContacts=db.prepare("SELECT company,url,contacts,fetchedAt FROM contact_research WHERE status='Completed' ORDER BY fetchedAt DESC LIMIT 100").all().filter((row:any)=>!contextTask||selectedCompanies.has(companyKey(row.company))).slice(0,3);
  const results=outcomeState();const ownerReportedResults={source:results.source,notice:results.notice,financials:results.financials,metrics:results.metrics,dueFollowUps:results.dueFollowUps,recommendations:results.recommendations.slice(0,3).map(a=>({title:a.title,why:a.why.slice(0,250),detail:a.detail.slice(0,400)})),events:results.events.filter(event=>!event.void).slice(0,6).map(event=>({...event,notes:event.notes.slice(0,250)}))};
  const funding=fundingState();const fundingResearch={status:funding.status,profile:{...funding.profile,services:funding.profile.services.slice(0,500)},notice:funding.notice,source:funding.source,records:funding.records.slice(0,3).map(row=>({title:row.title,url:row.url,lastChecked:row.lastChecked,description:row.description.slice(0,200),assessment:row.assessment}))};
  const profile=profileState();const ownerProvidedBusinessProfile={sourceLabel:profile.sourceLabel,company:profile.company,profile:Object.fromEntries(Object.entries(profile.profile).map(([key,value])=>[key,String(value).slice(0,['email','website'].includes(key)?300:500)]))};
- const context:any={company,standingGoal:String(goal||'').slice(0,1500),ownerProvidedBusinessProfile,ownerReportedResults,fundingResearch,contextTask,evidenceScope:contextTask?'Only records linked to this selected research task; at most 10 records, not all task evidence':'Latest saved evidence across research tasks; at most 10 records',currentNotices,publishedContacts,evidence,tasks,previousAdvisory:prior};
+ const brief=contextTask?taskBriefing(contextTask):null;
+ const leadBrief=brief?{company:brief.company,nextStep:brief.nextStep,instruction:brief.instruction,location:brief.location,signal:brief.signal,contact:brief.contact,intel:brief.intel,missing:brief.missing,source:brief.source,research:{status:brief.research.status,message:brief.research.message}}:null;
+ const context:any={company,standingGoal:String(goal||'').slice(0,1500),ownerProvidedBusinessProfile,ownerReportedResults,fundingResearch,contextTask,leadBrief,evidenceScope:contextTask?'Only records linked to this selected research task; at most 10 records, not all task evidence':'Latest saved evidence across research tasks; at most 10 records',currentNotices,publishedContacts,evidence,tasks,previousAdvisory:prior};
  // Preserve a complete context object rather than slicing JSON in the middle of a claim.
  for(const key of ['previousAdvisory','publishedContacts','tasks','evidence','currentNotices']){while(JSON.stringify(context).length>CONTEXT_LIMIT&&context[key].length)context[key].pop();}
  while(JSON.stringify(context).length>CONTEXT_LIMIT&&ownerReportedResults.events.length>1)ownerReportedResults.events.pop();
  while(JSON.stringify(context).length>CONTEXT_LIMIT&&fundingResearch.records.length>1)fundingResearch.records.pop();
+ if(leadBrief){
+  // Long published URLs must not defeat the total context budget. Remove whole
+  // fields/entries rather than cutting a source link or JSON claim in half.
+  while(JSON.stringify(context).length>CONTEXT_LIMIT&&leadBrief.intel.length)leadBrief.intel.pop();
+  for(const kind of ['emails','phones'] as const)while(JSON.stringify(context).length>CONTEXT_LIMIT&&leadBrief.contact[kind].length)leadBrief.contact[kind].pop();
+  if(JSON.stringify(context).length>CONTEXT_LIMIT)context.leadBrief={company:leadBrief.company,nextStep:leadBrief.nextStep,signal:leadBrief.signal};
+ }
  return JSON.stringify(context);
 }
 let processing=false;

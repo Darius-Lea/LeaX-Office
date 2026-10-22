@@ -1,4 +1,4 @@
-# Release status: 0.2.0-preview.3
+# Release status: 0.2.0-preview.4
 
 The current build is a single downloadable Windows x64 setup executable with automatic local AI. It is not yet a validated commercial release.
 
@@ -24,3 +24,6 @@ No live AI/source success, signed publisher status, accepted contracts or earnin
 
 
 Preview.3 adds focused advice popups, actionable access alerts, local-device read-aloud and saved office remodeling. The web office can now save encrypted SAM access privately without a host-settings change or restart. Read-aloud quality varies; free hosting still loses ephemeral storage. 36 Node tests and source/packaged Chromium checks passed; native Go tests, Windows-target vet and the unsigned cross-build passed. These usability improvements do not resolve the Windows signing/device, real-source/model or commercial-release gates above.
+
+
+Preview.4 makes CEO briefings concise and contact-first, preserves original reports, and adds durable bounded contact research, explicit website identity confirmation and a printable lead sheet. Published sources do not establish a decision-maker or current subcontractor need. The public search provider was blocked here; no real-company discovery success or new sales outcome is claimed. The existing Windows/signing/model/source release gates remain.

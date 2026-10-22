@@ -20,7 +20,7 @@ Genuine model-driven assignments use local Ollama `/api/chat`, with durable queu
 Evidence collection, deduplication, deadline checks and scheduling remain deterministic tools. Model advice is not automatically factual or authorized action. Per-cycle model advice uses that cycle's linked evidence; manual assignments can review recent business context. Marketing requests produce scripts/storyboards, not rendered cinematic video, and no ChatGPT/Claude account is connected.
 
 ## Contacts and owner-approved email preparation
-In Owner computer, supply an official public contact-page URL. The app respects robots rules, resolves and pins public HTTPS addresses, limits requests/size/time and saves only published emails/tel links with source URLs. No email or decision-maker identity is guessed; listings are not verified permission, role ownership or deliverability. It does not autonomously discover every company website or scrape private indexes.
+In Owner computer, supply an official public contact-page URL. The app respects robots rules, resolves and pins public HTTPS addresses, limits requests/size/time and saves only published email/phone listings with source URLs. No email or decision-maker identity is guessed; listings are not verified permission, role ownership or deliverability. The lead worker can attempt bounded public-index discovery, then requires company-site confirmation before checking linked pages. It does not discover every company website or scrape private indexes.
 
 Prepare an introduction only from a saved published email, edit it and approve it. A fresh official open-review SAM notice can also supply a contracting inquiry draft from its published contact. Approval enables opening the owner's mail app. The owner makes the final send decision; this app never sends email or submits a bid. Editing resets approval. Original evidence is preserved.
 
@@ -70,3 +70,10 @@ Choose What should I do next to open a short explanation in its own popup: why t
 Read to me reads the current explanation using an installed English device voice, with Stop and voice options when available. Voice quality depends on the device; unsupported browsers keep the written instructions available. It does not send notes to a cloud voice provider.
 
 Remodel your office from the office controls. Wall, floor and desk finishes, desk arrangement, monitor count and optional furnishings are saved with the office database and reused after reopening. Updating the design keeps existing work and the current camera view. The scene reflects recorded tasks and handoffs rather than creating work through animation.
+
+
+## Company-first CEO brief — preview.4
+
+Einstein’s research briefing and each record’s next-step button now open the company, one recommended action, published email/phone source links, correctly labeled project/company location and a short business reason first. Original notes stay saved behind View evidence. Read-aloud uses the concise brief. Print / Save brief produces a dedicated readable lead sheet. A published mailbox is not a verified decision-maker or confirmed customer.
+
+The clocked-in office queues contact research for up to three relevant companies per completed cycle; only the latest old cycle is backfilled. With no confirmed site it attempts a bounded public-index lookup, records real candidate links and asks you to confirm the company identity. A confirmed site is checked along with at most two actual same-origin contact/vendor links. The worker saves published details, source receipts, service/vendor/coverage quotes and structured business addresses where present. No websites, contacts, weak spots or demand are guessed. Search access was blocked in the development environment; provider failures remain visible, with an official-site confirmation form as the fallback. Prepared introductions remain unsent and require owner review.
