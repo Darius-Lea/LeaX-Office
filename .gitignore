@@ -5,6 +5,10 @@ node_modules/
 .env
 .env.local
 *.dpapi
+.connection-master.key
+.sam-access.encrypted
+.connection-master.key.*.tmp
+.sam-access.encrypted.*.tmp
 server-state.json
 *.sqlite
 *.sqlite-wal

@@ -1,8 +1,8 @@
 import {outcomeState} from './outcomes.ts';
 import {db,setting,setSetting,audit} from './store.ts';
-import {awardAdvice} from './advice.ts';
+import {awardAdvice,type FocusedAdvice} from './advice.ts';
 import {verifyFinding} from './research.ts';
-import {solicitationState,classifySolicitation} from './solicitations.ts';
+import {solicitationState,classifySolicitation,deadlineTimestamp} from './solicitations.ts';
 import {draftState} from './drafts.ts';
 
 const READINESS_KEY='business_readiness_v1';
@@ -16,7 +16,7 @@ const CHECKLIST=[
 type ReadinessId=typeof CHECKLIST[number]['id'];
 type Confirmation={confirmed:boolean;updatedAt:number};
 type SavedReadiness=Partial<Record<ReadinessId,Confirmation>>;
-export type GuideAction={id:string;title:string;why:string;detail:string;pane:'assistant'|'contacts'|'files'|'packets'|'pricing'|'results'|'connections';section?:string;priority:'attention'|'next'|'prepare'};
+export type GuideAction={id:string;title:string;why:string;detail:string;pane:'assistant'|'contacts'|'files'|'packets'|'pricing'|'results'|'connections';section?:string;priority:'attention'|'next'|'prepare';explanation?:FocusedAdvice};
 function savedReadiness():SavedReadiness{
  let value:any;try{value=JSON.parse(setting(READINESS_KEY)||'{}')}catch{return {}}
  const result:SavedReadiness={};for(const item of CHECKLIST){const entry=value?.[item.id];if(typeof entry?.confirmed==='boolean'&&Number.isSafeInteger(entry?.updatedAt)&&entry.updatedAt>0)result[item.id]={confirmed:entry.confirmed,updatedAt:entry.updatedAt};}return result;
@@ -28,6 +28,30 @@ export function saveReadiness(input:unknown){
  const prior=savedReadiness();prior[id as ReadinessId]={confirmed,updatedAt:Date.now()};setSetting(READINESS_KEY,JSON.stringify(prior));
  audit('business','Owner '+(confirmed?'confirmed':'cleared')+' readiness item: '+id+' (owner attestation, not independent verification)');
  return businessGuide();
+}
+function explainAction(action:GuideAction):FocusedAdvice{
+ const steps:Record<string,{title:string;body:string}[]>={
+  'recorded-cash-review':[{title:'Check the entries',body:'Record any missing customer payments and paid costs first. A missing entry can change this picture.'},{title:'Confirm the next payment',body:'For agreed work, ask the authorized customer contact when payment is due and what is needed to release it.'},{title:'Protect the next job',body:'Check deposits, payment terms and cash needed for delivery before taking on more costs.'}],
+  'recorded-followup-due':[{title:'Review the last conversation',body:'Check what the customer asked for and the next step you agreed.'},{title:'Send one useful follow-up',body:'Briefly recap the relevant service, ask one clear question and propose a date or next step. Sending remains your decision.'},{title:'Record what happened',body:'Save the reply or set a new follow-up date in Results.'}],
+  'recorded-interest-qualification':[{title:'Ask about the work',body:'Confirm the exact service, location, timing and who approves vendors.'},{title:'Check the terms',body:'Ask about qualifications, the budget process and payment terms before spending time on a quote.'},{title:'Confirm the next step',body:'Send a short recap of what was agreed and record the actual response.'}],
+  'recorded-win-plan':[{title:'Confirm the agreement',body:'Check the written scope, authorized customer contact, price and payment dates.'},{title:'Plan a deliverable job',body:'Arrange crews, materials, schedule and acceptance checks within your real capacity.'},{title:'Track costs and collection',body:'Record paid costs and actual receipts in Results. Follow up on payment when it is due.'}],
+  'recorded-cost-completeness':[{title:'Record the paid costs',body:'Add actual labor payments, materials, travel and other paid business costs.'},{title:'Check what is still missing',body:'Review unpaid bills, taxes and overhead with your records or accountant before judging profitability.'}],
+  'recorded-outreach-review':[{title:'Record any replies first',body:'Check whether responses happened but have not been saved in the app.'},{title:'Improve one message',body:'Verify the buyer’s role and current need. Use a shorter introduction with one relevant service and one clear question.'}],
+  'recorded-offer-review':[{title:'Find the stated reason',body:'Ask why the customer did not proceed; do not assume price was the problem.'},{title:'Improve the right part',body:'Compare scope, delivery capacity, proof and payment terms. Recheck job costs before changing the offer.'}],
+  'review-drafts':[{title:'Check the recipient',body:'Confirm the published source, the person’s role and why your service is relevant.'},{title:'Make the draft yours',body:'Remove placeholders and check every service, coverage and experience claim.'},{title:'Approve only a ready message',body:'Open the reviewed draft in your mail app when you are ready. You make the final send decision there.'}],
+  'open-approved-draft':[{title:'Open the reviewed message',body:'Use the saved draft’s mail-app button and check its recipient and content one last time.'},{title:'Choose whether to send',body:'If it is accurate and appropriate, send it yourself. Then record the real result and a follow-up date.'}],
+  'review-current-notice':[{title:'Read the live notice',body:'Open the official page and check the full scope, amendments and deadline.'},{title:'Make a quick go/no-go decision',body:'Confirm your registration, qualifications, crew coverage and delivery costs. Skip work you cannot reliably and profitably deliver.'},{title:'Plan only a suitable bid',body:'If it fits, note the required documents and question deadline before preparing your response.'}],
+  'prepare-introduction':[{title:'Verify the contact',body:'Check the matching company’s published page and whether this contact handles the relevant vendor or customer need.'},{title:'Prepare a short introduction',body:'Explain your relevant service and real coverage, then ask one clear onboarding or scope question.'},{title:'Review before sending',body:'Check the source and company claims. Save the draft for owner approval.'}],
+  'find-partner-contact':[{title:'Choose one relevant company',body:'Review the saved scope and confirm that your service and practical coverage fit.'},{title:'Find its vendor page',body:'Use the company’s official website to locate vendor onboarding or a published business contact. Do not guess addresses.'},{title:'Check current need',body:'Ask whether they currently use subcontractors for that scope before investing in a proposal.'}],
+  'prepare-job-price':[{title:'Get a clear scope',body:'Confirm the actual work, location, timing and customer expectations first.'},{title:'Enter the delivery costs',body:'Use Price a job for labor, materials, travel, overhead and contingency. Choose a margin that works for your business.'},{title:'Check the final offer',body:'Include applicable taxes, fees and payment terms before reviewing a quote with the customer.'}],
+  'connect-federal-search':[{title:'Get your free access key',body:'Connections explains how to obtain the key from your own SAM.gov account.'},{title:'Save and check access',body:'Paste it into the masked field, save it privately and use Check access. You do not need host settings or a terminal.'}],
+  'review-blocked-work':[{title:'Read the saved problem',body:'Open the assignment and check what prevented it from finishing.'},{title:'Fix that one issue',body:'Use Connections for access problems or the saved task controls to review the objective. Retry only after the cause is resolved.'}],
+  'research-direction':[{title:'Choose one clear offer',body:'Name a service you can deliver and a customer type with a realistic need.'},{title:'Set practical coverage',body:'Save the locations and delivery limits your current team can support.'},{title:'Expand only after checking the numbers',body:'A new market or service should have qualified demand, a delivery plan and costs that support your margin.'}],
+ };
+ const readiness=action.id.startsWith('readiness-');
+ const specific=steps[action.id]||(readiness?[{title:'Prepare the real information',body:action.why},{title:'Confirm it when checked',body:'Save the details in your company profile. Mark readiness complete only after you have verified the facts.'}]:[{title:'Take this step',body:action.detail}]);
+ const money=/cash|cost|price|win|offer/.test(action.id);
+ return {title:action.title,why:action.why,steps:specific,successCheck:action.id==='review-current-notice'?'You have a documented decision to pursue or skip the notice.':action.id==='connect-federal-search'?'The source confirms access; saved research and local AI remain available without this connection.':money?'The next decision uses a real scope, checked costs and clear payment terms.':'You have a specific next step and have saved what actually happened.',stopRule:money?'Do not treat a quote, reported win or incomplete cash log as guaranteed profit.':'Stop or ask for clarification when need, authority or delivery requirements are not established.'};
 }
 const sourceUrl=(raw:unknown)=>typeof raw==='string'&&/^https:\/\/www\.usaspending\.gov\/award\/CONT_[A-Za-z0-9_.:%-]+$/.test(raw);
 export function businessGuide(now=Date.now()){
@@ -57,9 +81,12 @@ export function businessGuide(now=Date.now()){
  if(blocked)actions.push({id:'review-blocked-work',title:'Review work that needs attention',why:`${blocked===1?'One assignment is':blocked+' assignments are'} blocked. The saved error explains what prevented progress.`,detail:'Open the assignment’s error. Resolve the source or connection problem, then retry from its saved checkpoint. Completed records remain saved; no failed research should be treated as a completed lead.',pane:'files',section:'tasks',priority:'attention'});
  if(!partners&&!currentNotices.length&&!publicContacts.size)actions.push({id:'research-direction',title:running||queued?'Give the team a clear target while research runs':'Review your target customers and services',why:'Useful research starts with a clear service scope and customers you can actually serve.',detail:running||queued?`${running} running and ${queued} queued research assignments are recorded. Use Company & direction to refine services, customer types and practical coverage; research does not itself win work.`:'Check Company & direction, then clock in to research the saved objective. A relevant result still needs source review, current demand, qualification and pricing.',pane:'files',section:'company-form',priority:'prepare'});
  if(!actions.length)actions.push({id:'plan-next-client',title:'Plan the next qualified customer conversation',why:'Saved research and readiness help you prepare, but only a confirmed need and agreed scope can lead to a job.',detail:'Ask the assistant to choose a researched company, explain why it fits and list the missing facts. Verify the contact, need and delivery economics before making an offer.',pane:'assistant',section:'assistant-form',priority:'next'});
- const nextActions=actions.slice(0,3),primaryAction=nextActions[0];
+ const ranks:Record<string,number>={'recorded-cash-review':10,'recorded-followup-due':11,'recorded-interest-qualification':12,'recorded-win-plan':13,'recorded-cost-completeness':14,'recorded-offer-review':15,'recorded-outreach-review':16,'open-approved-draft':30,'review-drafts':40,'prepare-introduction':45,'find-partner-contact':50,'prepare-job-price':60,'review-blocked-work':75,'research-direction':80,'connect-federal-search':90};
+ const urgentNotice=currentNotices.some((n:any)=>{const deadline=deadlineTimestamp(n.responseDeadLine);return deadline!==null&&deadline-now<=2*86400000});
+ const rank=(action:GuideAction)=>action.id==='review-current-notice'?(urgentNotice?20:55):action.id.startsWith('readiness-')?70:ranks[action.id]??65;
+ const nextActions=actions.map((action,index)=>({action,index})).sort((a,b)=>rank(a.action)-rank(b.action)||a.index-b.index).slice(0,3).map(({action})=>({...action,explanation:explainAction(action)})),primaryAction=nextActions[0];
  return {
-  company:company.name,objective:setting('standing_goal')||'',
+  company:company.name,objective:setting('standing_goal')||'',mission:'Build qualified customer demand, price for margin and collect agreed payments. Expand only when verified demand and delivery costs support it.',
   headline:primaryAction.title,
   summary:partners||currentNotices.length?`${company.name} has saved research to review. Turn one relevant record into a verified conversation before spending time on a quote.`:`Build a clear offer, then find a customer whose current need matches what ${company.name} can deliver.`,
   primaryAction,nextActions,readiness,ownerResults:{...results.financials,...results.metrics,dueFollowUps:results.dueFollowUps,source:results.source},

@@ -4,6 +4,13 @@ const viewport=document.querySelector('#office-viewport');
 const webglHost=document.createElement('div');webglHost.className='office-webgl';webglHost.hidden=true;viewport.prepend(webglHost);
 const message=document.createElement('p');message.className='office-render-message';viewport.before(message);
 let renderer=null,loading=false,latestState=null,latestInspect=null;
+let clericalDesignKey='';
+function applyClericalDesign(){
+ const design=latestState?.officeDesign?.design||{},key=document.body.dataset.view+JSON.stringify(design);if(key===clericalDesignKey)return;clericalDesignKey=key;
+ room.dataset.layout=design.layout||'pods';room.dataset.monitors=design.monitors||'single';
+ const themed=document.body.dataset.view==='2d',walls={sage:'#788a7c',navy:'#354b64',clay:'#b08470'},floors={oak:'#e9e2d6',walnut:'#c2ac96',stone:'#e4e6e1'};
+ room.style.borderColor=themed?(walls[design.wall]||walls.sage):'';room.style.background=themed?(floors[design.floor]||floors.oak):'';
+}
 async function ensure3D(){
  if(renderer||loading||!latestState||document.body.dataset.view!=='3d')return;
  loading=true;message.textContent='Loading your 3D office…';
@@ -30,12 +37,13 @@ export function setOfficeView(view){
  const angleLabel=document.querySelector('#angle-label');if(angleLabel)angleLabel.hidden=true;
  for(const name of ['3d','2d','terminal'])document.querySelector('#view-'+name)?.setAttribute('aria-pressed',String(name===view));
  webglHost.hidden=view!=='3d';renderer?.setEnabled(view==='3d');if(view==='3d')ensure3D();
+ applyClericalDesign();
 }
 const legacyAngle=document.querySelector('#office-angle');if(legacyAngle)legacyAngle.oninput=e=>{room.style.setProperty('--angle',e.target.value+'deg');renderer?.setAngle(e.target.value);};
 export function resetOfficeCamera(){renderer?.resetCamera();}
 const resetButton=document.querySelector('#reset-office');if(resetButton)resetButton.onclick=resetOfficeCamera;
 export function renderOffice(state,inspect){
- latestState=state;latestInspect=inspect;renderer?.update(state);ensure3D();
+ latestState=state;latestInspect=inspect;renderer?.update(state);ensure3D();applyClericalDesign();
  for(const [id,desk] of desks)if(!state.employees.some(e=>e.id===id)){desk.remove();desks.delete(id);}
  for(const employee of state.employees){
  let desk=desks.get(employee.id);

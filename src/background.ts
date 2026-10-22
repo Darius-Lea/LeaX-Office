@@ -1,5 +1,7 @@
 import {db,clock,setting} from './store.ts';
 import {pulse} from './office.ts';
+import {restoreSavedConnections} from './connections.ts';
+restoreSavedConnections();
 // Launching this entry is explicit authorization for background execution.
 // An explicit saved clock-out is still respected.
 if(!setting('clock'))clock(true);

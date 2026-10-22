@@ -50,7 +50,7 @@ This is an explicit backup/import workflow, **not automatic cloud synchronizatio
 
 No current local database means there is nothing old to replace; the staged backup still must pass validation. If the existing local database is corrupt, preservation cannot be verified, unexpected files appear, or rollback needs review, the launcher stops with a recovery message. Keep the selected backup and recovery folder and do not start a second copy until the issue is resolved.
 
-Only import a backup from your own trusted AI Headquarters instance. Read-only input verification checks integrity/schema, not the trustworthiness of every business record or third-party source inside it. Environment secrets such as a Render SAM.gov key are not migrated by the database; configure them separately in the local wizard. Windows-user DPAPI secrets also remain separate from the database. The local app does not synchronize subsequent changes back to Render.
+Only import a backup from your own trusted AI Headquarters instance. Read-only input verification checks integrity/schema, not the trustworthiness of every business record or third-party source inside it. Private access keys are not migrated by the database; enter them again in Owner computer → Connections after transfer. Windows-user DPAPI secrets also remain separate from the database. The local app does not synchronize subsequent changes back to Render.
 
 The embedded Node verification/backup helper was exercised on Linux with real SQLite fixtures: read-only WAL source backup, standalone checkpointed staging copy, required schema/integrity, source preservation, rejection of unrelated/corrupt databases, and refusal to overwrite a pre-existing destination. Actual Windows dialog, filesystem rename/rollback and process-ownership checks remain untested.
 
@@ -58,11 +58,13 @@ The embedded Node verification/backup helper was exercised on Linux with real SQ
 
 Current SAM.gov opportunities require a SAM.gov API key; public historical award research is a separate source and is not a list of open jobs. You can use the local office without entering this optional key, but current government opportunity search will show Setup required until authorized.
 
-1. Open the wizard's **Official SAM.gov API / free account and API-key instructions** link: https://open.gsa.gov/api/get-opportunities-public-api/ . Follow the official SAM.gov account/profile instructions to request your own key. The application does not create an account for you or bypass SAM access limits.
-2. Paste the key into the wizard's masked **SAM.gov API key** field and click **Save SAM key**. Do not paste the key in chat. Saving does not read any existing secret into the field.
-3. If the office is already running, use **Stop office**, then **Start / open office**. Saving the key does not stop a live process automatically or change its environment. On the next start, the launcher injects the saved key only into its local server process as `SAM_API_KEY`, then restores its own prior environment.
+1. Open Owner computer → Connections, or click a missing-SAM-access alert. Follow the account/profile instructions to request your own free key. The application does not create an account for you or bypass SAM access limits.
+2. Paste the complete key into the masked field and choose **Save private access**. The field is cleared after use; saved secrets are never prefilled. Do not paste the key in chat.
+3. Choose **Check federal opportunity access**. Saving makes it available immediately without restarting; checking confirms whether the official source accepts it. A saved key alone does not prove a successful search.
 
-The saved key is protected by Windows DPAPI and the local folder's access controls, not stored as plaintext, in the database, or in `native-state.json` (native setup; old script uses `server-state.json`). It can be decrypted only in the same Windows-user context; backups of the encrypted file alone are not portable credentials. An already injected `SAM_API_KEY` is reused if there is no saved local credential. The saved local key takes precedence when present. No secret value is printed, prefilled into the UI, or logged by the launcher. A corrupt/unreadable saved key causes a clear setup error instead of logging it.
+In the installed Windows app, the native helper protects the saved key with Windows-user DPAPI. It stays outside the database and process-state files; it is decrypted privately on later starts. This Windows encryption path still needs actual device validation. The launcher's optional key field remains a fallback; saving there applies at the next office start.
+
+The web office also accepts private entry. It encrypts the value in the office data folder rather than SQLite; keep that folder private. Free Render can lose the folder on a hosting reset, requiring the key to be entered again. Private keys are excluded from database backups, imports and shared app downloads. No secret value is printed or logged.
 
 SAM.gov accounts/API usage are subject to GSA rules and rate limits. The key permits authorized read-only public opportunity requests; it does not authorize emails, bidding, signing contracts or paid services. Follow the official limits and verify notices, eligibility and deadlines before any submission.
 
@@ -72,7 +74,7 @@ The native setup now automatically downloads its private AI engine and RAM-selec
 
 The browser/Node architecture avoids bundling a second Chromium runtime, as an Electron app would. Actual memory use depends on your browser, 3D mode, data volume and optional model. Choose the clerical/terminal view on low-powered devices. Work stops when your PC is powered off or asleep; the launcher does not change power settings or prevent sleep.
 
-First setup needs HTTPS access to `nodejs.org` and the npm registry/dependency domains in the committed lockfile. The runtime archive is checked against Node's official `SHASUMS256.txt`, and Windows verifies `node.exe`'s Authenticode signature. npm keeps its lockfile integrity checks. Verification errors stop installation rather than accepting an unverified executable. No VPN, proxy credentials or paid service is configured.
+First setup needs HTTPS access to `nodejs.org`, the pinned official Ollama release assets and the model registry. The runtime archive is checked against Node's official `SHASUMS256.txt`, and Windows verifies `node.exe`'s Authenticode signature. AI engine and production app integrity checks are retained; customer setup does not run npm. Verification errors stop installation rather than accepting an unverified executable. No VPN, proxy credentials or paid service is configured.
 
 ## Current validation limits
 
@@ -81,7 +83,7 @@ Historical note: the older PowerShell source launcher passed parser checks only.
 
 ## Rebuilding the native setup (developers only)
 
-Run `python scripts/build-native-installer.py --go /path/to/go` with Go 1.24+ and Python. The build embeds only allowlisted app source/public/scripts/docs and package manifests, excluding databases, secrets, caches and downloads. Go dependencies and resource tool are pinned; the build produces the Windows GUI executable and SHA-256 file. It does not sign or execute the result. Rebuild after changing bundled app code or documentation.
+Run `python scripts/build-native-installer.py --go /path/to/go` with Go 1.24+ and Python. The build embeds the standalone production application and required setup helpers/notices, excluding original source folders, development documents, databases, secrets, caches and downloads. Go dependencies and resource tool are pinned; the build produces the Windows GUI executable and SHA-256 file. It does not sign or execute the result. Rebuild after changing bundled app code or assets.
 
 
 ## Built-in AI — no separate installation or connection
@@ -97,4 +99,7 @@ The office now opens in a separate app-style window with a trusted installed Edg
 
 ## Add federal access inside your office
 
-Open Owner computer → Connections. It explains why current federal jobs need your free SAM.gov account’s key and how to request it. Paste a replacement key into the masked field and choose Save private access, then Check federal opportunity access. No terminal, host settings or app restart is needed. On installed Windows, the native helper encrypts it for your Windows user; neither the visible app state, database, logs nor shared download receives the value. The key is used in memory for the running office and decrypted privately on later starts. This path remains Windows-device unvalidated in this Linux workspace. Historical award research, built-in AI and the public funding connector do not require this key. Do not share keys in chat.
+Open Owner computer → Connections. It explains why current federal jobs need your free SAM.gov account’s key and how to request it. Paste a replacement key into the masked field and choose Save private access, then Check federal opportunity access. No terminal, host settings or app restart is needed. On installed Windows, the native helper encrypts it for your Windows user; neither the visible app state, database, logs nor shared download receives the value. The key is used in memory for the running office and decrypted privately on later starts. Windows private-pipe encryption remains unvalidated on a Windows device; the web office uses encrypted files in its private data folder and can lose them on a free-host reset. Historical award research, built-in AI and the public funding connector do not require this key. Do not share keys in chat.
+
+
+Office remodeling is saved in the same database as your work, so a retained or imported office keeps its design. After updating, use the Remodel control for finishes, desk layout, monitors and furnishings. Focused advice opens in a popup; Read to me uses a locally installed English voice when your browser supports one.

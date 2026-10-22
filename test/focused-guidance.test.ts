@@ -1,0 +1,6 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import {awardAdvice} from '../src/advice.ts';
+test('next-step advice gives short decisions and instructions without repeating the source record or promising profit',()=>{
+ const fit=awardAdvice({title:'Synthetic prime',evidence:JSON.stringify({description:'Structured cabling for a medical facility',country:'USA',state:'NY'})});assert.equal(fit.focusedAdvice.steps.length,3);assert.match(fit.focusedAdvice.title,/needs your help/);assert.ok(fit.focusedAdvice.steps.every(s=>s.title.length<60&&s.body.length<300));assert.equal(JSON.stringify(fit.focusedAdvice).includes('Structured cabling for a medical facility'),false);assert.match(fit.focusedAdvice.stopRule,/unqualified/);
+ const held=awardAdvice({evidence:{description:'Diesel generator maintenance',country:'USA'}});assert.match(held.focusedAdvice.title,/aside/);assert.match(held.focusedAdvice.steps[0].title,/hold/);assert.doesNotMatch(JSON.stringify(held.focusedAdvice),/guaranteed income|90%/);
+ const overseas=awardAdvice({evidence:{description:'Structured cabling',country:'CYP'}});assert.match(overseas.focusedAdvice.title,/overseas/);assert.match(overseas.focusedAdvice.stopRule,/confirmed/);
+});

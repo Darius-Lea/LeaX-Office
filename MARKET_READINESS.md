@@ -1,4 +1,4 @@
-# Release status: 0.2.0 preview
+# Release status: 0.2.0-preview.3
 
 The current build is a single downloadable Windows x64 setup executable with automatic local AI. It is not yet a validated commercial release.
 
@@ -21,3 +21,6 @@ The current build is a single downloadable Windows x64 setup executable with aut
 No live AI/source success, signed publisher status, accepted contracts or earnings is implied by automated fixtures or interface animation. Pricing is owner planning only; confirm scope, taxes/fees, delivery cost, qualifications and payment terms before offering a quote.
 
 0.2.0-preview.2 adds execution-reliability strikes with CEO control, recorded business outcomes/feedback, grounded capability/marketing documents, strict funding holds and in-app Windows-private SAM entry. Source data does not establish a high approval probability. User-reported cash is not verified profitability. Newly added native encrypted-pipe entry and Grants.gov schema/access need real-device/live-source validation before release claims. No external sends, applications, banking or accounting integrations were enabled.
+
+
+Preview.3 adds focused advice popups, actionable access alerts, local-device read-aloud and saved office remodeling. The web office can now save encrypted SAM access privately without a host-settings change or restart. Read-aloud quality varies; free hosting still loses ephemeral storage. 36 Node tests and source/packaged Chromium checks passed; native Go tests, Windows-target vet and the unsigned cross-build passed. These usability improvements do not resolve the Windows signing/device, real-source/model or commercial-release gates above.
