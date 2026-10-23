@@ -71,3 +71,12 @@ dialog::backdrop{background:#02080ccc;backdrop-filter:blur(6px)}
 @keyframes hq-rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @media(prefers-reduced-motion:reduce){.operations-panel,.operations-toggle,.office-brief,.notification-toast,dialog[open]{animation:none}.office-dock button:hover{transform:none}}
 @media(max-width:600px){#office-section::after{background:radial-gradient(ellipse at 50% 45%,transparent 62%,#030a1080 100%)}}
+/* Review fixes: no light strip beside the panel, dark status card, empty message pill hidden */
+html,body{background:#0b1620}
+#office-section{background:#0b1620}
+.shift-chip{background:var(--hq-glass);border:1px solid var(--hq-hair);box-shadow:0 14px 40px #02080c70,inset 0 1px 0 #ffffff12;color:#eaf6f1}
+.shift-chip h2,.shift-chip strong{color:#eaf6f1}
+.shift-chip p,.shift-chip span{color:#a9c4c4}
+.office-supervision{background:var(--hq-glass);border:1px solid var(--hq-hair);color:#cfe3de}
+.office-supervision p,.office-supervision summary{color:#a9c4c4}
+#message{min-width:0;transition:opacity .2s}
