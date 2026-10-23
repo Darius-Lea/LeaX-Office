@@ -57,13 +57,15 @@ export function renderOffice(state,inspect){
  }
  desk.onclick=()=>inspect(employee.id);
  const inference=state.aiRuns?.find(t=>t.agent===employee.id&&t.status==='Running');
+ const operation=state.operations?.employees?.find(row=>row.id===employee.id);
  const contactJob=employee.id==='Juliet'?state.leadResearch?.find(t=>t.status==='Running'):null;
  const task=state.tasks.find(t=>t.agent===employee.id&&t.status==='Running')||(inference?{goal:'Local model analysis: '+inference.prompt}:contactJob?{goal:'Contact research: '+contactJob.company}:null);
  const queued=state.tasks.some(t=>t.agent===employee.id&&t.status==='Queued')||state.teamJobs.some(t=>t.agent===employee.id&&t.status==='Queued')||state.aiRuns?.some(t=>t.agent===employee.id&&t.status==='Queued')||(employee.id==='Juliet'&&state.leadResearch?.some(t=>t.status==='Queued'));
  desk.dataset.active=String(!!task);desk.querySelector('b').textContent=employee.name;
- desk.querySelector('.monitor').textContent=task?'PROCESSING':employee.capability==='planned'?'SETUP':employee.id==='Johnson'?'SUPERVISION':'READY';
+ const operationStatus=String(operation?.status||'').toLowerCase();
+ desk.querySelector('.monitor').textContent=task?'PROCESSING':employee.capability==='planned'?'SETUP':operationStatus.includes('blocked')?'NEEDS ACCESS':operationStatus.includes('approval')?'REVIEW':employee.id==='Johnson'?'SUPERVISION':'READY';
  const count=state.notes.filter(n=>n.agent===employee.id).length;
- desk.querySelector('.desk-status').textContent=task?task.goal:employee.capability==='planned'?'Setup required':queued?'Assignment queued':state.clock!=='in'?'Clocked out':employee.id==='Johnson'?'Checking queue and handoffs':count?count+' saved reports · awaiting next cycle':'Available · awaiting next cycle';
+ desk.querySelector('.desk-status').textContent=task?task.goal:operation?.currentAction||operation?.detail||(employee.capability==='planned'?'Setup required':queued?'Assignment queued':state.clock!=='in'?'Clocked out':employee.id==='Johnson'?'Checking queue and handoffs':count?count+' saved reports · manager planning next work':'Available for manager assignment');
  }
  if(!patrol.isConnected)room.append(patrol);
  const target=desks.get(state.manager?.visitedAgent);

@@ -1,8 +1,10 @@
 # Next milestones
+Preview.5 completes bounded automatic manager planning, a live employee/work/statistics side monitor, persisted work-priority learning from real receipts, and a richer procedural office. A live USAspending cycle collected/reviewed 60 historical records and saved handoffs; it did not validate open bids or real company contacts. Continue from this implementation and the retained database.
+
 1. Validate the existing Windows x64 native setup on a real Windows device; verify model inference, import/restore, data retention, updates and restart. Obtain publisher signing before claiming a commercial release. ARM64 packaging remains a later target.
 2. Supply an authorized free SAM.gov API key securely; verify live notices, amendments, deadlines and account rate limits. Broaden relevant current/vendor-program sources with provenance, not prewritten leads.
 3. Run actual Ollama inference on user hardware; measure quality/resources and improve evidence-based business advice. No fake inference success from protocol tests.
-4. Add verified business website discovery/contact verification, recipient ownership and opt-out history. Then connect official owner-authorized email/replies with durable approval/idempotency boundaries.
+4. Validate the implemented public-index/company-confirmation contact workflow on live sources, improve website and recipient verification, and add opt-out history. Then connect official owner-authorized email/replies with durable approval/idempotency boundaries.
 5. Build qualified estimates/proposals, confirmed work orders/dispatch and invoicing/collections with actual inputs. Keep awarded value, pipeline estimates and collected revenue separate.
 6. Add verified automatic backup rotation and durable hosting/synchronization; improve 3D office incrementally while measured business outputs remain the priority.
 
@@ -17,3 +19,5 @@
 
 
 Preview.4 implements concise company/contact-first briefs and bounded public-source contact enrichment with a company-confirmation gate. Next validate search-provider access and real company contacts on the target installation, improve verified decision-maker and current-demand coverage, and keep missed/blocked contacts visibly unfinished.
+
+Preview.5: evaluate learned work priorities against owner-reviewed lead quality and actual business outcomes over time. Current online learning ranks eligible job recipes; it does not retrain model weights, verify revenue or remove source/approval gates. Improve it using measured useful results rather than artificial activity or penalties for waiting. Actual Windows installation/signing and connected-model/current-notice validation remain the first release gates.

@@ -10,7 +10,7 @@ const {managerPatrol,managerState}=await import('../src/manager.ts');
 test('Johnson patrol recovers expired claims, repairs handoffs, deduplicates reports and respects normal idle',()=>{
  try{
   const now=Date.now();
-  const idle=managerPatrol(now);assert.deepEqual(idle.issues,[]);assert.match(idle.summary,/waiting for scheduled research/);assert.ok(idle.visitedAgent);assert.equal(idle.nextCheckAt,now+60000);
+  const idle=managerPatrol(now);assert.deepEqual(idle.issues,[]);assert.match(idle.summary,/clocked out/);assert.equal(idle.plan!.status,'Paused');assert.ok(idle.visitedAgent);assert.equal(idle.nextCheckAt,now+60000);
   assert.deepEqual(managerPatrol(now+1000),idle);assert.equal((db.prepare("SELECT count(*) AS n FROM office_notes WHERE agent='Johnson'").get() as any).n,0);
   const interrupted=enqueue('Owner-edited objective: nationwide installation');const checkpoint='{"source":"saved","page":2}';
   db.prepare("UPDATE tasks SET status='Running',lease=?,attempts=1,checkpoint=? WHERE id=?").run(now-1,checkpoint,interrupted);
@@ -29,7 +29,7 @@ test('Johnson patrol recovers expired claims, repairs handoffs, deduplicates rep
   assert.ok(patrol.issues.some(issue=>issue.task===complete&&issue.type==='missing_output'));
   assert.ok(patrol.issues.some(issue=>issue.task===complete&&issue.agent==='Bravo'&&issue.type==='missing_evidence'));
   assert.ok(patrol.issues.some(issue=>issue.task===invalid&&issue.agent==='Bravo'&&issue.type==='invalid_checkpoint'));
-  assert.ok(patrol.issues.some(issue=>issue.task===networkBlocked&&issue.type==='research_blocked'&&issue.message==='Research unavailable: HTTP 403'));
+  assert.ok(!patrol.issues.some(issue=>issue.task===networkBlocked));assert.ok(patrol.sourceWaits!.some(issue=>issue.task===networkBlocked&&issue.type==='source_wait'&&issue.message==='Research unavailable: HTTP 403'));
   for(const [id,status,attempts,lease] of [[live,'Running',2,now+600000],[paused,'Paused',1,now-1],[canceled,'Canceled',1,now-1],[networkBlocked,'Blocked',2,0]] as const){
    const preserved=db.prepare('SELECT * FROM tasks WHERE id=?').get(id) as any;
    assert.equal(preserved.status,status);assert.equal(preserved.attempts,attempts);assert.equal(preserved.lease,lease);assert.equal(preserved.checkpoint,checkpoint);assert.ok(!patrol.recovered.includes(id));

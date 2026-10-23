@@ -14,6 +14,18 @@ async function launch(directory:string,extra:Record<string,string>={}){
  });return {...startup,child};
 }
 async function stop(child:any){await new Promise<void>(resolve=>{child.once('exit',()=>resolve());child.kill();});}
+test('native bootstrap readiness requires completed verified inference and never exposes setup internals',async()=>{
+ const directory=mkdtempSync(join(tmpdir(),'hq-ai-ready-'));let server:any,db:any;
+ try{server=await launch(directory);db=new DatabaseSync(join(directory,'headquarters.sqlite'));
+  const status=async()=>await (await fetch(`http://127.0.0.1:${server.port}/api/status`)).json();assert.equal((await status()).aiReady,false);
+  db.prepare("INSERT OR REPLACE INTO settings VALUES('ollama_model','synthetic-installed-model')").run();
+  for(const value of [{status:'Preparing',inferenceVerified:true},{status:'Completed',inferenceVerified:false},{status:'Needs-attention',inferenceVerified:true}]){
+   db.prepare("INSERT OR REPLACE INTO settings VALUES('managed_ai_setup',?)").run(JSON.stringify({...value,privateFixture:'not-public'}));const result=await status();assert.equal(result.aiReady,false);assert.equal(JSON.stringify(result).includes('not-public'),false);
+  }
+  db.prepare("INSERT OR REPLACE INTO settings VALUES('managed_ai_setup',?)").run(JSON.stringify({status:'Completed',inferenceVerified:true}));assert.equal((await status()).aiReady,true);
+  db.prepare("UPDATE settings SET value='malformed' WHERE key='managed_ai_setup'").run();assert.equal((await status()).aiReady,false);
+ }finally{if(db)db.close();if(server?.child.exitCode===null)await stop(server.child);rmSync(directory,{recursive:true,force:true})}
+});
 test('HTTP auth, origin protection, retry, saved account across restart, and logout',async()=>{
  const directory=mkdtempSync(join(tmpdir(),'hq-http-'));let server:any;
  try{
@@ -23,6 +35,7 @@ test('HTTP auth, origin protection, retry, saved account across restart, and log
  assert.equal((await call('reports/anything')).status,401);assert.equal((await call('download/windows')).status,401);assert.equal((await call('state')).status,401);assert.equal((await call('export/database')).status,401);assert.equal((await call('office/clock',{active:true})).status,401);assert.equal((await call('office/design',{wall:'navy'})).status,401);
  assert.equal((await call('setup',{code:server.code,password:'test founder passphrase'},'https://evil.test')).status,403);
  assert.equal((await call('briefings/anything')).status,401);assert.equal((await call('briefings/anything/print')).status,401);assert.equal((await call('leads/research',{recordId:'anything'})).status,401);
+ assert.equal((await call('learning/state')).status,401);assert.equal((await call('learning/feedback',{kind:'note',receiptId:'1',rating:'reward'})).status,401);
  const auth=await call('setup',{code:server.code,password:'test founder passphrase'});assert.equal(auth.status,200);cookie=auth.headers.get('set-cookie')!.split(';')[0];
  assert.equal((await call('contacts/research',{url:'https://127.0.0.1/private',company:'Blocked target'})).status,400);assert.equal((await call('ai/run',{agent:'Einstein',prompt:'What next?'})).status,400);assert.equal((await call('ai/install',{confirm:false})).status,400);
  assert.equal((await call('company',{name:'Test Company',legalName:'Test LLC',goal:'Nationwide cabling research'})).status,200);
@@ -35,7 +48,9 @@ test('HTTP auth, origin protection, retry, saved account across restart, and log
  assert.equal((await call('tasks',{goal:''})).status,400);
  const id=(await (await call('tasks',{goal:'Nationwide cabling'})).json()).id;
  const packet=await call('reports/'+id);assert.equal(packet.status,200);assert.match(await packet.text(),/Print \/ Save as PDF/);assert.match((await call('reports/'+id+'?download=1')).headers.get('content-disposition')!,/attachment/);assert.equal((await call('tasks/retry',{id})).status,409);assert.equal((await call('tasks/edit',{id,goal:'Edited nationwide objective'})).status,200);
- const db=new DatabaseSync(join(directory,'headquarters.sqlite'));db.prepare('INSERT INTO opportunities(id,task,title,url,evidence) VALUES(?,?,?,?,?)').run('test-record',id,'Synthetic HTTP test record','https://example.test/fixture','{}');db.prepare("UPDATE tasks SET status='Blocked',checkpoint=?,error='offline' WHERE id=?").run('{"page":2}',id);db.close();
+ const db=new DatabaseSync(join(directory,'headquarters.sqlite'));db.prepare('INSERT INTO opportunities(id,task,title,url,evidence) VALUES(?,?,?,?,?)').run('test-record',id,'Synthetic HTTP test record','https://example.test/fixture','{}');db.prepare("UPDATE tasks SET status='Blocked',checkpoint=?,error='offline' WHERE id=?").run('{"page":2}',id);const feedbackNote=String(db.prepare('INSERT INTO office_notes(task,agent,title,body,created) VALUES(?,?,?,?,?)').run('synthetic-feedback-http','Einstein','Synthetic saved review output','A real saved synthetic report receipt for HTTP feedback validation.',Date.now()).lastInsertRowid);db.close();
+ const correction={agent:'Einstein',kind:'note',receiptId:feedbackNote,rating:'correct',reason:'Synthetic owner feedback: use one clear next action'};
+ assert.equal((await call('learning/feedback',correction,'https://evil.test')).status,403);assert.equal((await call('learning/feedback',{...correction,agent:'Alpha'})).status,400);const learned=await call('learning/feedback',correction);assert.equal(learned.status,200);const trained=await learned.json();assert.equal(trained.model.trainedExamples,1);assert.equal(trained.correctionRequested,true);assert.equal(trained.plan.status,'Paused');assert.equal((await (await call('learning/state')).json()).parameters.find(p=>p.recipe==='team:Einstein').negativeWeight,3);
  const lead=await call('briefings/test-record');assert.equal(lead.status,200);assert.equal((await lead.json()).company,'Synthetic HTTP test record');assert.equal((await call('briefings/test-record/print')).status,200);assert.match((await call('briefings/test-record/print?download=1')).headers.get('content-disposition')!,/Lead-briefing.html/);assert.equal((await call('leads/research',{recordId:'test-record'},'https://evil.test')).status,403);assert.equal((await call('leads/research',{recordId:'test-record',website:'https://127.0.0.1/',confirmCompany:true})).status,400);assert.equal((await call('leads/research',{recordId:'missing'})).status,400);
  assert.equal((await call('research/note',{id:'test-record',note:'Owner qualification check pending'})).status,200);assert.equal((await call('research/note',{id:'missing',note:'x'})).status,400);
  assert.equal((await call('tasks/retry',{id})).status,200);
@@ -44,6 +59,7 @@ test('HTTP auth, origin protection, retry, saved account across restart, and log
  await stop(server.child);server=await launch(directory);assert.equal(server.code,undefined);
  assert.equal((await (await call('status')).json()).setupRequired,false);
  assert.equal((await call('state')).status,200); // durable session
+ assert.equal((await (await call('learning/state')).json()).trainedExamples,1);
  state=await (await call('state')).json();assert.equal(state.tasks[0].id,id);assert.equal(state.company.name,'Test Company');assert.equal(state.opportunities[0].note,'Owner qualification check pending');assert.equal(state.employees.length,8);assert.equal(state.employees.find(e=>e.id==='Alpha').name,'Alex');assert.equal(state.clock,'out');assert.equal(state.officeDesign.design.wall,'navy');assert.equal(state.officeDesign.design.layout,'studio');assert.equal(state.officeDesign.design.coffee,false);
  assert.equal((await call('office/open',{})).status,200);assert.equal((await (await call('state')).json()).clock,'in');
  await stop(server.child);server=await launch(directory);assert.equal((await (await call('state')).json()).clock,'in');

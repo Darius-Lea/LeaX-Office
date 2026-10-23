@@ -106,26 +106,38 @@ func ensureAIRuntime() (string, error) {
 	directory := filepath.Join(root, "ai", "ollama-"+ollamaVersion)
 	binary := filepath.Join(directory, "ollama.exe")
 	manifestPath := filepath.Join(directory, "hq-integrity.json")
-	if data, e := os.ReadFile(manifestPath); e == nil {
+	verifySaved := func() error {
+		data, e := os.ReadFile(manifestPath)
+		if e != nil {
+			return e
+		}
 		var manifest map[string]string
 		if e = json.Unmarshal(data, &manifest); e != nil {
-			return "", errors.New("Saved AI runtime verification is invalid; no runtime was launched")
+			return errors.New("Saved AI runtime verification is invalid; no runtime was launched")
 		}
-		if len(manifest) == 0 || manifest["ollama.exe"] == "" {
-			return "", errors.New("Incomplete AI runtime verification")
+		if len(manifest) == 0 || len(manifest) > 5000 || manifest["ollama.exe"] == "" {
+			return errors.New("Incomplete AI runtime verification")
 		}
 		progress("Checking saved local AI runtime. No model re-download is needed.")
 		for name, sum := range manifest {
 			p := filepath.Join(directory, filepath.FromSlash(name))
 			rel, e := filepath.Rel(directory, p)
 			if e != nil || strings.HasPrefix(rel, "..") || strings.Contains(name, ":") {
-				return "", errors.New("Invalid AI runtime manifest path")
+				return errors.New("Invalid AI runtime manifest path")
 			}
 			if e = checkHashContext(operationContext, p, sum); e != nil {
-				return "", e
+				return e
 			}
 		}
+		return nil
+	}
+	if e := verifySaved(); e == nil {
 		return binary, nil
+	} else if e = operationContext.Err(); e != nil {
+		return "", e
+	}
+	if _, e := os.Stat(directory); e == nil {
+		progress("Repairing the saved AI runtime with a verified official download. Your saved models and business records are kept.")
 	}
 	if e := checkAISpace(); e != nil {
 		return "", e
@@ -186,7 +198,7 @@ func ensureAIRuntime() (string, error) {
 	if e = os.WriteFile(filepath.Join(stage, "hq-integrity.json"), data, 0600); e != nil {
 		return "", e
 	}
-	if e = os.Rename(stage, directory); e != nil {
+	if e = installPreparedDirectory(operationContext, stage, directory); e != nil {
 		return "", e
 	}
 	os.Remove(archive)
@@ -419,6 +431,20 @@ func verifyAIConfiguration(node, app, model string) error {
 	c.Env = append(os.Environ(), "HQ_OLLAMA_PORT="+managedAIPort)
 	if e := c.Run(); e != nil {
 		return errors.New("The model installed but its local inference check did not complete. Reopen setup to retry; no successful AI work was invented")
+	}
+	return nil
+}
+
+// Status writes are separate from inference/configuration. They never select a
+// model or claim readiness, and cancellation still allows a short final update.
+func markAISetup(node, app, status string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	helper := filepath.Join(app, "scripts", "configure-local-ai.mjs")
+	c := exec.CommandContext(ctx, node, helper, filepath.Join(root, "data", "headquarters.sqlite"), "--status", status)
+	hidden(c)
+	if e := c.Run(); e != nil {
+		return errors.New("Local AI preparation status could not be saved")
 	}
 	return nil
 }

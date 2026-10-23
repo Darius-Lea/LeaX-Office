@@ -23,7 +23,7 @@ test('clock-in starts standing work, survives failure, supports edits, clock-out
  clock(true);const fresh=snapshot().tasks.find(t=>t.status==='Queued')!;
  editTask(String(fresh.id),'Find networking partners nationwide');assert.equal((db.prepare('SELECT goal FROM tasks WHERE id=?').get(fresh.id) as any).goal,'Find networking partners nationwide');
  await pulse(async()=>{throw Error('source unavailable');});assert.equal((db.prepare('SELECT status FROM tasks WHERE id=?').get(fresh.id) as any).status,'Blocked');
- const count=snapshot().tasks.length;setSetting('last_research',String(Date.now()-21600001));await pulse(async()=>Response.json({results:[],page_metadata:{hasNext:false}}));assert.equal(snapshot().tasks.length,count+1);assert.ok(Number(setting('last_research'))>Date.now()-1000);
+ const count=snapshot().tasks.length;setSetting('last_research',String(Date.now()-21600001));for(let i=0;i<3;i++)await pulse(async()=>{throw Error('Source backoff must prevent this request');});assert.equal(snapshot().tasks.length,count);const planned=JSON.parse(setting('work_planner_v1'));assert.equal(planned.status,'Source cooldown');assert.ok(planned.nextActionAt>Date.now());
  clock(false);assert.equal(await pulse(),false);
  }finally{db.close();rmSync(process.env.HQ_DATA_DIR!,{recursive:true});}
 });

@@ -63,6 +63,7 @@ type state struct {
 type localStatus struct {
 	Product       string `json:"product"`
 	SetupRequired bool   `json:"setupRequired"`
+	AIReady       bool   `json:"aiReady"`
 }
 
 func utf(s string) *uint16 { return syscall.StringToUTF16Ptr(s) }
@@ -418,7 +419,13 @@ func ensureNode() (string, error) {
 	runtimeRoot := filepath.Join(root, "runtimes")
 	node := filepath.Join(runtimeRoot, name, "node.exe")
 	if _, e := os.Stat(node); e == nil {
-		return node, verifyNode(node)
+		if e = verifyNode(node); e == nil {
+			return node, nil
+		}
+		if e = operationContext.Err(); e != nil {
+			return "", e
+		}
+		progress("Repairing the saved Node runtime using a fresh official, verified download. Your business data is kept.")
 	}
 	os.MkdirAll(runtimeRoot, 0700)
 	downloadRoot := filepath.Join(root, "downloads")
@@ -467,7 +474,7 @@ func ensureNode() (string, error) {
 	if e = verifyNode(filepath.Join(stage, name, "node.exe")); e != nil {
 		return "", e
 	}
-	if e = os.Rename(filepath.Join(stage, name), filepath.Join(runtimeRoot, name)); e != nil {
+	if e = installPreparedDirectory(operationContext, filepath.Join(stage, name), filepath.Join(runtimeRoot, name)); e != nil {
 		return "", e
 	}
 	return node, nil
@@ -591,7 +598,7 @@ func startOffice(wantShortcut bool) error {
 			progress("Opening the existing local office. No account or data was replaced.")
 			return openOffice(s, existing)
 		}
-		if strings.EqualFold(s.App, expectedApp) && owned(aiState()) {
+		if strings.EqualFold(s.App, expectedApp) && existing.AIReady && owned(aiState()) {
 			if models, e := aiGetTags(); e == nil && len(models) > 0 {
 				if wantShortcut {
 					if launcher, e := installLauncher(); e == nil {
@@ -620,11 +627,7 @@ func startOffice(wantShortcut bool) error {
 	if e != nil {
 		return e
 	}
-	model, e := prepareBuiltInAI()
-	if e != nil {
-		return e
-	}
-	// Prepare downloads before replacing a healthy owned office, so a network failure leaves it available.
+	// Prepare the small verified app/runtime before replacing a healthy owned office.
 	if runningOwned {
 		p, e := os.FindProcess(s.PID)
 		if e != nil {
@@ -643,9 +646,6 @@ func startOffice(wantShortcut bool) error {
 				break
 			}
 		}
-	}
-	if e = verifyAIConfiguration(node, app, model); e != nil {
-		return e
 	}
 	if e = operationContext.Err(); e != nil {
 		return e
@@ -711,8 +711,19 @@ func startOffice(wantShortcut bool) error {
 					info("The office installed, but Windows could not create the optional desktop shortcut. Your downloaded app still opens it.")
 				}
 			}
-			progress("Office installed and running locally. No Render required. Clock out to pause or Stop office here.")
-			return openOffice(s, st)
+			progress("Your office is installed. Opening it now while automatic local AI setup continues here.")
+			if e = finishOfficeSetup(operationContext, func() error {
+				if e := openOffice(s, st); e != nil {
+					return e
+				}
+				// Cancelling remaining AI preparation leaves the handed-off office running.
+				operationStartedOffice = false
+				return nil
+			}, prepareBuiltInAI, func(model string) error { return verifyAIConfiguration(node, app, model) }, func(status string) error { return markAISetup(node, app, status) }); e != nil {
+				return fmt.Errorf("Your local office is installed and its saved work is kept. Built-in AI setup needs attention: %w. Choose Install / open office here to retry automatic AI setup", e)
+			}
+			progress("Office and built-in AI are ready locally. No Render required. Clock out to pause work or Stop local office here.")
+			return nil
 		}
 		if e = pauseSetup(500 * time.Millisecond); e != nil {
 			return e

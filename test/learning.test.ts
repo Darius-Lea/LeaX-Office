@@ -1,0 +1,57 @@
+import {test,after} from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtempSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {DatabaseSync} from 'node:sqlite';
+const directory=mkdtempSync(join(tmpdir(),'hq-learning-'));process.env.HQ_DATA_DIR=directory;
+const {db,enqueue,setSetting,setting}=await import('../src/store.ts');
+await import('../src/team.ts');await import('../src/ai.ts');await import('../src/lead-research.ts');await import('../src/accountability.ts');
+const {SOURCE,parsePage}=await import('../src/research.ts');
+const {rankWorkOptions,recordWorkFeedback,collectLearningEvidence,learningState,pendingLearningCorrections,resolveLearningCorrection}=await import('../src/learning.ts');
+after(()=>{db.close();rmSync(directory,{recursive:true,force:true})});
+function completed(lane:string,suffix:string){
+ const id=enqueue('Research lane: '+lane+'\nFind cabling and network installation');
+ const finding=parsePage({results:[{generated_internal_id:'CONT_AWD_LEARNING_'+suffix,'Recipient Name':'Synthetic learning fixture '+suffix,Description:'Structured cabling and network installation synthetic evidence'}],page_metadata:{hasNext:false}},'Find cabling',Date.now()).findings[0];
+ db.prepare('INSERT INTO opportunities VALUES(?,?,?,?,?,1)').run(finding.awardId,id,finding.title,finding.url,JSON.stringify(finding.evidence));db.prepare('INSERT INTO task_findings VALUES(?,?)').run(id,finding.awardId);
+ db.prepare("UPDATE tasks SET agent='Bravo',status='Completed',checkpoint=? WHERE id=?").run(JSON.stringify({source:SOURCE.id,page:2,collected:1}),id);return id;
+}
+const options=[{id:'network',recipe:'award:network installation',agent:'Alpha',permission:'existing allowed read-only tools'},{id:'cabling',recipe:'award:structured cabling',agent:'Alpha',permission:'existing allowed read-only tools'}];
+test('real online learning updates persisted posterior parameters and changes eligible work selection from reward and corrective examples',()=>{
+ const company=setting('company'),task=completed('structured cabling','REWARD');
+ assert.equal(rankWorkOptions(options)[0].id,'network');
+ const reward=recordWorkFeedback({kind:'task',receiptId:task,agent:'Alpha',rating:'reward',reason:'Synthetic owner found this sourced cycle useful'});assert.equal(reward.duplicate,false);assert.equal(reward.model.trainedExamples,1);assert.equal(reward.model.version,1);assert.equal(reward.correctionRequested,false);
+ assert.equal(rankWorkOptions(options)[0].id,'cabling');let parameter=learningState().parameters.find(row=>row.recipe==='award:structured cabling')!;assert.equal(parameter.positiveWeight,3);assert.equal(parameter.negativeWeight,0);assert.equal(parameter.mean,.8);
+ const duplicate=recordWorkFeedback({kind:'task',receiptId:task,agent:'Alpha',rating:'reward'});assert.equal(duplicate.duplicate,true);assert.equal(duplicate.model.version,1);assert.throws(()=>recordWorkFeedback({kind:'task',receiptId:task,agent:'Alpha',rating:'correct',reason:'Change a prior rating'}),/already/);
+ const poor=completed('structured cabling','CORRECT');const correction=recordWorkFeedback({kind:'task',receiptId:poor,agent:'Alpha',rating:'correct',reason:'Synthetic owner wants a more useful target scope'});assert.equal(correction.correctionRequested,true);assert.equal(rankWorkOptions(options)[0].id,'network');parameter=learningState().parameters.find(row=>row.recipe==='award:structured cabling')!;assert.equal(parameter.negativeWeight,3);assert.equal(parameter.mean,.5);
+ assert.equal((db.prepare('SELECT status FROM tasks WHERE id=?').get(poor) as any).status,'Completed');assert.equal(setting('company'),company);assert.equal((db.prepare('SELECT count(*) AS n FROM task_findings WHERE task=?').get(poor) as any).n,1);
+ const durable=new DatabaseSync(join(directory,'headquarters.sqlite'),{readOnly:true});assert.equal((durable.prepare('SELECT version FROM learning_model WHERE id=1').get() as any).version,2);assert.equal((durable.prepare("SELECT negative_weight FROM learning_parameters WHERE recipe='award:structured cabling'").get() as any).negative_weight,3);durable.close();
+ const mutable=JSON.stringify(options);assert.deepEqual(rankWorkOptions([]),[]);assert.equal(JSON.stringify(options),mutable);assert.deepEqual(new Set(rankWorkOptions(options).map(row=>row.id)),new Set(['network','cabling']));
+});
+test('feedback requires real employee-owned outputs and rejects fake faults, missing models, provider blocks, setup and waiting',()=>{
+ const before=learningState().trainedExamples,queued=enqueue('Synthetic normal queue');
+ db.prepare("UPDATE tasks SET status='Blocked',attempts=3,error='HTTP403 source unavailable' WHERE id=?").run(queued);
+ for(const kind of ['task','note','lead','ai','incident'])assert.throws(()=>recordWorkFeedback({kind,receiptId:queued,agent:'Alpha',rating:'correct',reason:'This is only waiting, not a saved output'}));
+ const task=completed('network installation','OWNERSHIP');assert.throws(()=>recordWorkFeedback({kind:'task',receiptId:task,agent:'Einstein',rating:'reward'}),/did not produce/);assert.throws(()=>recordWorkFeedback({kind:'task',receiptId:task,agent:'Alpha',rating:'correct',reason:'x'}),/3–1200/);assert.throws(()=>recordWorkFeedback({kind:'task',receiptId:task,agent:'Alpha',rating:'reward',source:'automatic'}),/Unsupported/);
+ const empty=enqueue('Synthetic completed row without source output');db.prepare("UPDATE tasks SET status='Completed' WHERE id=?").run(empty);assert.throws(()=>recordWorkFeedback({kind:'task',receiptId:empty,agent:'Alpha',rating:'reward'}),/no verified saved/);
+ const unreviewed=completed('structured cabling','UNREVIEWED');db.prepare('UPDATE opportunities SET reviewed=0 WHERE id IN (SELECT opportunity FROM task_findings WHERE task=?)').run(unreviewed);assert.throws(()=>recordWorkFeedback({kind:'task',receiptId:unreviewed,agent:'Bravo',rating:'reward'}),/no verified saved/);db.prepare('UPDATE opportunities SET reviewed=1 WHERE id IN (SELECT opportunity FROM task_findings WHERE task=?)').run(unreviewed);db.prepare('UPDATE tasks SET checkpoint=? WHERE id=?').run(JSON.stringify({source:SOURCE.id,page:2,collected:0}),unreviewed);assert.throws(()=>recordWorkFeedback({kind:'task',receiptId:unreviewed,agent:'Bravo',rating:'reward'}),/no verified saved/);db.prepare('UPDATE tasks SET checkpoint=? WHERE id=?').run(JSON.stringify({source:SOURCE.id,page:2,collected:1}),unreviewed);assert.ok(learningState().eligibleReceipts.find(row=>row.kind==='task'&&row.id===unreviewed&&row.agent==='Bravo')!.canReward);
+ assert.equal(learningState().trainedExamples,before);assert.equal((db.prepare('SELECT status FROM tasks WHERE id=?').get(queued) as any).status,'Blocked');
+});
+test('actual saved report ratings update its work recipe and related target model while durable manager corrections preserve the original output',()=>{
+ const task=completed('network installation','NOTE');const note=db.prepare('INSERT INTO office_notes(task,agent,title,body,created) VALUES(?,?,?,?,?)').run(task,'Einstein','Synthetic saved lead brief','Sourced fixture briefing with a practical next step.',Date.now());
+ const id=String(note.lastInsertRowid),before=learningState().parameters.find(row=>row.recipe==='award:network installation')?.negativeWeight||0;
+ assert.throws(()=>recordWorkFeedback({kind:'note',receiptId:id,agent:'Alpha',rating:'correct',reason:'Wrong employee attribution'}),/another employee/);
+ recordWorkFeedback({kind:'note',receiptId:id,agent:'Einstein',rating:'correct',reason:'Synthetic critique: lead with the contact and one action'});
+ const state=learningState();assert.equal(state.parameters.find(row=>row.recipe==='team:Einstein')!.negativeWeight,3);assert.equal(state.parameters.find(row=>row.recipe==='award:network installation')!.negativeWeight,before+1.5);
+ const item=pendingLearningCorrections().find(row=>row.kind==='note'&&row.receiptId===id)!;assert.equal(item.taskId,task);assert.equal(item.agent,'Einstein');resolveLearningCorrection(item.id,{status:'Waiting',result:'Actual model setup is needed before a model-based rewrite; no rewrite claimed.'});assert.equal(pendingLearningCorrections().some(row=>row.id===item.id),false);assert.equal(pendingLearningCorrections(8,true).find(row=>row.id===item.id)!.status,'Waiting');
+ resolveLearningCorrection(item.id,{status:'Applied',result:'Synthetic manager test receipt records a separate review; original report retained.'});assert.equal(pendingLearningCorrections(8,true).some(row=>row.id===item.id),false);assert.throws(()=>resolveLearningCorrection(item.id,{status:'Applied',result:'Duplicate review'}),/already resolved/);
+ assert.equal((db.prepare('SELECT body FROM office_notes WHERE id=?').get(Number(id)) as any).body,'Sourced fixture briefing with a practical next step.');assert.equal(state.eligibleReceipts.find(row=>row.kind==='note'&&row.id===id)!.canCorrect,false);
+ assert.ok(state.eligibleReceipts.some(row=>row.kind==='task'&&row.id===task&&row.agent==='Alpha'));assert.ok(state.eligibleReceipts.some(row=>row.kind==='task'&&row.id===task&&row.agent==='Bravo'));
+});
+test('automatic evidence is deduplicated and trains only validated completions or actual repeated execution incidents',()=>{
+ const task=completed('structured cabling','AUTO'),failed=enqueue('Synthetic unavailable external source');db.prepare("UPDATE tasks SET status='Blocked',error='SAM key missing',attempts=3 WHERE id=?").run(failed);
+ const incidentTask=enqueue('Research lane: network installation\nFind cabling and network installation');db.prepare("INSERT INTO accountability_incidents(id,fingerprint,task,agent,kind,reason,strike_number,created) VALUES(?,?,?,?,?,?,?,?)").run('learning-real-fault','learning-fault-fingerprint',incidentTask,'Alpha','repeated_expired_claim','Synthetic fixture of a recorded repeated expired lease',1,Date.now());
+ const first=collectLearningEvidence();assert.ok(first.added>0);const second=collectLearningEvidence();assert.equal(second.added,0);assert.equal(second.trainedExamples,first.trainedExamples);const state=learningState();
+ assert.ok(state.recentFeedback.some(row=>row.kind==='task'&&row.receiptId===task&&row.source==='automatic'&&row.rating==='reward'));assert.ok(state.recentFeedback.some(row=>row.kind==='incident'&&row.receiptId==='learning-real-fault'&&row.rating==='correct'));assert.equal(state.recentFeedback.some(row=>row.receiptId===failed),false);assert.equal(state.pendingCorrections.some(row=>row.receiptId==='learning-real-fault'),false);assert.match(state.notice,/do not fine-tune Ollama/);assert.match(state.method,/Bayesian/);
+ const negative=state.parameters.find(row=>row.recipe==='award:network installation')!.negativeWeight,active=state.trainedExamples;db.prepare("UPDATE accountability_incidents SET status='Excused' WHERE id='learning-real-fault'").run();const retracted=collectLearningEvidence();assert.equal(retracted.retracted,1);assert.equal(retracted.added,0);assert.equal(retracted.trainedExamples,active-1);assert.equal(learningState().parameters.find(row=>row.recipe==='award:network installation')!.negativeWeight,negative-.15);assert.equal(learningState().recentFeedback.find(row=>row.receiptId==='learning-real-fault')!.trainingStatus,'Excluded');assert.equal(collectLearningEvidence().retracted,0);
+});

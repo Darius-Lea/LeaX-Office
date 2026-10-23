@@ -38,6 +38,20 @@
 </form>
 </section>
 <div id="workspace" hidden>
+<button id="operations-toggle" class="operations-toggle" aria-expanded="false" aria-controls="operations-panel"><span class="operations-indicator" aria-hidden="true"></span>Live operations <span id="operations-active-count"></span></button>
+<aside id="operations-panel" class="operations-panel" aria-labelledby="operations-title" hidden>
+<header class="operations-heading"><div><p class="eyebrow">THE WORK FLOOR</p><h2 id="operations-title">Live operations</h2></div><button id="operations-close" class="icon-button" aria-label="Collapse live operations">×</button></header>
+<div class="operations-scroll">
+<p id="operations-summary" class="operations-summary">Loading saved work status…</p><p id="operations-updated" class="operations-updated"></p>
+<div id="operations-metrics" class="operations-metrics" aria-label="Saved business statistics"></div>
+<button id="operations-statistics" class="operations-text-button operations-all-statistics">All business statistics</button>
+<button id="operations-manager" class="operations-manager"><span>MANAGER’S PLAN</span><strong id="operations-manager-summary">Checking available work</strong><small id="operations-next-action"></small></button>
+<div class="operations-section-heading"><h3>Who’s doing what</h3><span id="operations-staff-count"></span></div><div id="operations-employees" class="operations-employees"></div>
+<div class="operations-section-heading"><h3>Latest receipts</h3><button id="operations-history" class="operations-text-button">View work log</button></div><div id="operations-events" class="operations-events"></div>
+<button id="operations-learning" class="operations-learning"><span aria-hidden="true">↗</span><div><strong>Learning from real work</strong><small id="operations-learning-summary">Rewards and corrections use saved evidence.</small></div><span aria-hidden="true">›</span></button>
+</div>
+<footer class="operations-footer">Saved status updates every five seconds.</footer>
+</aside>
 <div class="office-hud">
 <div class="shift-chip">
 <span class="status-light" id="shift-light">
@@ -135,7 +149,7 @@
 <p id="manager-status" role="status">Manager will check saved assignments after clock-in.</p>
 <div id="manager-issues">
 </div>
-<p>Closing this window keeps local work running while the computer is awake. Clock out pauses new tasks. A sleeping or powered-off host cannot work.</p>
+<button id="manager-open-operations" class="operations-text-button">See the manager’s work plan</button>
 </details>
 </section>
 </div>

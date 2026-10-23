@@ -3,6 +3,13 @@ import {fileURLToPath} from 'node:url';
 import {resolve} from 'node:path';
 const endpoint='http://127.0.0.1:11435';
 const automaticModels=new Set(['qwen3:0.6b','qwen3:1.7b','qwen3:4b']);
+export function markLocalAISetup(database,status){
+ if(!['Preparing','Needs-attention','Paused'].includes(status))throw Error('Unsupported setup status');
+ const db=new DatabaseSync(database,{timeout:5000});try{
+  db.exec('PRAGMA trusted_schema=OFF; CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY,value TEXT);');
+  db.prepare("INSERT OR REPLACE INTO settings VALUES('managed_ai_setup',?)").run(JSON.stringify({status,checkedAt:Date.now(),inferenceVerified:false}));
+ }finally{db.close()}
+}
 // Called only by the local native setup after engine and model verification.
 export async function configureLocalAI(database,requested,fetcher=fetch){
  if(!automaticModels.has(requested))throw Error('Unsupported automatic model');
@@ -25,5 +32,5 @@ export async function configureLocalAI(database,requested,fetcher=fetch){
  }finally{db.close()}
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
- try{await configureLocalAI(process.argv[2],process.argv[3]);console.log('Local AI installed, inference tested and configured automatically.');}catch{console.error('Automatic AI verification did not complete. Existing business data and prior model settings were retained.');process.exitCode=1}
+ try{if(process.argv[3]==='--status')markLocalAISetup(process.argv[2],process.argv[4]);else{await configureLocalAI(process.argv[2],process.argv[3]);console.log('Local AI installed, inference tested and configured automatically.');}}catch{console.error('Automatic AI preparation did not complete. Existing business data and prior model settings were retained.');process.exitCode=1}
 }

@@ -1,0 +1,22 @@
+import {test,after} from 'node:test';import assert from 'node:assert/strict';
+import {mkdtempSync,rmSync} from 'node:fs';import {tmpdir} from 'node:os';import {join} from 'node:path';
+const directory=mkdtempSync(join(tmpdir(),'hq-operations-'));process.env.HQ_DATA_DIR=directory;
+const {db,enqueue,setSetting}=await import('../src/store.ts');
+const {operationsState}=await import('../src/operations.ts');
+const {saveOutcome}=await import('../src/outcomes.ts');
+const now=Date.now(),plan={status:'Monitoring',summary:'Synthetic source window is being monitored.',nextAction:'Check the next permitted service lane.',nextActionAt:now+60000,directives:[],reasons:['Synthetic provider cooldown']};
+const idleLearning={eligibleReceipts:[]};
+after(()=>{db.close();rmSync(directory,{recursive:true,force:true})});
+test('live operations uses actual running receipts and money records without inventing busy staff, revenue or idle-time faults',()=>{
+ setSetting('clock','out');let state=operationsState({now,plan,learning:idleLearning});assert.ok(state.employees.every(row=>row.status==='Off duty'));assert.equal(state.metrics.find(row=>row.label==='Executing now')!.value,'0');assert.equal(state.metrics.find(row=>row.label==='Execution faults')!.value,'0');assert.ok(state.employees.every(row=>!row.receipt));
+ setSetting('clock','in');const active=enqueue('Synthetic actual running source request');db.prepare("UPDATE tasks SET status='Running',lease=?,attempts=1 WHERE id=?").run(now+60000,active);
+ const queue=enqueue('Synthetic saved review');db.prepare("UPDATE tasks SET agent='Bravo' WHERE id=?").run(queue);
+ db.prepare("INSERT INTO employees VALUES('SyntheticRole','Synthetic planned worker','Unconnected role','planned')").run();
+ db.prepare("INSERT INTO outgoing_drafts VALUES('synthetic-draft','fixture@example.test','Synthetic introduction','Synthetic saved draft','https://example.test/contact','Pending approval',?)").run(now);
+ saveOutcome({type:'quote_sent',company:'Synthetic customer',reference:'Fixture quote',occurredAt:now,amount:9999});
+ const countBefore=(db.prepare('SELECT count(*) AS n FROM tasks').get() as any).n;
+ state=operationsState({now,plan,learning:idleLearning});assert.equal(state.employees.find(row=>row.id==='Alpha')!.status,'Working');assert.match(state.employees.find(row=>row.id==='Alpha')!.currentAction,/actual running/);assert.equal(state.employees.find(row=>row.id==='Bravo')!.status,'Queued');assert.equal(state.employees.find(row=>row.id==='Delta')!.status,'Awaiting approval');assert.equal(state.employees.find(row=>row.id==='Johnson')!.status,'Monitoring');assert.equal(state.employees.find(row=>row.id==='SyntheticRole')!.status,'Setup required');assert.equal(state.metrics.find(row=>row.label==='Executing now')!.value,'1');assert.equal(state.metrics.find(row=>row.label==='Recorded receipts')!.value,'$0.00');
+ saveOutcome({type:'payment_received',company:'Synthetic customer',reference:'Fixture payment',occurredAt:now,amount:123.45});state=operationsState({now,plan,learning:idleLearning});assert.equal(state.metrics.find(row=>row.label==='Recorded receipts')!.value,'$123.45');assert.match(state.metrics.find(row=>row.label==='Recorded receipts')!.detail,/Owner-reported/);assert.equal((db.prepare('SELECT count(*) AS n FROM tasks').get() as any).n,countBefore);
+ db.prepare("UPDATE tasks SET status='Blocked',error='Research unavailable: source HTTP403' WHERE id=?").run(active);state=operationsState({now,plan,learning:idleLearning});assert.equal(state.employees.find(row=>row.id==='Alpha')!.status,'Waiting on a tool');assert.equal(state.employees.find(row=>row.id==='Alpha')!.receipt,undefined);assert.equal(state.metrics.find(row=>row.label==='Execution faults')!.value,'0');assert.equal(state.metrics.find(row=>row.label==='Executing now')!.value,'0');
+ db.prepare("UPDATE tasks SET status='Completed',created=? WHERE id=?").run(Date.now()+1000,queue);state=operationsState({now:now+2000,plan,learning:idleLearning});assert.equal(state.employees.find(row=>row.id==='Alpha')!.status,'Waiting');assert.doesNotMatch(state.employees.find(row=>row.id==='Alpha')!.detail,/HTTP403/);
+});

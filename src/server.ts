@@ -1,4 +1,8 @@
 import {getOfficeDesign,saveOfficeDesign} from './office-design.ts';
+import {serveWindowsDownload} from './download.ts';
+import {operationsState} from './operations.ts';
+import {learningState,recordWorkFeedback,collectLearningEvidence} from './learning.ts';
+import {planWork,workPlannerState} from './work-planner.ts';
 import {leadBriefing} from './briefings.ts';
 import {queueLeadResearch,processLeadResearch,leadResearchState} from './lead-research.ts';
 import {profileState,saveProfile,profileDocument} from './business-profile.ts';
@@ -10,8 +14,8 @@ import {pricingState,saveEstimate} from './pricing.ts';
 import {businessGuide,saveReadiness} from './business-guide.ts';
 import {assignmentReport,leadBriefingReport} from './reports.ts';
 import {createServer} from 'node:http';
-import {readFileSync,existsSync,createReadStream,statSync} from 'node:fs';
-import {randomBytes,createHash} from 'node:crypto';
+import {readFileSync,existsSync} from 'node:fs';
+import {randomBytes} from 'node:crypto';
 import {backup} from 'node:sqlite';
 import {join} from 'node:path';
 import {db,directory,setup,login,authenticated,enqueue,snapshot,audit,clock,setting,setSetting,editTask} from './store.ts';
@@ -42,20 +46,19 @@ const bootstrap=process.env.HQ_SETUP_CODE || randomBytes(24).toString('hex');
 if(needsSetup&&!publicBinding&&!process.env.HQ_SETUP_CODE)console.log('One-time local setup code: '+bootstrap);
 function vendorFile(name:string,original:string){const packed=new URL('../vendor/'+name,import.meta.url);return readFileSync(existsSync(packed)?packed:new URL('../node_modules/three/'+original,import.meta.url));}
 const attempts=new Map<string,{count:number,time:number}>();
+function managedAISetupState(){
+ try{const value=JSON.parse(setting('managed_ai_setup')||'null');if(!value||!['Preparing','Needs-attention','Paused','Completed'].includes(value.status))return null;return {status:value.status,checkedAt:Number(value.checkedAt)||null,inferenceVerified:value.status==='Completed'&&value.inferenceVerified===true};}catch{return null;}
+}
 const server=createServer(async(req,res)=>{
  res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; frame-ancestors 'none'");res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Cache-Control','no-store');
  const send=(status:number,data:any)=>{res.writeHead(status,{'Content-Type':'application/json'});res.end(JSON.stringify(data));};
  try{
  const url=new URL(req.url||'/',`http://127.0.0.1:${port}`);
- if(req.method==='GET' && ['/', '/download','/download.css','/app.js','/speech.js','/office.js','/office3d.js','/style.css','/report.css','/report.js'].includes(url.pathname)){const file=url.pathname==='/'?'index.html':url.pathname==='/download'?'download.html':url.pathname.slice(1);res.setHeader('Content-Type',file.endsWith('html')?'text/html':file.endsWith('js')?'text/javascript':'text/css');res.end(readFileSync(new URL('../public/'+file,import.meta.url)));return;}
+ if(['GET','HEAD'].includes(req.method||'') && ['/', '/download','/download.css','/download.js','/app.js','/speech.js','/office.js','/office3d.js','/style.css','/report.css','/report.js'].includes(url.pathname)){const file=url.pathname==='/'?'index.html':url.pathname==='/download'?'download.html':url.pathname.slice(1);res.setHeader('Content-Type',file.endsWith('html')?'text/html':file.endsWith('js')?'text/javascript':'text/css');res.end(req.method==='HEAD'?undefined:readFileSync(new URL('../public/'+file,import.meta.url)));return;}
  if(req.method==='GET'&&['/vendor/three.module.js','/vendor/three.core.js'].includes(url.pathname)){res.setHeader('Content-Type','text/javascript');res.setHeader('Cache-Control','public, max-age=86400');res.end(vendorFile(url.pathname.split('/').pop()!,'build/'+url.pathname.split('/').pop()));return;}
  if(req.method==='GET'&&['/vendor/FontLoader.js','/vendor/TextGeometry.js','/vendor/office-font.json'].includes(url.pathname)){const paths:Record<string,string>={'/vendor/FontLoader.js':'loaders/FontLoader.js','/vendor/TextGeometry.js':'geometries/TextGeometry.js','/vendor/office-font.json':'../fonts/helvetiker_regular.typeface.json'};const raw=vendorFile(url.pathname.split('/').pop()!,'examples/jsm/'+paths[url.pathname]).toString('utf8');res.setHeader('Content-Type',url.pathname.endsWith('json')?'application/json':'text/javascript');res.end(raw.replace(/from 'three'/g,"from '/vendor/three.module.js'"));return;}
- if(req.method==='GET'&&['/download/windows','/download/windows.sha256'].includes(url.pathname)){
- const file=process.env.HQ_INSTALLER_PATH||new URL('../downloads/AI-Headquarters-Setup.exe',import.meta.url);
- if(!existsSync(file))return send(503,{error:'The Windows setup file is not available on this host yet. Contact the app owner.'});
- if(url.pathname.endsWith('.sha256')){res.setHeader('Content-Type','text/plain');res.end(createHash('sha256').update(readFileSync(file)).digest('hex')+'  AI-Headquarters-Setup.exe\n');return;}
- res.setHeader('Content-Type','application/vnd.microsoft.portable-executable');res.setHeader('Content-Disposition','attachment; filename="AI-Headquarters-Setup.exe"');res.setHeader('Content-Length',statSync(file).size);const stream=createReadStream(file);stream.on('error',()=>res.destroy());res.on('close',()=>stream.destroy());stream.pipe(res);return;}
- if(req.method==='GET' && url.pathname==='/api/status')return send(200,{product:'ai-headquarters',setupRequired:!db.prepare('SELECT id FROM founder').get()});
+ if(['GET','HEAD'].includes(req.method||'')&&['/download/windows','/download/windows.sha256'].includes(url.pathname)){serveWindowsDownload(req,res,process.env.HQ_INSTALLER_PATH||new URL('../downloads/AI-Headquarters-Setup.exe',import.meta.url),url.pathname.endsWith('.sha256'));return;}
+ if(req.method==='GET' && url.pathname==='/api/status'){const ai=managedAISetupState();return send(200,{product:'ai-headquarters',setupRequired:!db.prepare('SELECT id FROM founder').get(),aiReady:ai?.inferenceVerified===true&&!!setting('ollama_model')});}
  const localPort=(server.address() as any)?.port||port;
  const allowedOrigins=publicBinding?[publicOrigin]:[`http://127.0.0.1:${localPort}`,`http://localhost:${localPort}`,...(publicOrigin?[publicOrigin]:[])];
  if(req.method==='POST' && !allowedOrigins.includes(req.headers.origin))return send(403,{error:'Invalid origin'});
@@ -70,7 +73,10 @@ const server=createServer(async(req,res)=>{
  if(req.method==='GET'&&url.pathname.startsWith('/api/reports/')){const html=assignmentReport(decodeURIComponent(url.pathname.slice('/api/reports/'.length)),url.searchParams.get('download')==='1');res.setHeader('Content-Type','text/html; charset=utf-8');if(url.searchParams.get('download')==='1')res.setHeader('Content-Disposition','attachment; filename="Assignment-packet.html"');res.end(html);return;}
  if(req.method==='GET'&&url.pathname==='/api/download/windows'){res.setHeader('Content-Type','application/vnd.microsoft.portable-executable');res.setHeader('Content-Disposition','attachment; filename="AI-Headquarters-Setup.exe"');res.end(readFileSync(process.env.HQ_INSTALLER_PATH||new URL('../downloads/AI-Headquarters-Setup.exe',import.meta.url)));return;}
  if(req.method==='GET'&&url.pathname==='/api/state'){
- const state=snapshot();return send(200,{...state,leadResearch:leadResearchState(),businessGuide:businessGuide(),officeDesign:getOfficeDesign(),businessProfile:profileState(),accountability:accountabilityState(),outcomes:outcomeState(),funding:fundingState(),pricing:pricingState(),opportunities:state.opportunities.map(record=>({...record,advice:awardAdvice(record,state.company.name)})),...teamState(),roleCharters:ROLE_CHARTERS,manager:managerState(),aiRuns:agentRuns(),aiConfigured:!!setting('ollama_model'),contactResearch:contactState(),drafts:draftState(),solicitations:solicitationState()});}
+ const state=snapshot(),workPlan=workPlannerState(),learning=learningState();return send(200,{...state,workPlan,learning,operations:operationsState({plan:workPlan,learning}),managedAISetup:managedAISetupState(),leadResearch:leadResearchState(),businessGuide:businessGuide(),officeDesign:getOfficeDesign(),businessProfile:profileState(),accountability:accountabilityState(),outcomes:outcomeState(),funding:fundingState(),pricing:pricingState(),opportunities:state.opportunities.map(record=>({...record,advice:awardAdvice(record,state.company.name)})),...teamState(),roleCharters:ROLE_CHARTERS,manager:managerState(),aiRuns:agentRuns(),aiConfigured:!!setting('ollama_model'),contactResearch:contactState(),drafts:draftState(),solicitations:solicitationState()});}
+ if(req.method==='GET'&&url.pathname==='/api/learning/state')return send(200,learningState());
+ if(req.method==='POST'&&url.pathname==='/api/learning/feedback'){
+ const result=recordWorkFeedback(body),plan=planWork();return send(200,{...result,plan});}
  if(req.method==='GET'&&url.pathname.startsWith('/api/briefings/')){
  const path=url.pathname.slice('/api/briefings/'.length);
  if(path.endsWith('/print')){const download=url.searchParams.get('download')==='1';res.setHeader('Content-Type','text/html; charset=utf-8');if(download)res.setHeader('Content-Disposition','attachment; filename="Lead-briefing.html"');res.end(leadBriefingReport(decodeURIComponent(path.slice(0,-6)),download));return;}
@@ -86,7 +92,7 @@ const server=createServer(async(req,res)=>{
  if(req.method==='GET'&&url.pathname==='/api/business/profile/print'){const download=url.searchParams.get('download')==='1';res.setHeader('Content-Type','text/html; charset=utf-8');if(download)res.setHeader('Content-Disposition','attachment; filename="Company-capability-statement.html"');res.end(profileDocument(download));return;}
  if(req.method==='GET'&&url.pathname==='/api/connections/status')return send(200,connectionState());
  if(req.method==='POST'&&url.pathname==='/api/connections/sam')return send(200,await saveSAMKey(body.key));
- if(req.method==='POST'&&url.pathname==='/api/accountability/resolve')return send(200,resolveIncident(body));
+ if(req.method==='POST'&&url.pathname==='/api/accountability/resolve'){const result=resolveIncident(body);collectLearningEvidence();return send(200,result);}
  if(req.method==='POST'&&url.pathname==='/api/outcomes/save')return send(201,saveOutcome(body));
  if(req.method==='POST'&&url.pathname==='/api/outcomes/correct')return send(200,correctOutcome(body));
  if(req.method==='POST'&&url.pathname==='/api/funding/profile')return send(200,saveFundingProfile(body));

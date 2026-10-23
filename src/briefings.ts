@@ -82,4 +82,11 @@ export function briefingText(brief:LeadBriefing){
  const contact=[...brief.contact.emails.map(c=>'Email: '+c.value),...brief.contact.phones.map(c=>'Phone: '+c.value)].join('\n')||'Contact: Research unfinished — no published email or phone saved.';
  return ['Recommended next step: '+brief.nextStep,'Company: '+brief.company,contact,'Location: '+brief.location,'Why this target: '+brief.reason,'Your move: '+brief.instruction,'Status: '+brief.signal,'Source: '+brief.source.url].join('\n\n');
 }
-export function enrichBriefingNotes(notes:any[]){return notes.map(note=>note.agent==='Einstein'&&!String(note.task).startsWith('ai:')?{...note,briefing:taskBriefing(String(note.task))}:note)};
+export function enrichBriefingNotes(notes:any[]){return notes.map(note=>{
+ if(note.agent!=='Einstein'||String(note.task).startsWith('ai:'))return note;
+ if(String(note.task).startsWith('manager-lead:')&&db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='manager_directives'").get()){
+  const receipt=String(note.task).slice('manager-lead:'.length),row=db.prepare("SELECT reference FROM manager_directives WHERE id=? AND kind='contact_brief'").get('brief:'+receipt) as any;
+  if(row?.reference){try{return {...note,briefing:leadBriefing(row.reference)}}catch{}}
+ }
+ return {...note,briefing:taskBriefing(String(note.task))};
+})};

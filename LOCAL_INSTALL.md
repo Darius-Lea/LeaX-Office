@@ -2,9 +2,9 @@
 
 Use the **native Windows x64 setup executable**, not GitHub’s source ZIP or the old `.cmd` launcher. The old PowerShell launcher can be rejected by Windows signing policy; the native setup does not execute PowerShell or change that policy.
 
-1. Visit your app website’s **/download** page and choose **Download for Windows**. Existing host: https://leax-office.onrender.com/download . No sign-in, ZIP extraction or project-folder browsing is needed.
+1. Visit your app website’s **/download** page and choose **Download for Windows**. The page shows real transfer progress and checks the file before handing it to your browser to save. Cancel and retry are available; a direct browser link remains a fallback. Existing host: https://leax-office.onrender.com/download . No sign-in, ZIP extraction or project-folder browsing is needed.
 2. Open `AI-Headquarters-Setup.exe`. It is unsigned: Windows may show an unknown-publisher warning. Only use the app owner’s official download site or your own repository. Actual Windows installation remains unvalidated in this Linux development environment.
-3. Setup starts automatically when the downloaded executable opens; **Install / open office** is available for reopening/retry. It downloads official portable Node, verifies SHA-256 and Windows Authenticode, verifies the complete production app and opens a local app-style browser window at `http://127.0.0.1:4310`. Downloads require internet; no terminal or administrator install is needed.
+3. Setup starts automatically when the downloaded executable opens; **Install / open office** is available for reopening/retry. The office opens before the large AI downloads; keep the setup window open for automatic AI preparation. Research and saved files can be used while AI is being prepared. It downloads official portable Node, verifies SHA-256 and Windows Authenticode, verifies the complete production app and opens a local app-style browser window at `http://127.0.0.1:4310`. Downloads require internet; no terminal or administrator install is needed.
 4. Existing local data is reused. For a new office, choose your founder password; setup supplies the private one-time code in a local fragment and the app clears it from the address. No code is published or sent in a query string.
 5. To preserve your Render office, first download its private SQLite backup in Owner computer → Company & research, stop the local office, then choose **Import saved office from Render / backup** in native setup. Confirm replacement after choosing your trusted backup. The helper validates schema/integrity and stages a consistent copy. Existing local data receives a verified recovery backup and an archive before replacement; failed replacement restores originals. Start again and use the imported founder password. No automatic cloud sync occurs.
 
@@ -70,7 +70,7 @@ SAM.gov accounts/API usage are subject to GSA rules and rate limits. The key per
 
 ## AI and resources
 
-The native setup now automatically downloads its private AI engine and RAM-selected starter model and saves the connection after a genuine inference check. Separate Ollama installation and manual model selection are unnecessary. GPU support and model performance are not guaranteed; inference uses more memory than the Node/browser interface. Model controls remain available for advanced users.
+The office opens first. The native setup then automatically downloads its private AI engine and RAM-selected starter model and saves the connection only after a genuine inference check. The office health line distinguishes unfinished, paused and failed AI setup. If AI preparation fails, use **Install / open office** in setup to retry; the opened office and its saved records remain available. Retry stages a fresh verified runtime when a cached Node or AI runtime is damaged, retaining the old runtime files separately. Separate Ollama installation and manual model selection are unnecessary. GPU support and model performance are not guaranteed; inference uses more memory than the Node/browser interface. Model controls remain available for advanced users.
 
 The browser/Node architecture avoids bundling a second Chromium runtime, as an Electron app would. Actual memory use depends on your browser, 3D mode, data volume and optional model. Choose the clerical/terminal view on low-powered devices. Work stops when your PC is powered off or asleep; the launcher does not change power settings or prevent sleep.
 
@@ -103,3 +103,6 @@ Open Owner computer → Connections. It explains why current federal jobs need y
 
 
 Office remodeling is saved in the same database as your work, so a retained or imported office keeps its design. After updating, use the Remodel control for finishes, desk layout, monitors and furnishings. Focused advice opens in a popup; Read to me uses a locally installed English voice when your browser supports one.
+
+
+Preview.5 adds the Live operations side monitor. It shows actual running work, the manager’s next assignment, saved business counts and source waits. Reward useful work or Correct & retrain applies only to a saved work receipt; the persisted model learns which eligible job recipes to prioritize. Source waiting, required approvals and setup do not earn penalties. The manager assigns bounded follow-through and research automatically while clocked in; clock-out and host sleep still pause new work.

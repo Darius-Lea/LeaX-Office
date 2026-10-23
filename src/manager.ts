@@ -2,11 +2,20 @@ import {createHash} from 'node:crypto';
 import {db,setting,setSetting,audit} from './store.ts';
 import './team.ts';
 import {observeExpiredClaim,observeMissingOutput} from './accountability.ts';
+import {workPlannerState} from './work-planner.ts';
 
 const FOLLOW_UP_ROLES=['Juliet','Hotel','Delta','Einstein'];
 const PATROL_INTERVAL=60000;
 export type ManagerIssue={type:string;task:string;agent:string;message:string};
-export type ManagerStatus={checkedAt:number;visitedAgent:string|null;summary:string;issues:ManagerIssue[];nextCheckAt:number;recovered:string[]};
+export type ManagerStatus={checkedAt:number;visitedAgent:string|null;summary:string;issues:ManagerIssue[];sourceWaits?:ManagerIssue[];nextCheckAt:number;recovered:string[];plan?:{status:string;summary:string;nextAction:string;nextActionAt:number|null;reasons:string[]}};
+
+// The worker preserves both source access failures and invalid source/local data
+// under the same legacy error prefix. Only known transport/access failures are
+// normal source waits; malformed evidence and unknown pipeline faults still surface.
+function isSourceWait(task:{agent:string;error:string|null}){
+ const error=String(task.error||'');
+ return task.agent==='Alpha'&&error.startsWith('Research unavailable:')&&!/SyntaxError|\bJSON\b|schema|provenance|evidence|checkpoint|exceeds|missing valid|No research tool|SQLite|database/i.test(error)&&/\bHTTP\s*\d{3}\b|fetch failed|\bnetwork\b|\boffline\b|timed?\s*out|timeout|AbortError|\b(?:ECONN\w*|ENOTFOUND|EAI_AGAIN|ETIMEDOUT)\b|socket (?:closed|hang up)/i.test(error);
+}
 
 export function managerState():ManagerStatus|null{
  const saved=setting('manager_status');return saved?JSON.parse(saved):null;
@@ -17,7 +26,7 @@ export function managerState():ManagerStatus|null{
 export function managerPatrol(now=Date.now()):ManagerStatus{
  const previous=managerState();
  if(previous&&now<previous.nextCheckAt)return previous;
- const issues:ManagerIssue[]=[];const recovered:string[]=[];
+ const issues:ManagerIssue[]=[];const sourceWaits:ManagerIssue[]=[];const recovered:string[]=[];
  db.exec('BEGIN IMMEDIATE');
  try{
   const abandoned=db.prepare("SELECT id,agent,attempts,lease FROM tasks WHERE status='Running' AND lease<=?").all(now) as any[];
@@ -59,8 +68,15 @@ export function managerPatrol(now=Date.now()):ManagerStatus{
     }
    }
   }
-  const blocked=db.prepare("SELECT id,agent,error FROM tasks WHERE status IN ('Blocked','Failed') ORDER BY id").all() as any[];
-  for(const task of blocked)issues.push({type:'research_blocked',task:task.id,agent:task.agent,message:task.error||'Assignment needs owner review'});
+  const blocked=db.prepare("SELECT id,agent,error,created FROM tasks WHERE status IN ('Blocked','Failed') ORDER BY id").all() as any[];
+  const latestSuccess=Number((db.prepare("SELECT max(created) AS stamp FROM tasks WHERE status='Completed' AND agent='Bravo'").get() as any)?.stamp||0);
+  for(const task of blocked){
+   if(isSourceWait(task)){
+    // A later successful cycle demonstrates recovery. Keep the failed task and
+    // checkpoint as history without repeatedly presenting it as a current fault.
+    if(Number(task.created)>=latestSuccess)sourceWaits.push({type:'source_wait',task:task.id,agent:task.agent,message:task.error});
+   }else issues.push({type:'research_blocked',task:task.id,agent:task.agent,message:task.error||'Assignment needs owner review'});
+  }
   const stalled=db.prepare("SELECT id,agent FROM tasks WHERE status='Queued' AND created<? ORDER BY id").all(now-300000) as any[];
   for(const task of stalled)issues.push({type:'queue_wait',task:task.id,agent:task.agent,message:'Older assignment is still queued (created over five minutes ago); inspect queue and source availability'});
   const employees=db.prepare("SELECT id FROM employees WHERE id<>'Johnson' ORDER BY rowid").all() as any[];
@@ -69,10 +85,12 @@ export function managerPatrol(now=Date.now()):ManagerStatus{
   const running=Number((db.prepare("SELECT count(*) AS n FROM tasks WHERE status='Running'").get() as any).n);
   const pending=Number((db.prepare("SELECT count(*) AS n FROM tasks WHERE status='Queued'").get() as any).n);
   const followups=Number((db.prepare("SELECT count(*) AS n FROM team_jobs WHERE status='Queued'").get() as any).n);
-  const summary=issues.length?`${issues.length} items need attention; ${recovered.length} interrupted claims recovered. ${running} running, ${pending} queued research assignments, ${followups} follow-up stages pending.`:
+  const planned=workPlannerState(now);const plan={status:planned.status,summary:planned.summary,nextAction:planned.nextAction,nextActionAt:planned.nextActionAt,reasons:planned.reasons};
+  const waitSummary=sourceWaits.length?` ${sourceWaits.length} source reads are waiting after access or connection failures. Saved evidence is retained; the manager handles paced rechecks while clocked in.`:'';
+  const summary=(issues.length?`${issues.length} items need attention; ${recovered.length} interrupted claims recovered. ${running} running, ${pending} queued research assignments, ${followups} follow-up stages pending.`:
    running||pending||followups?`No supervision exceptions found. ${running} running, ${pending} queued research assignments, ${followups} follow-up stages pending.`:
-   'No pending assignments or supervision exceptions; waiting for scheduled research. Idle employees are not reported as working.';
-  const status:ManagerStatus={checkedAt:now,visitedAgent,summary,issues,nextCheckAt:now+PATROL_INTERVAL,recovered};
+   planned.summary)+waitSummary;
+  const status:ManagerStatus={checkedAt:now,visitedAgent,summary,issues,sourceWaits,nextCheckAt:now+PATROL_INTERVAL,recovered,plan};
   const stableIssues=issues.map(issue=>JSON.stringify(issue)).sort();
   const signature=createHash('sha256').update(JSON.stringify(stableIssues)).digest('hex');
   if(issues.length&&signature!==setting('manager_issue_signature')){
