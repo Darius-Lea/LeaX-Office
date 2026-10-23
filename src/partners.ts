@@ -21,6 +21,10 @@ db.exec(`CREATE TABLE IF NOT EXISTS partner_members(
  sequence INTEGER PRIMARY KEY AUTOINCREMENT,meeting_id TEXT NOT NULL,from_id TEXT NOT NULL,to_id TEXT NOT NULL,
  from_connection TEXT NOT NULL,to_connection TEXT NOT NULL,type TEXT NOT NULL,payload TEXT NOT NULL,created INTEGER NOT NULL);
  CREATE INDEX IF NOT EXISTS partner_media_delivery ON partner_media_signals(meeting_id,to_id,sequence);`);
+// Add receipt links without changing any existing requests or company records.
+const requestColumns=new Set((db.prepare('PRAGMA table_info(partner_meeting_requests)').all() as any[]).map(column=>column.name));
+if(!requestColumns.has('meeting_id'))db.exec('ALTER TABLE partner_meeting_requests ADD COLUMN meeting_id TEXT');
+if(!requestColumns.has('arranged_at'))db.exec('ALTER TABLE partner_meeting_requests ADD COLUMN arranged_at INTEGER');
 
 export type PartnerActor={id:string;role:'partner'|'owner';displayName:string;username?:string};
 const SESSION_MS=8*60*60*1000,INVITE_MS=60*60*1000,MEDIA_MS=45000,SIGNAL_MS=120000;
@@ -80,13 +84,38 @@ export function revokePartner(input:{id?:string;inviteId?:string}){
  else{const memberId=id(body.id),result=db.prepare('UPDATE partner_members SET disabled=? WHERE id=? AND disabled IS NULL').run(Date.now(),memberId);if(!result.changes)throw Error('Active colleague not found');db.prepare('DELETE FROM partner_sessions WHERE member_id=?').run(memberId);db.prepare('DELETE FROM partner_media_presence WHERE actor_id=?').run(memberId);db.prepare('DELETE FROM partner_media_signals WHERE from_id=? OR to_id=?').run(memberId,memberId);}
  audit('partners','Owner revoked colleague access or an unused invitation');return {ok:true};
 }
-function mapRequest(row:any){return {id:row.id,senderId:row.sender_id,senderName:row.sender_name,title:row.title,agenda:row.agenda,memberIds:JSON.parse(row.member_ids),createdAt:row.created,status:row.status};}
+function mapRequest(row:any){return {id:row.id,senderId:row.sender_id,senderName:row.sender_name,title:row.title,agenda:row.agenda,memberIds:JSON.parse(row.member_ids),createdAt:row.created,status:row.status,meetingId:row.meeting_id||null,arrangedAt:row.arranged_at||null};}
 export function partnerMeetingRequests(value:PartnerActor){const person=actor(value),rows=db.prepare('SELECT * FROM partner_meeting_requests ORDER BY created DESC,rowid DESC LIMIT 200').all() as any[];return rows.filter(row=>person.role==='owner'||row.sender_id===person.id||JSON.parse(row.member_ids).includes(person.id)).slice(0,100).map(mapRequest);}
 export function requestPartnerMeeting(value:PartnerActor,input:{title:string;agenda?:string;memberIds?:string[]}){
  const person=actor(value),body=object(input,['title','agenda','memberIds']),title=text(body.title,160,'Meeting title'),agenda=text(body.agenda,2000,'Agenda',true),members=body.memberIds||[];
  if(!Array.isArray(members)||members.length>12||new Set(members).size!==members.length)throw Error('Choose at most 12 different colleagues');for(const memberId of members)if(!partnerMember(id(memberId)))throw Error('Choose an active colleague');
  if(Number((db.prepare("SELECT count(*) AS n FROM partner_meeting_requests WHERE sender_id=? AND created>? AND status='Pending'").get(person.id,Date.now()-86400000) as any).n)>=20)throw Error('You already have 20 recent pending meeting requests');
  const requestId=randomUUID();db.prepare('INSERT INTO partner_meeting_requests(id,sender_id,sender_name,title,agenda,member_ids,created) VALUES(?,?,?,?,?,?,?)').run(requestId,person.id,person.displayName,title,agenda,JSON.stringify(members),Date.now());audit('partners','An authenticated person saved a human meeting request; no attendance or AI response claimed');return mapRequest(db.prepare('SELECT * FROM partner_meeting_requests WHERE id=?').get(requestId));
+}
+// Founder-only route. The server supplies authorization; request bodies never
+// carry a role. Arranged means a real shared meeting exists, not attendance.
+export function resolvePartnerMeetingRequest(input:{id:string;meetingId:string}){
+ const body=object(input,['id','meetingId']),requestId=id(body.id),meetingId=id(body.meetingId);
+ db.exec('SAVEPOINT partner_arrange_request');
+ try{
+  const request=db.prepare('SELECT * FROM partner_meeting_requests WHERE id=?').get(requestId) as any;
+  if(!request)throw Error('Meeting request not found');
+  if(request.status==='Arranged'){
+   if(request.meeting_id!==meetingId)throw Error('This request is already arranged with a different meeting');
+   db.exec('RELEASE partner_arrange_request');return {...mapRequest(request),deduplicated:true};
+  }
+  if(request.status!=='Pending')throw Error('Only pending meeting requests can be arranged');
+  const meeting=db.prepare('SELECT status FROM office_meetings WHERE id=?').get(meetingId) as any;
+  if(!meeting||!['Called','Active','Ended'].includes(meeting.status))throw Error('Call or start the actual shared meeting before arranging this request');
+  const requested=new Set<string>([request.sender_id,...JSON.parse(request.member_ids)]);
+  for(const memberId of requested){
+   if(memberId==='owner')continue;
+   if(!db.prepare("SELECT 1 FROM office_meeting_participants WHERE meeting_id=? AND participant_kind='human' AND participant_id=?").get(meetingId,memberId))throw Error('Explicitly share this meeting with the requester and every requested colleague first');
+  }
+  db.prepare("UPDATE partner_meeting_requests SET status='Arranged',meeting_id=?,arranged_at=? WHERE id=? AND status='Pending'").run(meetingId,Date.now(),requestId);
+  audit('partners','Owner arranged a saved request with an explicitly shared meeting; attendance and media connection not implied');
+  const result=mapRequest(db.prepare('SELECT * FROM partner_meeting_requests WHERE id=?').get(requestId));db.exec('RELEASE partner_arrange_request');return {...result,deduplicated:false};
+ }catch(error){db.exec('ROLLBACK TO partner_arrange_request; RELEASE partner_arrange_request');throw error;}
 }
 export function partnerOwnerState(){return {members:(db.prepare('SELECT id,username,display_name,created,disabled FROM partner_members ORDER BY created DESC').all() as any[]).map(row=>({...publicMember(row),createdAt:row.created,disabledAt:row.disabled})),invites:(db.prepare('SELECT id,name,created,expires,accepted_member_id,revoked FROM partner_invites ORDER BY created DESC LIMIT 100').all() as any[]).map(row=>({id:row.id,name:row.name,createdAt:row.created,expiresAt:row.expires,accepted:!!row.accepted_member_id,revokedAt:row.revoked})),requests:partnerMeetingRequests(partnerOwnerActor()),notice:'Invited colleagues belong to this company. They receive only explicitly shared meetings and public company names; founder administration and business records stay owner-only.'};}
 export function partnerOfficeState(value:PartnerActor){const person=actor(value);let company:any={};try{company=JSON.parse(setting('company')||'{}');}catch{}return {me:person,company:{name:typeof company.name==='string'?company.name.slice(0,160):'Company office',legalName:typeof company.legalName==='string'?company.legalName.slice(0,160):''},members:(db.prepare('SELECT id,display_name FROM partner_members WHERE disabled IS NULL ORDER BY display_name LIMIT 100').all() as any[]).map(row=>({id:row.id,displayName:row.display_name})),requests:partnerMeetingRequests(person),permissions:{sharedMeetings:true,businessRecords:false,founderAdministration:person.role==='owner'},notice:'This is one company’s invited-colleague office. Remote people must open this same reachable HTTPS app address. A local 127.0.0.1 address only works on that computer. No port forwarding or remote hosting is configured automatically.'};}

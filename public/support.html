@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Support & meeting requests</title><link rel="stylesheet" href="/support.css"></head>
+<body><main>
+ <a class="wordmark" href="/">AI / HQ</a>
+ <header><p class="eyebrow">SUPPORT & CONVERSATION</p><h1 id="support-title">Owner support & meeting requests</h1><p class="intro">Support the owner through their chosen payment provider, or request a private conversation after paying the stated meeting fee.</p></header>
+ <section id="availability" class="notice" role="status" aria-live="polite"><h2>Checking availability</h2><p id="availability-message">Loading the owner’s public instructions…</p><button id="retry-state" type="button" hidden>Check again</button></section>
+ <div id="support-content" hidden>
+  <section class="payment-card" aria-labelledby="payment-title"><p class="eyebrow">1 · REVIEW & PAY WITH THE PROVIDER</p><h2 id="payment-title">Support or request a meeting</h2><p id="payment-instructions" class="plain-text"></p><p class="fee">Required meeting fee <strong id="meeting-fee"></strong></p><p>Payment happens on the provider’s own website. Check the recipient and amount there before paying. Optional support does not book a meeting or grant access.</p><a id="payment-link" class="primary-link" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">Open payment provider ↗</a><p class="small">The provider opens in a separate tab. This app does not collect card details, connect to your payment account or verify receipts.</p></section>
+  <section class="request-card" aria-labelledby="request-title"><p class="eyebrow">2 · REQUEST PRIVATE OWNER REVIEW</p><h2 id="request-title">Ask for a conversation</h2><p>After paying the meeting fee, leave a short request. The owner checks the payment separately and may contact you to arrange a private meeting. No invitation is sent automatically.</p>
+   <form id="support-form">
+    <label for="request-name">Your name</label><input id="request-name" name="name" type="text" maxlength="100" autocomplete="name" required>
+    <label for="request-email">Your email for the owner’s reply</label><input id="request-email" name="email" type="email" maxlength="254" autocomplete="email" required>
+    <label for="request-reason">What would you like to discuss?</label><textarea id="request-reason" name="reason" maxlength="2000" rows="5" required placeholder="A plain-text topic. Do not include passwords or sensitive account details."></textarea>
+    <label for="receipt-reference">Provider receipt reference</label><input id="receipt-reference" name="receiptReference" type="text" maxlength="200" autocomplete="off" required placeholder="Transaction/reference only — no card or account details">
+    <label class="check"><input id="payment-statement" type="checkbox" required><span>I paid the required meeting fee using the provider link and want the owner to review my request. I understand that this reference is not verified by the app and no meeting is booked yet.</span></label>
+    <p class="small">Your name, email, topic and reference are stored privately for the owner. There is no public request lookup. Up to five requests per hour are accepted from one connection.</p>
+    <button id="submit-request" type="submit">Submit for payment review</button>
+   </form>
+   <p id="request-status" class="request-status" role="status" aria-live="polite"></p>
+  </section>
+ </div>
+ <aside class="safety"><h2>Keep your request simple</h2><p>Plain text only. Attachments are not accepted. Links are kept as text and are not opened or previewed. No malware scan or visitor identity check is performed.</p><p id="support-notice">Payments and meeting arrangements are reviewed manually by the owner. This page does not provide payment verification, automatic membership or guaranteed access.</p></aside>
+ <noscript><p class="notice">JavaScript is needed to load the owner’s current public instructions and submit a request. No payment link or meeting fee is assumed.</p></noscript>
+ <footer><a href="/">Return to the office</a><span>No automatic booking, account invitation or payment verification.</span></footer>
+</main><script type="module" src="/support.js"></script></body></html>

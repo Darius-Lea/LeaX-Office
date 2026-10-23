@@ -37,7 +37,10 @@ import {conversationState,sendAgentMessage,retryAgentMessage} from './conversati
 import {knowledgeState,exportKnowledge,configureKnowledgeGitHub,disconnectKnowledgeGitHub,syncKnowledge} from './knowledge.ts';
 import {meetingState,meetingDetail,createMeeting,callMeeting,startMeeting,endMeeting,addMeetingAgenda,addMeetingMessage,queueMeetingResponses,addMeetingHumans,partnerMeetingState,joinPartnerMeeting,heartbeatPartnerMeeting,leavePartnerMeeting,messagePartnerMeeting} from './meetings.ts';
 import {profileAssistState,startProfileAssist,retryProfileAssist,applyProfileAssist} from './profile-assist.ts';
-import {createPartnerInvite,acceptPartnerInvite,partnerLogin,partnerSession,partnerLogout,partnerOwnerActor,partnerOwnerState,partnerOfficeState,revokePartner,requestPartnerMeeting,joinPartnerMedia,leavePartnerMedia,partnerMediaState,sendPartnerSignal} from './partners.ts';
+import {createPartnerInvite,acceptPartnerInvite,partnerLogin,partnerSession,partnerLogout,partnerOwnerActor,partnerOwnerState,partnerOfficeState,revokePartner,requestPartnerMeeting,resolvePartnerMeetingRequest,joinPartnerMedia,leavePartnerMedia,partnerMediaState,sendPartnerSignal} from './partners.ts';
+import {bitcoinState,configureBitcoin,refreshBitcoin,disconnectBitcoin} from './bitcoin.ts';
+import {teachingState,previewTeachingSource,approveTeachingExamples,addTeachingExample,deleteTeachingExample} from './teaching.ts';
+import {supportPublicState,supportOwnerState,configureSupport,submitSupportRequest,reviewSupportRequest} from './support-requests.ts';
 const port=Number(process.env.PORT||4310);
 const host=process.env.HOST || (process.env.RENDER==='true'?'0.0.0.0':'127.0.0.1');
 const publicBinding=!['127.0.0.1','localhost','::1'].includes(host);
@@ -64,7 +67,7 @@ const server=createServer(async(req,res)=>{
  const send=(status:number,data:any)=>{res.writeHead(status,{'Content-Type':'application/json'});res.end(JSON.stringify(data));};
  try{
  const url=new URL(req.url||'/',`http://127.0.0.1:${port}`);
- if(['GET','HEAD'].includes(req.method||'') && ['/', '/download','/partners','/partner.js','/partner.css','/download.css','/download.js','/app.js','/speech.js','/office.js','/office3d.js','/meeting3d.js','/meetings.js','/office-extensions.js','/voice-input.js','/office-music.js','/marketing-video.js','/style.css','/report.css','/report.js'].includes(url.pathname)){const file=url.pathname==='/'?'index.html':url.pathname==='/download'?'download.html':url.pathname==='/partners'?'partner.html':url.pathname.slice(1);res.setHeader('Content-Type',file.endsWith('html')?'text/html':file.endsWith('js')?'text/javascript':'text/css');res.end(req.method==='HEAD'?undefined:readFileSync(new URL('../public/'+file,import.meta.url)));return;}
+ if(['GET','HEAD'].includes(req.method||'') && ['/', '/download','/partners','/support','/partner.js','/partner.css','/support.js','/support.css','/download.css','/download.js','/app.js','/speech.js','/office.js','/office3d.js','/meeting3d.js','/meetings.js','/office-extensions.js','/tech-office.js','/voice-input.js','/office-music.js','/marketing-video.js','/style.css','/report.css','/report.js'].includes(url.pathname)){const file=url.pathname==='/'?'index.html':url.pathname==='/download'?'download.html':url.pathname==='/partners'?'partner.html':url.pathname==='/support'?'support.html':url.pathname.slice(1);res.setHeader('Content-Type',file.endsWith('html')?'text/html':file.endsWith('js')?'text/javascript':'text/css');res.end(req.method==='HEAD'?undefined:readFileSync(new URL('../public/'+file,import.meta.url)));return;}
  if(req.method==='GET'&&['/vendor/three.module.js','/vendor/three.core.js'].includes(url.pathname)){res.setHeader('Content-Type','text/javascript');res.setHeader('Cache-Control','public, max-age=86400');res.end(vendorFile(url.pathname.split('/').pop()!,'build/'+url.pathname.split('/').pop()));return;}
  if(req.method==='GET'&&['/vendor/FontLoader.js','/vendor/TextGeometry.js','/vendor/office-font.json'].includes(url.pathname)){const paths:Record<string,string>={'/vendor/FontLoader.js':'loaders/FontLoader.js','/vendor/TextGeometry.js':'geometries/TextGeometry.js','/vendor/office-font.json':'../fonts/helvetiker_regular.typeface.json'};const raw=vendorFile(url.pathname.split('/').pop()!,'examples/jsm/'+paths[url.pathname]).toString('utf8');res.setHeader('Content-Type',url.pathname.endsWith('json')?'application/json':'text/javascript');res.end(raw.replace(/from 'three'/g,"from '/vendor/three.module.js'"));return;}
  if(['GET','HEAD'].includes(req.method||'')&&['/download/windows','/download/windows.sha256'].includes(url.pathname)){serveWindowsDownload(req,res,process.env.HQ_INSTALLER_PATH||new URL('../downloads/AI-Headquarters-Setup.exe',import.meta.url),url.pathname.endsWith('.sha256'));return;}
@@ -73,6 +76,8 @@ const server=createServer(async(req,res)=>{
  const allowedOrigins=publicBinding?[publicOrigin]:[`http://127.0.0.1:${localPort}`,`http://localhost:${localPort}`,...(publicOrigin?[publicOrigin]:[])];
  if(req.method==='POST' && !allowedOrigins.includes(req.headers.origin))return send(403,{error:'Invalid origin'});
  let body:any={};if(req.method==='POST'){let raw='';for await(const part of req){raw+=part;if(raw.length>(['/api/business/profile','/api/partners/media/signal'].includes(url.pathname)?32768:16384))return send(413,{error:'Request too large'});}body=JSON.parse(raw||'{}');}
+ if(req.method==='GET'&&url.pathname==='/api/support/public')return send(200,supportPublicState());
+ if(req.method==='POST'&&url.pathname==='/api/support/request'){try{return send(201,submitSupportRequest(body,req.socket.remoteAddress||'local'));}catch(error){if((error as any)?.statusCode===429)return send(429,{error:'Too many requests. Try again later.'});throw error;}}
  if(req.method==='POST'&&['/api/partners/login','/api/partners/accept'].includes(url.pathname)){
   const key='partner:'+(req.socket.remoteAddress||'local'),old=attempts.get(key);if(old&&Date.now()-old.time<60000&&old.count>=10)return send(429,{error:'Try again in one minute'});attempts.set(key,{count:old&&Date.now()-old.time<60000?old.count+1:1,time:old&&Date.now()-old.time<60000?old.time:Date.now()});
   const result=url.pathname.endsWith('/accept')?acceptPartnerInvite(body):partnerLogin(body);if(!result)return send(401,{error:'Invalid credentials'});
@@ -104,10 +109,23 @@ const server=createServer(async(req,res)=>{
   return send(405,{error:'Method not available'});
  }
  if(!authenticated(token))return send(401,{error:'Sign in required'});
+ if(req.method==='GET'&&url.pathname==='/api/support/owner')return send(200,supportOwnerState());
+ if(req.method==='POST'&&url.pathname==='/api/support/configure')return send(200,configureSupport(body));
+ if(req.method==='POST'&&url.pathname==='/api/support/review')return send(200,reviewSupportRequest(body));
+ if(req.method==='GET'&&url.pathname==='/api/bitcoin/state')return send(200,bitcoinState());
+ if(req.method==='POST'&&url.pathname==='/api/bitcoin/configure')return send(200,configureBitcoin(body));
+ if(req.method==='POST'&&url.pathname==='/api/bitcoin/refresh')return send(200,await refreshBitcoin());
+ if(req.method==='POST'&&url.pathname==='/api/bitcoin/disconnect')return send(200,disconnectBitcoin());
+ if(req.method==='GET'&&url.pathname==='/api/teaching/state')return send(200,teachingState());
+ if(req.method==='POST'&&url.pathname==='/api/teaching/preview')return send(200,await previewTeachingSource(body));
+ if(req.method==='POST'&&url.pathname==='/api/teaching/approve')return send(201,approveTeachingExamples(body));
+ if(req.method==='POST'&&url.pathname==='/api/teaching/add')return send(201,addTeachingExample(body));
+ if(req.method==='POST'&&url.pathname==='/api/teaching/delete')return send(200,deleteTeachingExample(body));
  if(req.method==='GET'&&url.pathname==='/api/partners/state')return send(200,partnerOwnerState());
  if(req.method==='POST'&&url.pathname==='/api/partners/invite')return send(201,createPartnerInvite(body));
  if(req.method==='POST'&&url.pathname==='/api/partners/revoke')return send(200,revokePartner(body));
  if(req.method==='POST'&&url.pathname==='/api/partners/meeting-share')return send(200,addMeetingHumans(body));
+ if(req.method==='POST'&&url.pathname==='/api/partners/meeting-arranged')return send(200,resolvePartnerMeetingRequest(body));
  if(req.method==='GET'&&url.pathname==='/api/meetings/state')return send(200,meetingState());
  if(req.method==='GET'&&url.pathname.startsWith('/api/meetings/'))return send(200,meetingDetail(decodeURIComponent(url.pathname.slice('/api/meetings/'.length))));
  if(req.method==='POST'&&url.pathname.startsWith('/api/meetings/')){
@@ -121,7 +139,7 @@ const server=createServer(async(req,res)=>{
  if(req.method==='GET'&&url.pathname.startsWith('/api/reports/')){const html=assignmentReport(decodeURIComponent(url.pathname.slice('/api/reports/'.length)),url.searchParams.get('download')==='1');res.setHeader('Content-Type','text/html; charset=utf-8');if(url.searchParams.get('download')==='1')res.setHeader('Content-Disposition','attachment; filename="Assignment-packet.html"');res.end(html);return;}
  if(req.method==='GET'&&url.pathname==='/api/download/windows'){res.setHeader('Content-Type','application/vnd.microsoft.portable-executable');res.setHeader('Content-Disposition','attachment; filename="AI-Headquarters-Setup.exe"');res.end(readFileSync(process.env.HQ_INSTALLER_PATH||new URL('../downloads/AI-Headquarters-Setup.exe',import.meta.url)));return;}
  if(req.method==='GET'&&url.pathname==='/api/state'){
- const state=snapshot({recordPage:Number(url.searchParams.get('recordPage')||0),taskPage:Number(url.searchParams.get('taskPage')||0),query:url.searchParams.get('historyQuery')||''}),workPlan=workPlannerState(),learning=learningState(),deals=dealState();return send(200,{...state,connectivity:connectivityState(),webResearch:webResearchState(),knowledge:knowledgeState(),backups:backupState(),deals,workPlan,learning,operations:operationsState({plan:workPlan,learning}),managedAISetup:managedAISetupState(),leadResearch:leadResearchState(),businessGuide:businessGuide(Date.now(),deals),officeDesign:getOfficeDesign(),businessProfile:profileState(),accountability:accountabilityState(),outcomes:outcomeState(),funding:fundingState(),pricing:pricingState(),opportunities:state.opportunities.map(record=>({...record,advice:awardAdvice(record,state.company.name)})),...teamState(),roleCharters:ROLE_CHARTERS,manager:managerState(),aiRuns:agentRuns(),aiConfigured:!!setting('ollama_model'),contactResearch:contactState(),drafts:draftState(),solicitations:solicitationState()});}
+ const state=snapshot({recordPage:Number(url.searchParams.get('recordPage')||0),taskPage:Number(url.searchParams.get('taskPage')||0),query:url.searchParams.get('historyQuery')||''}),workPlan=workPlannerState(),learning=learningState(),deals=dealState();return send(200,{...state,bitcoin:bitcoinState(),meetingAlerts:{upcoming:db.prepare("SELECT id,title,scheduled_at AS scheduledAt,status FROM office_meetings WHERE status IN ('Scheduled','Called','Active') ORDER BY scheduled_at,created LIMIT 10").all(),pendingRequests:Number((db.prepare("SELECT count(*) AS n FROM partner_meeting_requests WHERE status='Pending'").get() as any).n)},connectivity:connectivityState(),webResearch:webResearchState(),knowledge:knowledgeState(),backups:backupState(),deals,workPlan,learning,operations:operationsState({plan:workPlan,learning}),managedAISetup:managedAISetupState(),leadResearch:leadResearchState(),businessGuide:businessGuide(Date.now(),deals),officeDesign:getOfficeDesign(),businessProfile:profileState(),accountability:accountabilityState(),outcomes:outcomeState(),funding:fundingState(),pricing:pricingState(),opportunities:state.opportunities.map(record=>({...record,advice:awardAdvice(record,state.company.name)})),...teamState(),roleCharters:ROLE_CHARTERS,manager:managerState(),aiRuns:agentRuns(),aiConfigured:!!setting('ollama_model'),contactResearch:contactState(),drafts:draftState(),solicitations:solicitationState()});}
  if(req.method==='GET'&&url.pathname==='/api/connectivity/status')return send(200,connectivityState());
  if(req.method==='POST'&&url.pathname==='/api/connectivity/check')return send(200,await checkConnectivity());
  if(req.method==='POST'&&url.pathname==='/api/web-research/run')return send(200,await runWebResearch(setting('standing_goal')));

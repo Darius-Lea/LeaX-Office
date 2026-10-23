@@ -1,6 +1,16 @@
 # Current implementation status — 2026-10-23
 
-## Current milestone — 0.2.0-preview.7
+## Current milestone — 0.2.0-preview.9
+
+Implemented: durable first-person working meetings; actual model response slots/tool receipts; selected colleague questions, reviewed microphone transcripts, installed-voice choice, serial reply read-aloud and output feedback; private invitation-only partner accounts and explicitly shared human meeting messages; consent-gated WebRTC signaling; reviewed AI profile suggestions with exact-source quotes and stale-edit/overwrite protection; actual 30-second silent video export; consent-gated YouTube music; required lead/status evidence tools before advisory inference; bounded small-model context and one repair before an unreliable answer is blocked; private reviewed teaching examples and licensed-source preview; optional paced Bitcoin public-address receipts; honest illustrative dispatch and offline game; official external payment links with private manually reviewed requests.
+
+Preserved: existing conference-camera controls, office customization, founder identity/data, bounded autonomous manager, source backoff/clock-out, nationwide/overseas research, persistent chats and case pipeline, draft approval, private keys, Windows worker/install path and backups. New controls live in focused office windows.
+
+Validation: 166 Node tests pass; real-server Chromium meeting/profile/music-gate, support/teaching/privacy/mobile checks pass; native Go tests and Windows-target vet pass. Partner real-browser call signaling is tested but connected media is blocked by managed WebRTC UDP policy. Final packaged checks and executable facts are recorded in TEST_RESULTS.md.
+
+Incomplete: successful live local inference/current keyed bids/new contact discovery here, Windows device execution and publisher signing, connected cross-device video, TURN infrastructure, cinematic generated footage/neural voices/physical Poly control, real miner/pool/hardware, payment verification/automatic scheduling, mailbox send/replies, autonomous whole-browser execution and production multi-tenant security audit. No source fixtures are business leads; no earnings or every-second model training are asserted.
+
+## Previous milestone — 0.2.0-preview.7
 
 Added durable CEO conversations for every saved employee through the genuine local-model queue and existing tool allowlist. Questions persist without a model; clock-out prevents automatic resumption; chat takes priority over automatic advice and retains bounded same-employee context, selected work and active owner feedback. Completed model output supplies the reply; failed or missing inference never supplies a canned answer. Chats avoid duplicate generic briefing notes.
 

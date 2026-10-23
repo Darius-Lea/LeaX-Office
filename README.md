@@ -1,4 +1,18 @@
 # AI Headquarters
+
+## Working meetings and grounded help — preview.9
+
+Open **Meet** for the first-person boardroom: call your saved team, choose a colleague, ask a typed question or review a microphone transcript, and return without losing the meeting. Replies use the real local-model queue and show setup/clock/error states. Read-aloud uses installed English voices. The room, hands, tablet and faceless metallic assistant are procedural graphics; no physical conference hardware is controlled.
+
+Lead requests now retrieve saved evidence and queue actual public-contact research before model advice. Company, next step and published contacts appear before model/tool details. An unsupported answer is repaired once, then held for review if still unreliable. A small starter model remains limited; tools and saved receipts do not guarantee complete contacts or accurate reasoning. Evidence coverage is a completeness score, never a chance of winning or being legitimate.
+
+Use **Business profile → Let AI help** to organize your own facts into individually reviewed fields. **Create a downloadable video** exports a real silent 30-second 720p motion-graphics WebM; it is not cinematic footage, narration or an external video-generation service. **Office music** loads a selected YouTube video only after consent and Play.
+
+**Partner offices & meetings** creates private one-use account invitations. Invitees see only explicitly shared human meetings; private owner business APIs remain inaccessible. Camera/microphone require separate consent. Remote calls require the same reachable HTTPS app and compatible network: there is no TURN relay, and this workspace could not establish connected media. A local Windows office is not automatically exposed online.
+
+**Teach your office** saves reviewed examples or previews a small licensed JSONL sample. Relevant approved examples and corrections guide later answers; they do not fine-tune model weights. **Tech room** shows optional actual public Bitcoin-address receipts and a clearly decorative printer, with no miner connected. Its offline matching game produces no income. Dispatch animation acknowledges only a newly owner-reported sent introduction, not verified email delivery.
+
+**Donations & meeting requests** supports your official payment link and a private request inbox. Payment takes place outside the app; you must check the provider before recording confirmation. No bank integration, automatic booking, public company access, uploaded attachment or malware scanner is implied. This remains an unsigned preview; see [TEST_RESULTS.md](TEST_RESULTS.md) and [MARKET_READINESS.md](MARKET_READINESS.md).
 A founder-controlled business office for LeaX LLC / American Power Global. This is an actively developed application, not a completed autonomous company.
 
 ## Connected office — preview.7
@@ -29,7 +43,7 @@ Research and assignment archives now show sixty items per page with search, whil
 
 ## Start without coding on Windows
 
-Latest preview.7 installer: **[Download Windows setup](https://github.com/Darius-Lea/LeaX-Office/raw/refs/heads/codex/desktop-reliability-and-autonomous-office/downloads/AI-Headquarters-Setup.exe)**. Open the downloaded executable to update the local app; the data folder is retained. This is the review/download branch, separate from the live Render deployment.
+Latest preview.9 installer: **[Download Windows setup](https://github.com/Darius-Lea/LeaX-Office/raw/refs/heads/codex/desktop-reliability-and-autonomous-office/downloads/AI-Headquarters-Setup.exe)**. Open the downloaded executable to update the local app; the data folder is retained. This is the review/download branch, separate from the live Render deployment.
 Open **[/download](/download)** on your app site (for the existing host: https://leax-office.onrender.com/download). Click **Download for Windows**, then open **AI-Headquarters-Setup.exe** from the browser’s downloads. Setup starts automatically. No ZIP or project folders are involved. The download page shows transfer progress and checks the complete setup file before saving. Setup installs verified portable Node and opens the local office first, then automatically downloads/configures private local AI and verifies a real response. A failed or cancelled AI download keeps the opened office available. Signed installed Edge/Chrome can open it in a separate app-style window; the default browser is the fallback. No separate Ollama install, model selection, terminal, npm, paid AI key or administrator install is required. Setup offers progress, cancel and retry. Windows itself may display an unknown-publisher warning because the app is unsigned. Actual Windows installation remains unvalidated; this is **0.2.0 preview**, not a certified commercial release.
 
 Data stays in `%LOCALAPPDATA%\AIHeadquarters\data`, separate from installed versions. Download your private database backup from the existing Render office and use **Import saved office from Render / backup** in setup to retain your founder login, tasks and notes. Import validates and stages the selected database and preserves existing local files/recovery copies. It never synchronizes silently. Read [LOCAL_INSTALL.md](LOCAL_INSTALL.md) for transfer, updates and limits.

@@ -1,4 +1,14 @@
 # Architecture
+
+## Preview.9 office extensions
+
+Meeting, participant, message, response-request and idempotent mutation tables preserve workflow independently of 3D avatars. Local response slots map to actual ai_runs; clerk summaries are separately labeled. Employee conversations and meetings share the bounded serialized local-model executor, clock gates and actual tool receipts. Grounded lead/status preflight happens before inference; one repair precedes a blocked output. Small models receive compact selected evidence instead of unrelated office state.
+
+Profile-assist requests preserve owner descriptions and source quotes; reviewed apply requires an unchanged profile snapshot and explicit overwrite approval. Teaching previews/examples are private retrieval data, not executable dataset code or model weights. New teaching/meeting counts appear in the knowledge breakdown; their contents remain excluded from generic encrypted GitHub learning archives.
+
+Separate hashed partner sessions cannot authenticate founder APIs. Scoped meeting messages/presence are distinct from explicit WebRTC camera/microphone consent. Recipient-limited ephemeral SDP/ICE signaling is not proof of a connected media channel. Public support requests are plain text and rate limited, with no attachments or automatic membership/booking. Manual external-payment review never writes business cash receipts. Bitcoin lookups use a fixed public API, validated mainnet addresses and durable global pacing; no wallet keys, miner or pool exists.
+
+Browser extensions load first-party room/media modules locally. YouTube is consent-loaded in a privacy-enhanced frame. Speech may involve the browser vendor only after per-turn consent; read-aloud restricts installed local English voices. Canvas/MediaRecorder renders a real silent WebM locally. The primary office scene pauses while the full-screen meeting scene is open; unchanged/hidden scenes avoid redraw and clean up GPU resources.
 Node 24 native TypeScript + built-in HTTP/SQLite; npm-pinned Three.js modules served locally, no frontend build step or CDN. SQLite data, employee configuration, notes, tasks, checkpoints and audit history persist outside local app versions. Existing schemas migrate additively.
 
 worker.ts handles bounded Alpha collection and Bravo provenance review with transactional page checkpoints. team.ts produces source-linked register/checklist/unsent drafts/briefings. manager.ts checks leases, handoffs and outputs with a persisted throttle and deduplicated alerts. office.ts gates authorized processing on saved clock state; background.ts supplies the same loop without a web server. Source, model and internal work have distinct status/evidence.

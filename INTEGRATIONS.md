@@ -1,5 +1,15 @@
 # Integrations
 
+## Preview.9 additions
+
+- Browser Web Speech: optional per-turn microphone consent; vendor processing is browser-dependent. Installed local English voices for replies; no custom neural voice provider.
+- Browser Canvas/MediaRecorder: actual local silent 30-second 1280×720 WebM export. No external video-generation API, filming or voiceover.
+- YouTube privacy-enhanced embedded player: owner-entered video, explicit consent and Play; actual player events drive the optional head movement. No unattended third-party load.
+- WebRTC: invitation-scoped accounts/meetings and bounded signaling, separate camera/microphone/STUN consent. Public Google STUN only after consent. No TURN, cross-device connection guarantee, automatic localhost exposure or physical conference-bar control.
+- mempool.space: optional mainnet public-address totals, real source/time and at least five minutes between provider attempts, preserving older successful observations. No miner, wallet, pool, coin generation or income verification.
+- Supported official payment URLs: PayPal Donate/PayPal.me, Stripe Payment Links, Ko-fi. External owner-provided links only; manually checked receipt references, no API payment verification, bank connection, automatic booking or access grant.
+- Private teaching JSONL: bounded direct public samples with owner license attestation and row approval. Retrieval examples only, no weight fine-tuning or dataset code execution.
+
 USAspending public federal contract-award API: POST https://api.usaspending.gov/api/v2/search/spending_by_award/ . No API key or paid account is required. Fixed destination, bounded timeout/response and up to three pages of 20 records per assignment. Keywords map from business services without a geographic exclusion. These historical awards identify possible partners, not open jobs. Official schema: https://github.com/fedspendingtransparency/usaspending-api/blob/master/usaspending_api/api_contracts/contracts/v2/search/spending_by_award.md . Earlier development runs were proxy-blocked. Live validation on 2026-10-22 with `NODE_USE_ENV_PROXY=1` succeeded: 60 actual historical records collected/reviewed, four saved handoffs, three contact jobs queued and one validated completion learning example in a temporary isolated database, removed afterward. No real contacts, current jobs, sends or revenue were established by that run. Target-device availability still depends on its network and the provider.
 
 SAM.gov current opportunities: official public read API, separate from award history. The owner requests a free key and enters it in Owner computer → Connections. Saving and live access checking are separate. Installed Windows saves with user DPAPI; hosted/non-native offices save encrypted private files outside SQLite and restore them on startup. No personal key is shipped or included in database transfers. Host resets can lose saved access. Searches are bounded and source classifications do not establish bid eligibility. Keyed live access remains unvalidated here.

@@ -1,6 +1,22 @@
 # Install AI Headquarters on Windows
 
-Latest **preview.7** update: [Download Windows setup](https://github.com/Darius-Lea/LeaX-Office/raw/refs/heads/codex/desktop-reliability-and-autonomous-office/downloads/AI-Headquarters-Setup.exe). Open the downloaded executable to update while retaining your data folder. **Internet & tools** shows real source access and schedules; **My computer → Assistant** opens saved employee conversations. Model preparation must finish successfully for actual AI replies. Email preparation explains the purpose and opens your own mail service for final send; it does not connect to your inbox. Optional private learning archives are separate from full office backups.
+## What changes in preview.9
+
+Close the old office and reopen the latest downloaded setup to update the app. Keep `%LOCALAPPDATA%\AIHeadquarters\data`; updates reuse your founder login, saved business records, office design and new meetings. A Render office and a downloaded office are separate databases unless you explicitly import a backup. The review-branch installer link below is the current package; the existing Render `/download` can remain older until its publication is explicitly performed.
+
+After opening your local office:
+
+1. Choose **Meet** to call a working meeting. If AI setup is still required, questions remain saved; finish the visible setup window and retry. With more than 12 employees, select up to 12 for a focused meeting.
+2. Click an employee to chat, or open a saved answer for **answer & evidence** and Useful/Improve feedback. Use **Teach your office** for a concrete reviewed example. This is memory/retrieval and job-priority learning, not continuous model-weight training.
+3. In your business profile, choose **Let AI help**, describe real capabilities, then approve selected suggestions. You can reopen the last saved draft. The existing profile stays unchanged until approval.
+4. Use **Create a downloadable video** for an editable silent 30-second WebM and save the exported file. The app does not film or synthesize actors or voiceover.
+5. **Office music** accepts a YouTube video link with consent. Playback uses YouTube and your internet; it does not download music or start automatically.
+
+For remote partners, use **Partner offices & meetings** on one reachable HTTPS installation, privately share the one-use invitation, then share the particular meeting. This does not make a local-only computer reachable from another office. Camera/microphone consent is separate; restrictive networks may prevent the peer connection because no TURN relay is supplied. Meetings/messages still remain saved. Read-aloud voice quality and microphone availability depend on the browser/device.
+
+Bitcoin monitoring is optional, read-only public-address lookup. No CPU/GPU miner or mining income is implemented. Public paid-meeting requests need an owner-supplied official payment URL; check payments at that provider. Do not advertise a connected bank, automatic appointments or malware scanning.
+
+Latest **preview.9** update: [Download Windows setup](https://github.com/Darius-Lea/LeaX-Office/raw/refs/heads/codex/desktop-reliability-and-autonomous-office/downloads/AI-Headquarters-Setup.exe). Open the downloaded executable to update while retaining your data folder. **Internet & tools** shows real source access and schedules; **My computer → Assistant** opens saved employee conversations. Model preparation must finish successfully for actual AI replies. Email preparation explains the purpose and opens your own mail service for final send; it does not connect to your inbox. Optional private learning archives are separate from full office backups.
 
 Preview.6 keeps your existing office database and adds **Opportunities** in the owner computer. Open a source lead and choose **Track potential partner**, or add a customer you already know. Keep the next action, follow-up date, qualification checks and reported results together. Today opens the specific opportunity that needs attention. Historical awards remain potential-partner research, and reported wins remain separate from received payments.
 

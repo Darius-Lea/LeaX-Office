@@ -39,6 +39,36 @@ test('member views omit business/private data and authenticated meeting requests
  const secondSession=partners.partnerLogin({username:'requester',password:secret})!;partners.revokePartner({id:first.member.id});assert.equal(partners.partnerSession(first.token),null);assert.equal(partners.partnerSession(secondSession.token),null);assert.equal(partners.partnerLogin({username:'requester',password:secret}),null);assert.throws(()=>partners.partnerOfficeState(first.member),/no longer/);assert.throws(()=>partners.requestPartnerMeeting(first.member,{title:'Disabled request'}));
 });
 
+test('arranging requests links a real called shared meeting once, validates every intended person and preserves receipts',()=>{
+ const requester=member('arrange.requester'),recipient=member('arrange.recipient');
+ const request=partners.requestPartnerMeeting(requester.member,{title:'Synthetic arrangement request',memberIds:[recipient.member.id]});
+ const scheduled=createMeeting({title:'Synthetic arranged meeting',employeeIds:[]});
+ assert.equal(request.meetingId,null);assert.equal(request.arrangedAt,null);
+ assert.throws(()=>partners.resolvePartnerMeetingRequest({id:request.id,meetingId:'missing-fixture'}),/Call or start/);
+ assert.throws(()=>partners.resolvePartnerMeetingRequest({id:request.id,meetingId:scheduled.id}),/Call or start/);
+ const called=callMeeting({id:scheduled.id,expectedRevision:scheduled.revision,queueResponses:false});
+ const insert=db.prepare("INSERT INTO office_meeting_participants VALUES(?,?,'human',?,'Partner',NULL)");
+ insert.run(called.id,recipient.member.id,recipient.member.displayName);
+ assert.throws(()=>partners.resolvePartnerMeetingRequest({id:request.id,meetingId:called.id}),/requester and every requested/);
+ assert.equal(partners.partnerMeetingRequests(requester.member).find(row=>row.id===request.id)?.status,'Pending');
+ db.prepare('DELETE FROM office_meeting_participants WHERE meeting_id=? AND participant_id=?').run(called.id,recipient.member.id);
+ insert.run(called.id,requester.member.id,requester.member.displayName);
+ assert.throws(()=>partners.resolvePartnerMeetingRequest({id:request.id,meetingId:called.id}),/every requested colleague/);
+ insert.run(called.id,recipient.member.id,recipient.member.displayName);
+ const arranged=partners.resolvePartnerMeetingRequest({id:request.id,meetingId:called.id});assert.equal(arranged.status,'Arranged');assert.equal(arranged.meetingId,called.id);assert.ok(arranged.arrangedAt);assert.equal(arranged.deduplicated,false);
+ const auditCount=(db.prepare("SELECT count(*) AS n FROM audit WHERE event LIKE 'Owner arranged a saved request%'").get() as any).n;
+ const replay=partners.resolvePartnerMeetingRequest({id:request.id,meetingId:called.id});assert.equal(replay.deduplicated,true);assert.equal(replay.arrangedAt,arranged.arrangedAt);assert.equal((db.prepare("SELECT count(*) AS n FROM audit WHERE event LIKE 'Owner arranged a saved request%'").get() as any).n,auditCount);
+ assert.throws(()=>partners.resolvePartnerMeetingRequest({id:request.id,meetingId:'different-fixture'}),/different meeting/);
+ assert.throws(()=>partners.resolvePartnerMeetingRequest({id:'missing-fixture',meetingId:called.id}),/not found/);
+ assert.throws(()=>partners.resolvePartnerMeetingRequest({id:request.id,meetingId:called.id,role:'owner'} as any),/valid partner details/);
+ assert.equal(partners.partnerMeetingRequests(recipient.member).find(row=>row.id===request.id)?.meetingId,called.id);
+ db.prepare("UPDATE office_meetings SET status='Ended',ended_at=? WHERE id=?").run(Date.now(),called.id);
+ assert.equal(partners.resolvePartnerMeetingRequest({id:request.id,meetingId:called.id}).deduplicated,true);
+ const ownerRequest=partners.requestPartnerMeeting(partners.partnerOwnerActor(),{title:'Synthetic owner request'});
+ assert.equal(partners.resolvePartnerMeetingRequest({id:ownerRequest.id,meetingId:called.id}).status,'Arranged');
+ assert.equal((db.prepare('SELECT meeting_id,status FROM partner_meeting_requests WHERE id=?').get(request.id) as any).meeting_id,called.id);
+});
+
 test('media signaling requires shared meeting membership and explicit joins, isolates recipients, bounds records and expires transport',()=>{
  const first=member('video.one'),second=member('video.two'),third=member('video.three'),fourth=member('video.four'),fifth=member('video.five');
  const meeting=createMeeting({title:'Synthetic media fixture',employeeIds:[]});

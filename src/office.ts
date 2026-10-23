@@ -15,6 +15,7 @@ import {runWebResearch,webResearchState} from './web-research.ts';
 import {checkConnectivityWhenDue} from './connectivity.ts';
 import {resumeAgentConversations} from './conversations.ts';
 import {resumeMeetingResponses} from './meetings.ts';
+import {bitcoinState,refreshBitcoin} from './bitcoin.ts';
 // Clock state persists across tab closure and process restarts. Explicit clock-out wins.
 let busy=false;
 export function requestManagerResearch(now=Date.now()){
@@ -76,6 +77,7 @@ export function runConnectedResearch(){
  if(setting('clock')!=='in')return;
  void checkConnectivityWhenDue().catch(()=>console.error('Internet check needs attention; inspect Internet & tools'));
  void runWebResearch(setting('standing_goal')).catch(()=>console.error('Public-source research needs attention; inspect its saved source status'));
+ const bitcoin=bitcoinState();if(bitcoin.configured&&(!bitcoin.nextCheckAt||Date.now()>=bitcoin.nextCheckAt))void refreshBitcoin().catch(()=>console.error('Bitcoin receipt check needs attention; no mining income assumed'));
 }
 export function startOffice(){
  const timer=setInterval(()=>{runConnectedResearch();void maintainBackups().catch(()=>console.error('Automatic backup needs attention; inspect Data protection in the office.'));pulse().catch(error=>console.error('Office worker failure:',String(error)));},1000);

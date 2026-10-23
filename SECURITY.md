@@ -1,4 +1,12 @@
 # Security boundaries
+
+## Preview.9 meeting, media and visitor boundaries
+
+Invitation codes and partner session tokens are hashed; one-use expiring invitations create scoped meeting accounts, never founder access. All mutation routes require an exact trusted Origin; private owner routes require the independent founder cookie. Revocation is checked on each request. Shared meeting views omit owner-only docket/profile/tool/private records. Human chat requires actual meeting invitation and recent joined presence. Camera/microphone/STUN access is a separate explicit consent; no recording is implemented. Signaling is recipient-scoped, bounded and short-lived. Remote peer IP disclosure is explained; no TURN service is bundled.
+
+Support requests are unauthenticated plain-text submissions with persisted pacing; no file upload or preview is accepted. Payment links are restricted to supported official provider URLs; no transaction token/bank connection or verification is present. Visitor links remain plain text in owner views. Owner/AI text-risk review is not antivirus or malware scanning. Payment approval grants neither membership nor booking. Keep real payments and files at trusted providers.
+
+Teaching fetches use existing public DNS/HTTPS/robots safeguards, no redirects, a 128 KB/30-row direct JSONL limit and explicit permission/review attestation. No dataset code executes, no preview becomes an automatic model instruction, and no examples enter shared generic-learning exports. Source licensing is owner attestation, not independently certified. Bitcoin monitoring accepts a public validated mainnet address only and reads fixed public mempool.space endpoints after consent; no private keys/spending/mining permissions exist.
 Single-founder local prototype. Console possession plus first-run code is required to establish founder access; email alone grants nothing. Passwords are scrypt hashes with random salts. Sessions expire after eight hours. Authentication APIs throttle repeated requests. State-changing requests require matching local Origin; session cookies are HttpOnly/SameSite Strict. No external writes or arbitrary URL tools. Model and research outputs cannot grant permissions.
 No secrets in frontend or Git. Data and backups contain sensitive records; filesystem/user-account protection and encrypted disks are recommended. Not hardened or audited for public hosting. No tenant isolation or remote deployment authorization implied. Security reporting: open a private maintainer channel; do not post credentials.
 
