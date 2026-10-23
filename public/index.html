@@ -239,4 +239,252 @@
 </section>
 </div>
 <p class="fine-print">Research is the first step toward a client, not revenue. Qualify the need, agree scope and payment terms, deliver accepted work, then collect payment.</p>
-<div class="backup-summary" id="backup-su
+<div class="backup-summary" id="backup-summary-home"><span><strong>Your saved work</strong><small id="backup-summary-text">Checking backup status…</small></span><button id="backup-status-open" class="secondary-button">Backup & transfer</button></div>
+<details class="optional-connections"><summary>Optional federal opportunity search</summary><section id="source-access-card" class="connection-attention" hidden><div><p class="eyebrow">CURRENT FEDERAL OPPORTUNITIES</p><h3>One private access step is needed</h3><p>Get your free SAM.gov key, then enter it here in Connections. We’ll show you how. Historical research and local AI can work without it.</p></div><button id="source-access-open">Set up private access</button></section></details>
+</div>
+<div data-computer-pane="pipeline" hidden>
+<div class="pane-heading opportunity-heading"><div><p class="eyebrow">FROM A LEAD TO A REAL CONVERSATION</p><h2>Your opportunities</h2><p>Keep the evidence, next step and actual results together. A researched company becomes a prospect to qualify, never an automatic sale.</p></div><button id="deal-create" class="secondary-button">Add your own customer</button></div>
+<div id="deal-summary" class="deal-summary" aria-label="Opportunity progress"></div>
+<div class="deal-filters"><label>Find a company or project<input id="deal-search" type="search" autocomplete="off" placeholder="Search your saved opportunities"></label><label>Show<select id="deal-filter"><option value="active">Active opportunities</option><option value="due">Follow-ups due</option><option value="interested">Interested conversations</option><option value="proposal">Proposals</option><option value="won">Won work</option><option value="closed">Closed opportunities</option><option value="all">All saved opportunities</option></select></label></div>
+<div id="deal-list" class="deal-list" aria-live="polite"></div><p id="deal-notice" class="fine-print">Sales progress and money are based on the outcomes you record. Nothing is sent automatically.</p>
+</div>
+<div data-computer-pane="assistant" hidden>
+<section>
+<h3>Ask your assistant</h3>
+<div class="assistant-conversation-entry"><p>Talk with any employee about saved work. Conversations stay with your office; actual replies require the local AI engine.</p><button id="talk-assistant" type="button">Talk to an employee</button></div>
+<p id="owner-bid-status">
+</p>
+<p>Real model analysis runs on the computer hosting this app, using saved evidence. Generated advice can be wrong; no external actions are executed.</p>
+<form id="assistant-form">
+<label>Employee<select id="assistant-agent" name="agent">
+</select>
+</label>
+<label>What do you need?<textarea name="prompt" maxlength="6000" required>Explain which researched companies fit our services, what I should do next to get legitimate profitable work, and what I must verify first.</textarea>
+</label>
+<button>Ask assistant</button>
+<button type="button" id="marketing-prompt">Plan a marketing video</button>
+</form>
+<div id="ai-activity">
+</div>
+<button id="assistant-setup" class="secondary-button">Check built-in AI</button>
+</section>
+</div>
+<div data-computer-pane="contacts" hidden>
+<section>
+<p class="eyebrow">FROM EVIDENCE TO A CONVERSATION</p>
+<h3>Find a published business contact</h3>
+<p>Provide a public company/vendor contact page. Only published email/phone text is collected; company ownership, named decision-makers and deliverability remain unverified. No sending or bulk crawling.</p>
+<form id="contact-form">
+<label>Company<input name="company" required maxlength="200">
+</label>
+<label>Public HTTPS contact page<input name="url" type="url" required placeholder="https://company.example/contact">
+</label>
+<button>Research published contacts</button>
+</form>
+<div id="contact-results">
+</div>
+<h3>Owner-reviewed email drafts</h3>
+<p>Your team prepared these introductions so you can ask whether a company needs subcontractors or installation partners. Review a draft, approve its content, then send it from your own email. A draft is not an offered job.</p>
+<div id="email-drafts">
+</div>
+</section>
+</div>
+<div data-computer-pane="inbox">
+<div class="pane-heading">
+<p class="eyebrow">DELIVERED BY YOUR TEAM</p>
+<h2>Your saved notes</h2>
+<p>Read the evidence, add your judgment and choose the next action.</p>
+</div>
+<div id="owner-notes">
+</div>
+</div>
+<div data-computer-pane="files" hidden>
+<div class="pane-heading">
+<p class="eyebrow">THE FILING CABINET</p>
+<h2>Company & research</h2>
+</div>
+<nav id="file-folders" aria-label="Company folders">
+<button data-folder="company">Company</button>
+<button data-folder="employees">Employees</button>
+<button data-folder="assignments">Assignments</button>
+<button data-folder="research">Research</button>
+<button data-folder="journal">Activity</button>
+</nav>
+<details id="clerical" open>
+<summary>Company files</summary>
+<section data-file-folder="company">
+<h2>Standing business goal</h2>
+<p id="goal">
+</p>
+<p id="health">Checking system health…</p>
+<button id="backup">Create database backup</button>
+<a href="/api/export/database" download>Download private database backup / transfer to local app</a>
+<button id="logout">Sign out</button>
+</section>
+<div class="grid" data-file-folder="company">
+<section>
+<h2>Company & direction</h2>
+<p>Set the company and standing objective once. Clock in to start work without writing a fresh assignment each time.</p>
+<form id="company-form">
+<label>Company name<input name="name" required maxlength="120">
+</label>
+<label>Legal name<input name="legalName" maxlength="120">
+</label>
+<label>Standing objective<textarea name="goal" required maxlength="4000">
+</textarea>
+</label>
+<button>Save company & direction</button>
+</form>
+</section>
+<section>
+<h2>Assign research</h2>
+<p>Search public federal contract awards for potential partners. All states and overseas locations remain eligible. Up to three pages are collected per assignment; these are historical awards, not open bids.</p>
+<form id="task">
+<label>Business objective<textarea name="goal" required maxlength="4000">Find commercial IT installation opportunities for American Power Global nationwide.</textarea>
+</label>
+<button>Queue assignment</button>
+</form>
+</section><details id="capability-profile-details"><summary>Business profile & marketing documents</summary><p>Save verified company facts once. Your advisor can use them to prepare a consistent capability statement, introduction and weekly marketing plan.</p><form id="business-profile-form"><label>Services you can deliver<textarea name="services" maxlength="3000" required></textarea></label><div class="grid"><label>Actual service coverage<textarea name="coverage" maxlength="2000"></textarea></label><label>Ideal customers<textarea name="idealCustomers" maxlength="2000"></textarea></label></div><label>What makes your business useful?<textarea name="strengths" maxlength="2000"></textarea></label><label>Verified experience, references or proof<textarea name="proof" maxlength="3000" placeholder="Use only facts you can support. Do not imply certifications or past projects you do not have."></textarea></label><details><summary>Public business contact details</summary><div class="grid"><label>Contact name<input name="contactName" maxlength="120"></label><label>Business email<input name="email" type="email" maxlength="254"></label><label>Business phone<input name="phone" maxlength="60"></label><label>Business website<input name="website" type="url" maxlength="1000" placeholder="https://"></label></div></details><button>Save business profile</button></form><p id="business-profile-source" class="fine-print"></p><p><a href="/api/business/profile/print" target="_blank" rel="noopener">Open printable capability statement</a></p><div id="business-profile-documents"></div></details>
+</div>
+<section data-file-folder="employees" hidden>
+<h2>Your employees</h2>
+<p>Your owner workspace has no subscription employee limit. Built-in employees have bounded research and administrative tools. New custom roles need tool implementations before they execute. Evidence collection and administrative checks use deterministic tools. Employees can also run genuine local-model analysis when Ollama is connected; AI output is labeled and saved separately.</p>
+<div id="employee-list">
+</div>
+<form id="employee-form">
+<input type="hidden" name="id">
+<label>Employee name<input name="name" required maxlength="80">
+</label>
+<label>Role<input name="role" required maxlength="160">
+</label>
+<button>Save employee</button>
+<button type="reset">New employee</button>
+</form>
+</section>
+<section data-file-folder="assignments" hidden>
+<h2>Assignments & handoffs</h2>
+<label class="history-search">Search saved history<input data-history-query type="search" maxlength="200" placeholder="Find an assignment or company"></label><div class="history-pager"><button id="task-history-newer" class="secondary-button">Newer</button><span id="task-history-status"></span><button id="task-history-older" class="secondary-button">Older</button></div>
+<div id="tasks">
+</div>
+</section>
+<section data-file-folder="research" hidden>
+<section class="web-research-section" aria-labelledby="web-research-title"><p class="eyebrow">BEYOND HISTORICAL AWARDS</p><h2 id="web-research-title">Project signals & public notices</h2><p id="web-research-summary">No saved public-source findings yet.</p><button id="web-research-check" class="secondary-button">Check public sources</button><button id="web-research-tools" class="secondary-button">Source access & schedule</button><div id="web-research-records" class="web-research-records"></div></section>
+<h2>Current notices to review for bidding</h2>
+<p>These are separate from historical awards. Active status and a future confirmed deadline only qualify a notice for review—not proof that your company is eligible.</p>
+<p id="solicitation-status">
+</p>
+<button id="search-notices">Check current SAM.gov notices</button>
+<div id="solicitation-records">
+</div>
+<h2>Historical award research</h2>
+<p>An award is a government contract already issued to the named company, not money or an open job for your company.</p>
+<label class="history-search">Search saved history<input data-history-query type="search" maxlength="200" placeholder="Find a company, scope or assignment"></label><div class="history-pager"><button id="record-history-newer" class="secondary-button">Newer</button><span id="record-history-status"></span><button id="record-history-older" class="secondary-button">Older</button></div>
+<p>Historical awards identify potential partners. Source review does not verify contacts, eligibility, subcontracting interest or current availability.</p>
+<div id="opportunities">
+</div>
+<h3>Research sources</h3>
+<div id="sources">
+</div>
+</section>
+<section data-file-folder="journal" hidden>
+<h2>Activity journal</h2>
+<div id="audit">
+</div>
+</section>
+</details>
+</div>
+<div data-computer-pane="results" hidden>
+<div class="pane-heading"><p class="eyebrow">WHAT HAPPENED IN YOUR BUSINESS</p><h2>Business results</h2><p>Tell your advisor what happened outside the app. Your next steps can then reflect real conversations, jobs and cash you report.</p></div>
+<div id="outcome-summary" class="result-summary"></div><section id="outcome-feedback"><h3>From your reported results</h3><div id="outcome-recommendations"></div></section>
+<section><h3>Record a business result</h3><form id="outcome-form"><div class="grid"><label>What happened?<select name="type" id="outcome-type" required><option value="intro_sent">Introduction sent</option><option value="reply_interested">Interested reply</option><option value="reply_declined">Declined reply</option><option value="quote_sent">Quote sent</option><option value="job_won">Job won</option><option value="payment_received">Payment received</option><option value="cost_recorded">Business cost paid</option><option value="lost_job">Job lost</option></select></label><label>Company or customer<input name="company" maxlength="200" required></label><label>Date<input name="occurredAt" type="date" required></label><label id="outcome-amount-label">Amount, if relevant ($)<input name="amount" type="number" min="0.01" step="0.01" max="100000000"></label></div><details><summary>Add context or a follow-up date</summary><label>Project / reference<input name="reference" maxlength="200"></label><label>What happened, and why?<textarea name="notes" maxlength="4000" placeholder="What did the customer say? What should the advisor know?"></textarea></label><label>Follow up on<input name="nextFollowUpAt" type="date"></label></details><p class="fine-print">Only record events that happened. These are your reports, not independent email, bank or accounting verification. Quote and job values are not counted as cash received.</p><button>Save business result</button></form></section><div class="section-heading"><h3>Saved results</h3><span class="small-pill">Owner reported</span></div><div id="outcome-events"></div></div>
+<div data-computer-pane="funding" hidden>
+<div class="pane-heading"><p class="eyebrow">FOCUS YOUR APPLICATION EFFORT</p><h2>Funding review</h2><p>Review official funding evidence against your company. An eligibility match is not a promise of approval.</p></div>
+<section class="funding-intro"><h3>Spend time where the evidence supports it</h3><p id="funding-guidance">The app will not invent a 50–90% approval chance. Missing eligibility facts mean hold and verify, not a recommendation to apply.</p><p id="funding-status" role="status">Funding source has not been checked.</p><button id="funding-search">Check official funding opportunities</button></section>
+<details id="funding-profile-details"><summary>Company facts for funding screening</summary><form id="funding-profile-form"><div class="grid"><label>Business type<select name="entityType"><option value="for_profit">For-profit business</option><option value="nonprofit">Nonprofit</option><option value="government">Government entity</option><option value="individual">Individual</option><option value="unknown" selected>Not confirmed</option></select></label><label>State / territory<input name="state" maxlength="2" placeholder="e.g. NC"></label></div><label>Services and funding purpose<textarea name="services" maxlength="2000" placeholder="Your services, what the funding would pay for and why it matches the program."></textarea></label><div class="grid"><label>Country code<input name="country" maxlength="3" value="USA" required></label><label>Confirmed small business?<select name="smallBusiness"><option value="unknown">Not confirmed</option><option value="yes">Yes</option><option value="no">No</option></select></label><label>Research & development project?<select name="researchDevelopment"><option value="unknown">Not confirmed</option><option value="yes">Yes</option><option value="no">No</option></select></label><label>Matching funds available?<select name="matchingFunds"><option value="unknown">Not confirmed</option><option value="yes">Yes</option><option value="no">No</option></select></label></div><button>Save company screening facts</button><p class="fine-print">Use only confirmed company facts. The app cannot infer certifications or eligibility from your company name.</p></form></details>
+<div id="funding-results"></div><details><summary>How funding recommendations are assessed</summary><p id="funding-notice"></p><p>A program must have a current official source, relevant scope and documented applicant eligibility before application work is recommended. Unknown or mismatched requirements are held. Competitive grants rarely provide a defensible individual approval percentage.</p><p>Borrowing is different from a grant and can require repayment, underwriting, collateral or guarantees. The app does not apply, borrow or promise money on your behalf.</p></details></div>
+<div data-computer-pane="connections" hidden>
+<div class="pane-heading"><p class="eyebrow">WE’LL GUIDE YOU THROUGH IT</p><h2>Connections</h2><p>Set up required access here. You do not need to edit files or use a terminal.</p></div>
+<section><div class="section-heading"><h3>Built-in AI</h3><span id="connection-ai" class="small-pill">Checking</span></div><p>The Windows app prepares and connects local AI automatically. No paid AI key or separate Ollama installation is required.</p><button id="connection-ai-check" class="secondary-button">Check built-in AI</button></section>
+<section id="sam-connection-card"><div class="section-heading"><h3>Current federal opportunities</h3><span id="connection-sam" class="small-pill">Checking</span></div><p id="connection-sam-message">Add your own free SAM.gov key to check current federal notices. Historical award research does not need this key.</p><div id="sam-local-download" hidden><p>For private key storage, open the downloaded Windows app. Your key belongs on your own computer.</p><a href="/download">Download the local app</a></div><form id="sam-key-form" autocomplete="off"><label>Your private SAM.gov key<input name="key" type="password" autocomplete="new-password" spellcheck="false" maxlength="512" required placeholder="Paste your key here"></label><p id="connection-storage" class="fine-print">Your key is stored privately for this office. The value is never displayed or included in a shared download.</p><button>Save private access</button></form><button id="sam-check-access" class="secondary-button" disabled>Check federal opportunity access</button><button id="sam-key-help" class="secondary-button" type="button">Where do I get my free key?</button></section></div>
+<div data-computer-pane="pricing" hidden><div class="pane-heading"><p class="eyebrow">KNOW THE COST BEFORE YOU QUOTE</p><h2>Price a job</h2><p>Build a saved working estimate. Confirm the scope and every cost before offering a price.</p></div><section><form id="pricing-form"><div class="grid"><label>Customer or project<input name="customer" maxlength="200" placeholder="Company / project name"></label><label>Brief scope<input name="scope" maxlength="2000" placeholder="What work are you pricing?"></label></div><div class="pricing-fields"><label>Labor hours<input name="laborHours" type="number" min="0" max="100000" step="0.01" required placeholder="0"></label><label>Cost per labor hour ($)<input name="laborRate" type="number" min="0" max="100000" step="0.01" required placeholder="0"></label><label>Materials cost ($)<input name="materials" type="number" min="0" max="100000000" step="0.01" required value="0"></label></div><details><summary>Travel, overhead and target margin</summary><div class="pricing-fields"><label>Travel cost ($)<input name="travel" type="number" min="0" max="100000000" step="0.01" value="0" required></label><label>Overhead allocation ($)<input name="overhead" type="number" min="0" max="100000000" step="0.01" value="0" required></label><label>Contingency (%)<input name="contingencyPercent" type="number" min="0" max="100" step="0.01" value="0" required></label><label>Target gross margin (%)<input name="marginPercent" type="number" min="0" max="95" step="0.01" value="0" required></label></div></details><p class="fine-print">Start with your own verified costs. A zero value is not an assumption that the expense will be free. Taxes, fees, financing and actual collected profit are not calculated.</p><button>Save working estimate</button></form></section><div id="pricing-estimates"></div></div>
+<div data-computer-pane="packets" hidden>
+<h3>Assignment packets</h3>
+<p>Saved evidence, source links and assistant recommendations in a company-branded document. Print or choose Save as PDF in your browser’s print window.</p>
+<div id="packet-list">
+</div>
+</div>
+</div>
+</div>
+</dialog>
+<dialog id="setup-dialog">
+<div class="setup-heading">
+<div>
+<p class="eyebrow">YOUR WORKSPACE, YOUR DEVICE</p>
+<h2>Settings & installation</h2>
+</div>
+<button id="setup-close" class="icon-button" aria-label="Close settings">×</button>
+</div>
+<p id="setup-message" class="window-message" role="status" aria-live="polite" hidden></p><p id="device-info">
+</p>
+<section>
+<h3>1 · Run locally and keep your data</h3>
+<p>On Windows 10/11 (64-bit), download and open <strong>AI-Headquarters-Setup.exe</strong>. Setup starts automatically. A native setup window installs the verified runtime and opens your local office without a PowerShell script or terminal. Your data stays in your Windows user folder across updates.</p>
+<p>
+<a href="/api/download/windows" download>Download Windows setup (.exe)</a>
+</p>
+<p>This native installer is currently unsigned and Windows may show an unknown-publisher warning. Actual installation on Windows still needs device validation. Keep the computer awake for background work. No software can work while it is powered off.</p>
+</section>
+<section>
+<h3>2 · Built-in local AI — automatic</h3>
+<p>The latest Windows download installs its own private AI engine, chooses a starter model for your computer and tests the connection automatically. You do not install Ollama separately, choose a model or enter an AI API key. First setup downloads roughly 2–5 GB and needs a computer with at least 4 GB RAM and 12 GB free disk space. Model quality and speed depend on your hardware.</p>
+<button id="ai-check">Check built-in AI</button>
+<p id="ai-setup-status">
+</p>
+<details class="technical-details">
+<summary>Device details</summary>
+<p id="hardware-info">
+</p>
+</details>
+<p>If your existing local app predates automatic AI setup, download and open the latest Windows setup to upgrade. Saved business data stays separate.</p>
+<details>
+<summary>Advanced model controls (optional)</summary>
+<label>Installed model<select id="model-select">
+</select>
+</label>
+<button id="model-save">Use selected model</button>
+<button id="model-download">Download small fallback model</button>
+<p>These controls are optional. The installer normally handles model installation and selection. A small fallback model uses roughly 0.5–0.7 GB; larger models need more memory.</p>
+</details>
+</section>
+<section>
+<h3>Optional · Current federal opportunities</h3><p>If current federal searches need access, Connections will explain what to get and let you enter it privately inside the app. Historical award research and local AI do not need a SAM.gov key.</p><button id="setup-connections">Open Connections</button>
+</section>
+<section>
+<h3>4 · Choose your direction</h3>
+<p>Save your company name, services and standing objective under company files. Opening the signed-in app starts work unless you explicitly clock out. Closing the tab does not erase work or clock out. Keep private backups of the data folder.</p>
+<button id="setup-company">Open company settings</button>
+</section>
+</dialog>
+<dialog id="focused-dialog" aria-labelledby="focused-title">
+<header class="focused-heading"><div><p id="focused-eyebrow" class="eyebrow">YOUR OWNER DESKTOP</p><h2 id="focused-title" tabindex="-1">Your next step</h2></div><button id="focused-close" class="icon-button" aria-label="Close focused window">×</button></header>
+<div id="focused-scroll"><p id="focused-message" class="window-message" role="status" aria-live="polite" hidden></p><p id="focused-intro"></p><div id="focused-body"></div><ol id="focused-steps"></ol><div id="focused-actions"></div></div>
+<footer class="focused-reading"><div class="reading-controls"><button id="focused-read" class="secondary-button">Read to me</button><button id="focused-stop" class="secondary-button" hidden>Stop reading</button><label id="focused-voice-label" hidden>Device voice<select id="focused-voice"></select></label></div><p id="focused-speech-status" class="fine-print" role="status" aria-live="polite"></p></footer>
+</dialog>
+<div id="toast" class="notification-toast" hidden>
+<span class="toast-mark" aria-hidden="true">✉</span>
+<div>
+<strong id="toast-title">
+</strong>
+<p id="toast-body">
+</p>
+<button id="toast-action" hidden>Open</button>
+</div>
+<button id="toast-dismiss" class="icon-button" aria-label="Dismiss notification">×</button>
+</div>
+<p id="message" role="status" aria-live="polite">
+</p>
+</main>
+<script type="module" src="/app.js">
+</script>
+</body>
+</html>
