@@ -277,7 +277,7 @@ export function createOffice3D(host,{onEmployee,onOwner,onMeetingMode=()=>{}}){
  const hoverRing=new THREE.Mesh(planeGeo,glowMaterial(glowTexture,'#7ff0d8',.5));hoverRing.rotation.x=-Math.PI/2;hoverRing.position.y=.13;hoverRing.scale.set(5.6,4.4,1);hoverRing.visible=false;scene.add(hoverRing);
  function setHover(action){const desk=action?employees.get(action):null;const on=!!desk&&!reduced.matches;if(on)hoverRing.position.set(desk.position.x,.13,desk.position.z);if(hoverRing.visible!==on){hoverRing.visible=on;markDirty();}else if(on)markDirty();}
  let introActive=!reduced.matches,introT=0;const stopIntro=()=>{introActive=false;};canvas.addEventListener('pointerdown',stopIntro);canvas.addEventListener('wheel',stopIntro,{passive:true});
- function updateIntro(dt){if(!introActive||cameraMode!=='orbit')return false;introT=Math.min(1,introT+dt/2.6);const e=1-Math.pow(1-introT,3);yaw=.57-(1-e)*.6;elevation=.73-(1-e)*.2;distance=35.5*(1+(1-e)*.3);if(introT>=1)introActive=false;return true;}
+ function updateIntro(dt){if(!introActive||cameraMode!=='orbit')return false;introT=Math.min(1,introT+dt/4.4);const e=1-Math.pow(1-introT,3);yaw=.57-(1-e)*1.25;elevation=.73-(1-e)*.45;distance=35.5*(1-(1-e)*.42);if(introT>=1)introActive=false;return true;}
  // Bitcoin miner showpiece. DESIGN ONLY: it is not connected to anything, stays idle and shows no numbers.
  // Wire it up later with the returned setMinerState({printing,progress,connected}); progress runs 0 to 1 and grows the coin.
  const miner=new THREE.Group();miner.position.set(-9.35,0,1.2);miner.rotation.y=Math.PI/2;miner.scale.setScalar(1.3);scene.add(miner);
