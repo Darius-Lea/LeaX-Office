@@ -147,8 +147,16 @@
 <div id="office-room" class="office-room">
 </div>
 <div id="meeting-view-controls" class="meeting-view-controls" hidden>
-<div><span class="meeting-view-kicker">AI HEADQUARTERS · CONFERENCE SUITE</span><strong>First-person view</strong><small>Drag to look around · Press Esc to return</small></div>
-<button id="meeting-room-start" type="button">Start a working meeting</button><button id="meeting-room-exit" type="button">Return to office</button>
+<header class="meeting-console-heading"><div><span class="meeting-view-kicker">AI HEADQUARTERS · CONFERENCE SUITE</span><strong id="meeting-session-title">Meeting room</strong><small id="meeting-session-status" role="status">Click the display to pick up the remote and open the meeting controls.</small></div><button id="meeting-room-start" type="button">Start a working meeting</button><button id="meeting-room-exit" type="button">Exit meeting</button></header>
+<div class="meeting-console-actions">
+<label class="meeting-participant-picker">Talk with<select id="meeting-participant" aria-label="Choose an AI office colleague"></select></label>
+<button id="meeting-advisor-join" type="button">Talk with selected colleague</button>
+<button id="meeting-statistics" type="button">View business statistics</button>
+<button id="meeting-call-workers" class="meeting-call-workers" type="button">Call workers in</button>
+<button id="meeting-invite-user" type="button" title="Manage real invitation-only partner accounts">Invite another app user</button>
+</div>
+<details class="meeting-external-call"><summary>Use a FaceTime or Google Meet link</summary><p>Create the invitation in FaceTime or Google Meet, then paste its link here. The call opens in a separate tab; video stays in that service.</p><label for="meeting-call-link">FaceTime or Meet invitation link</label><input id="meeting-call-link" type="url" inputmode="url" autocomplete="off" placeholder="https://facetime.apple.com/join/… or https://meet.google.com/…"><div class="meeting-call-link-actions"><button id="meeting-share-link" type="button">Share invite</button><button id="meeting-open-link" type="button">Open call</button></div><small id="meeting-link-status" role="status">Invite links stay in this window and are not saved to your office.</small></details>
+<small class="meeting-call-limit">Internal AI conversations and saved business figures are available here. App accounts, in-office guest video, and camera or speaker tracking are not available yet.</small>
 </div>
 </div>
 <label id="angle-label" hidden>Rotate office<input id="office-angle" type="range" min="-40" max="40" value="-18">

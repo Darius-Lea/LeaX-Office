@@ -557,3 +557,6 @@ function showAiWork(run,note=null){
 const officeExtensions=installOfficeExtensions({api,getState:()=>window.hqState,refresh,openPopup,closePopup,onEmployee:id=>openAgentConversation(id),onAISetup:()=>{closePopup();showSetup();}});
 meetingWorkspace=officeExtensions.meeting;
 window.addEventListener('pagehide',()=>officeExtensions.dispose());
+window.addEventListener('hq:meeting-talk',event=>{if(event.detail?.agent)openAgentConversation(event.detail.agent);});
+window.addEventListener('hq:meeting-statistics',showOperationsStatistics);
+const previewPartnerButton=document.querySelector('#meeting-invite-user');if(previewPartnerButton)previewPartnerButton.onclick=()=>officeExtensions.showPartners();

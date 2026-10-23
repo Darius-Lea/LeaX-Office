@@ -8,6 +8,12 @@ window.addEventListener('hq-room-visibility',event=>{alternateRoom=event.detail?
 window.addEventListener('hq-music-state',event=>{musicPlaying=event.detail?.playing===true;renderer?.setMusicPlaying?.(musicPlaying);});
 let clericalDesignKey='';
 const meetingEnter=document.querySelector('#meeting-room-enter'),meetingControls=document.querySelector('#meeting-view-controls'),meetingExit=document.querySelector('#meeting-room-exit');
+const meetingParticipant=document.querySelector('#meeting-participant'),meetingTalk=document.querySelector('#meeting-advisor-join'),meetingStats=document.querySelector('#meeting-statistics'),meetingWorkers=document.querySelector('#meeting-call-workers'),meetingStatus=document.querySelector('#meeting-session-status');
+const meetingCallLink=document.querySelector('#meeting-call-link'),meetingLinkStatus=document.querySelector('#meeting-link-status'),meetingShareLink=document.querySelector('#meeting-share-link'),meetingOpenLink=document.querySelector('#meeting-open-link');
+let meetingRosterSignature='';
+function updateMeetingParticipants(state){if(!meetingParticipant)return;const roster=state.employees||[],signature=JSON.stringify(roster.map(person=>[person.id,person.name,person.role]));if(signature===meetingRosterSignature)return;const selected=meetingParticipant.value;meetingRosterSignature=signature;meetingParticipant.replaceChildren(...roster.map(person=>{const option=document.createElement('option');option.value=person.id;option.textContent=person.name+' · '+person.role;return option;}));meetingParticipant.value=roster.some(person=>person.id===selected)?selected:roster.some(person=>person.id==='Einstein')?'Einstein':roster[0]?.id||'';if(meetingTalk)meetingTalk.disabled=!roster.length;}
+function setMeetingStatus(message){if(meetingStatus)meetingStatus.textContent=message;}
+function updateMeetingAttendance({count=0,returning=0,arriving=0}={}){if(!meetingWorkers)return;meetingWorkers.disabled=returning>0||(!count&&!(latestState?.employees||[]).length);meetingWorkers.textContent=returning?'Returning to desks…':count?'Return workers to desks':'Call workers in';if(returning)setMeetingStatus('The team is walking back to their assigned desks.');else if(count&&!arriving)setMeetingStatus(count+' team member'+(count===1?' is':'s are')+' in the conference room.');}
 function updateMeetingAvailability(){const enabled=latestState?.officeDesign?.design?.meeting!==false;if(meetingEnter){meetingEnter.disabled=!enabled;meetingEnter.title=enabled?'Enter the first-person meeting room view':'Turn on the meeting area in Remodel office & equipment to enter.';}if(!enabled)renderer?.exitMeetingRoom();}
 function applyClericalDesign(){
  const design=latestState?.officeDesign?.design||{},key=document.body.dataset.view+JSON.stringify(design);if(key===clericalDesignKey)return;clericalDesignKey=key;
@@ -21,7 +27,7 @@ async function ensure3D(){
  loading=true;message.textContent='Loading your 3D office…';
  rendererLoad=(async()=>{try{
  const {createOffice3D}=await import('/office3d.js');
- renderer=createOffice3D(webglHost,{onEmployee:id=>latestInspect?.(id),onOwner:(pane)=>{if(pane==='music'){window.dispatchEvent(new Event('hq-music-open'));return;}if(pane==='meeting'){document.querySelector('#meeting-open').click();return;}document.querySelector('#owner-computer').click();if(pane==='packets')document.querySelector('[data-pane=packets]').click();},onMeetingMode:active=>{document.body.dataset.camera=active?'meeting':'orbit';if(meetingEnter)meetingEnter.hidden=active;if(meetingControls)meetingControls.hidden=!active;}});
+ renderer=createOffice3D(webglHost,{onEmployee:id=>latestInspect?.(id),onOwner:(pane)=>{if(pane==='music'){window.dispatchEvent(new Event('hq-music-open'));return;}document.querySelector('#owner-computer').click();if(pane==='packets')document.querySelector('[data-pane=packets]').click();},onMeetingMode:active=>{document.body.dataset.camera=active?'meeting':'orbit';if(meetingEnter)meetingEnter.hidden=active;if(meetingControls)meetingControls.hidden=!active;if(active)setMeetingStatus('Click the conference display to pick up the remote and start the local meeting controls.');},onMeetingStatus:setMeetingStatus,onMeetingAttendance:updateMeetingAttendance});
  viewport.classList.add('webgl-ready');webglHost.hidden=document.body.dataset.view!=='3d';
  renderer.update(latestState);renderer.setMusicPlaying?.(musicPlaying);renderer.setEnabled(document.body.dataset.view==='3d'&&!alternateRoom);
  message.textContent='Drag to look around · Scroll or pinch to zoom · Click your computer, a desk or the printer.';
@@ -52,10 +58,17 @@ export function setOfficeView(view){
 const legacyAngle=document.querySelector('#office-angle');if(legacyAngle)legacyAngle.oninput=e=>{room.style.setProperty('--angle',e.target.value+'deg');renderer?.setAngle(e.target.value);};
 export function resetOfficeCamera(){renderer?.resetCamera();}
 const resetButton=document.querySelector('#reset-office');if(resetButton)resetButton.onclick=resetOfficeCamera;
-if(meetingEnter)meetingEnter.addEventListener('click',async()=>{if(latestState?.officeDesign?.design?.meeting===false)return;setOfficeView('3d');const office=await ensure3D();office?.enterMeetingRoom();});
+if(meetingEnter)meetingEnter.addEventListener('click',async()=>{if(latestState?.officeDesign?.design?.meeting===false)return;setOfficeView('3d');const office=await ensure3D();office?.enterMeetingRoom(false);});
 if(meetingExit)meetingExit.addEventListener('click',()=>renderer?.exitMeetingRoom());
+if(meetingTalk)meetingTalk.addEventListener('click',()=>{if(meetingParticipant?.value)window.dispatchEvent(new CustomEvent('hq:meeting-talk',{detail:{agent:meetingParticipant.value}}));});
+if(meetingStats)meetingStats.addEventListener('click',()=>window.dispatchEvent(new Event('hq:meeting-statistics')));
+if(meetingWorkers)meetingWorkers.addEventListener('click',()=>renderer?.toggleMeetingWorkers());
+function getExternalMeetingLink(){let url;try{url=new URL(meetingCallLink?.value.trim()||'');}catch{throw Error('Paste a valid FaceTime or Google Meet invitation link first.');}const host=url.hostname.toLowerCase(),faceTime=host==='facetime.apple.com'&&/^\/join\/[^/]+\/?$/i.test(url.pathname),meet=host==='meet.google.com'&&/^\/[a-z]{3}-[a-z]{4}-[a-z]{3}\/?$/i.test(url.pathname);if(url.protocol!=='https:'||url.username||url.password||url.port||(!faceTime&&!meet))throw Error('Use an HTTPS FaceTime or Google Meet invitation link.');return url.href;}
+async function shareExternalMeetingLink(){try{const url=getExternalMeetingLink();if(navigator.share){await navigator.share({title:'Join my meeting',url});if(meetingLinkStatus)meetingLinkStatus.textContent='Share sheet opened. Your call stays in FaceTime or Google Meet.';}else{await navigator.clipboard.writeText(url);if(meetingLinkStatus)meetingLinkStatus.textContent='Invite link copied. Paste it into a message to your guests.';}}catch(error){if(meetingLinkStatus)meetingLinkStatus.textContent=error.name==='AbortError'?'Sharing was cancelled.':error.message||'Could not share the invitation link.';}}
+if(meetingShareLink)meetingShareLink.addEventListener('click',()=>void shareExternalMeetingLink());
+if(meetingOpenLink)meetingOpenLink.addEventListener('click',()=>{try{const url=getExternalMeetingLink();window.open(url,'_blank','noopener,noreferrer');if(meetingLinkStatus)meetingLinkStatus.textContent='Opening the call in a new tab. Camera and microphone controls are in FaceTime or Google Meet.';}catch(error){if(meetingLinkStatus)meetingLinkStatus.textContent=error.message;}});
 export function renderOffice(state,inspect){
- latestState=state;latestInspect=inspect;renderer?.update(state);ensure3D();applyClericalDesign();updateMeetingAvailability();
+ latestState=state;latestInspect=inspect;updateMeetingParticipants(state);renderer?.update(state);ensure3D();applyClericalDesign();updateMeetingAvailability();
  for(const [id,desk] of desks)if(!state.employees.some(e=>e.id===id)){desk.remove();desks.delete(id);}
  for(const employee of state.employees){
  let desk=desks.get(employee.id);
