@@ -61,15 +61,38 @@ jobs:
 
       - name: Publish installer to release branch
         shell: pwsh
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add downloads/AI-Headquarters-Setup.exe downloads/AI-Headquarters-Setup.exe.sha256
           git diff --cached --quiet
-          if ($LASTEXITCODE -eq 0) { Write-Host 'Installer is already current.'; exit 0 }
-          git commit -m 'Build Windows installer'
+          if ($LASTEXITCODE -ne 0) {
+            git commit -m 'Build Windows installer'
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            git push origin "HEAD:$env:GITHUB_REF_NAME"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          } else { Write-Host 'Installer is already current.' }
+
+      - name: Check out hosted app download
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          path: main-publish
+          fetch-depth: 0
+
+      - name: Update Windows download served by main
+        shell: pwsh
+        run: |
+          $repo = Join-Path $env:GITHUB_WORKSPACE 'main-publish'
+          $destination = Join-Path $repo 'downloads'
+          Copy-Item -LiteralPath 'downloads\AI-Headquarters-Setup.exe' -Destination $destination -Force
+          Copy-Item -LiteralPath 'downloads\AI-Headquarters-Setup.exe.sha256' -Destination $destination -Force
+          git -C $repo config user.name 'github-actions[bot]'
+          git -C $repo config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git -C $repo add downloads/AI-Headquarters-Setup.exe downloads/AI-Headquarters-Setup.exe.sha256
+          git -C $repo diff --cached --quiet
+          if ($LASTEXITCODE -eq 0) { Write-Host 'Hosted Windows download is already current.'; exit 0 }
+          git -C $repo commit -m 'Update hosted Windows installer'
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          git push origin "HEAD:$env:GITHUB_REF_NAME"
+          git -C $repo push origin HEAD:main
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
