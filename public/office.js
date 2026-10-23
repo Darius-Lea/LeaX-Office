@@ -3,10 +3,12 @@ const room=document.querySelector('#office-room');
 const viewport=document.querySelector('#office-viewport');
 const webglHost=document.createElement('div');webglHost.className='office-webgl';webglHost.hidden=true;viewport.prepend(webglHost);
 const message=document.createElement('p');message.className='office-render-message';viewport.before(message);
-let renderer=null,loading=false,latestState=null,latestInspect=null,alternateRoom=false,musicPlaying=false;
-window.addEventListener('hq-room-visibility',event=>{alternateRoom=event.detail?.open===true;renderer?.setEnabled(document.body.dataset.view==='3d'&&!alternateRoom);if(!alternateRoom)ensure3D();});
+let renderer=null,loading=false,rendererLoad=null,latestState=null,latestInspect=null,alternateRoom=false,musicPlaying=false;
+window.addEventListener('hq-room-visibility',event=>{alternateRoom=event.detail?.open===true;if(alternateRoom)renderer?.exitMeetingRoom?.();renderer?.setEnabled(document.body.dataset.view==='3d'&&!alternateRoom);if(!alternateRoom)ensure3D();});
 window.addEventListener('hq-music-state',event=>{musicPlaying=event.detail?.playing===true;renderer?.setMusicPlaying?.(musicPlaying);});
 let clericalDesignKey='';
+const meetingEnter=document.querySelector('#meeting-room-enter'),meetingControls=document.querySelector('#meeting-view-controls'),meetingExit=document.querySelector('#meeting-room-exit');
+function updateMeetingAvailability(){const enabled=latestState?.officeDesign?.design?.meeting!==false;if(meetingEnter){meetingEnter.disabled=!enabled;meetingEnter.title=enabled?'Enter the first-person meeting room view':'Turn on the meeting area in Remodel office & equipment to enter.';}if(!enabled)renderer?.exitMeetingRoom();}
 function applyClericalDesign(){
  const design=latestState?.officeDesign?.design||{},key=document.body.dataset.view+JSON.stringify(design);if(key===clericalDesignKey)return;clericalDesignKey=key;
  room.dataset.layout=design.layout||'pods';room.dataset.monitors=design.monitors||'single';
@@ -14,18 +16,23 @@ function applyClericalDesign(){
  room.style.borderColor=themed?(walls[design.wall]||walls.sage):'';room.style.background=themed?(floors[design.floor]||floors.oak):'';
 }
 async function ensure3D(){
- if(renderer||loading||!latestState||document.body.dataset.view!=='3d'||alternateRoom)return;
+ if(renderer||!latestState||document.body.dataset.view!=='3d'||alternateRoom)return renderer;
+ if(rendererLoad)return rendererLoad;
  loading=true;message.textContent='Loading your 3D office…';
- try{
+ rendererLoad=(async()=>{try{
  const {createOffice3D}=await import('/office3d.js');
- renderer=createOffice3D(webglHost,{onEmployee:id=>latestInspect?.(id),onOwner:(pane)=>{if(pane==='music'){window.dispatchEvent(new Event('hq-music-open'));return;}if(pane==='meeting'){document.querySelector('#meeting-open').click();return;}document.querySelector('#owner-computer').click();if(pane==='packets')document.querySelector('[data-pane=packets]').click();}});
+ renderer=createOffice3D(webglHost,{onEmployee:id=>latestInspect?.(id),onOwner:(pane)=>{if(pane==='music'){window.dispatchEvent(new Event('hq-music-open'));return;}if(pane==='meeting'){document.querySelector('#meeting-open').click();return;}document.querySelector('#owner-computer').click();if(pane==='packets')document.querySelector('[data-pane=packets]').click();},onMeetingMode:active=>{document.body.dataset.camera=active?'meeting':'orbit';if(meetingEnter)meetingEnter.hidden=active;if(meetingControls)meetingControls.hidden=!active;}});
  viewport.classList.add('webgl-ready');webglHost.hidden=document.body.dataset.view!=='3d';
  renderer.update(latestState);renderer.setMusicPlaying?.(musicPlaying);renderer.setEnabled(document.body.dataset.view==='3d'&&!alternateRoom);
  message.textContent='Drag to look around · Scroll or pinch to zoom · Click your computer, a desk or the printer.';
+ return renderer;
  }catch(error){
+ console.error('3D rendering is unavailable:',error);
  message.textContent='3D rendering is unavailable on this device. Your office continues in the lightweight clerical view.';
  setOfficeView('2d');
- }finally{loading=false;}
+ return null;
+ }finally{loading=false;rendererLoad=null;}})();
+ return rendererLoad;
 }
 
 const desks=new Map();
@@ -35,6 +42,7 @@ const figure=document.createElement('span');figure.className='person';figure.inn
 const caption=document.createElement('span');caption.className='patrol-caption';patrol.append(figure,caption);
 export function setOfficeView(view){
  if(!['3d','2d','terminal'].includes(view))view='3d';
+ if(view!=='3d')renderer?.exitMeetingRoom();
  document.body.dataset.view=view;const files=document.querySelector('#clerical');if(files)files.open=view!=='3d';try{localStorage.setItem('hq-view',view);}catch{};
  const angleLabel=document.querySelector('#angle-label');if(angleLabel)angleLabel.hidden=true;
  for(const name of ['3d','2d','terminal'])document.querySelector('#view-'+name)?.setAttribute('aria-pressed',String(name===view));
@@ -44,8 +52,10 @@ export function setOfficeView(view){
 const legacyAngle=document.querySelector('#office-angle');if(legacyAngle)legacyAngle.oninput=e=>{room.style.setProperty('--angle',e.target.value+'deg');renderer?.setAngle(e.target.value);};
 export function resetOfficeCamera(){renderer?.resetCamera();}
 const resetButton=document.querySelector('#reset-office');if(resetButton)resetButton.onclick=resetOfficeCamera;
+if(meetingEnter)meetingEnter.addEventListener('click',async()=>{if(latestState?.officeDesign?.design?.meeting===false)return;setOfficeView('3d');const office=await ensure3D();office?.enterMeetingRoom();});
+if(meetingExit)meetingExit.addEventListener('click',()=>renderer?.exitMeetingRoom());
 export function renderOffice(state,inspect){
- latestState=state;latestInspect=inspect;renderer?.update(state);ensure3D();applyClericalDesign();
+ latestState=state;latestInspect=inspect;renderer?.update(state);ensure3D();applyClericalDesign();updateMeetingAvailability();
  for(const [id,desk] of desks)if(!state.employees.some(e=>e.id===id)){desk.remove();desks.delete(id);}
  for(const employee of state.employees){
  let desk=desks.get(employee.id);

@@ -9,7 +9,7 @@ export function installOfficeExtensions({api,getState,refresh,openPopup,closePop
  let profileTimer=null,video=null,tech=null;
  const meeting=createMeetingWorkspace({dialog:$('#meeting-dialog'),api,getOfficeState:getState,onEmployee,onMusic:showMusic,onAISetup});
  const music=createOfficeMusicPlayer({container:$('#office-music-player'),onStateChange:state=>window.dispatchEvent(new CustomEvent('hq-music-state',{detail:{playing:state.playing}}))});
- $('#meeting-open').onclick=()=>void meeting.show();$('#office-music-open').onclick=showMusic;
+ $('#meeting-open').onclick=()=>void meeting.show();const previewStart=$('#meeting-room-start');if(previewStart)previewStart.onclick=()=>void meeting.show();$('#office-music-open').onclick=showMusic;
  $('#music-close').onclick=()=>$('#music-dialog').close();$('#music-form').onsubmit=event=>{event.preventDefault();const form=event.target,result=music.load(form.elements.url.value,{consent:form.elements.consent.checked});$('#music-feedback').textContent=result.message||'';};
  function showMusic(){if(!$('#music-dialog').open)$('#music-dialog').showModal();}
  window.addEventListener('hq-music-open',showMusic);
