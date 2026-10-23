@@ -3,7 +3,9 @@ const room=document.querySelector('#office-room');
 const viewport=document.querySelector('#office-viewport');
 const webglHost=document.createElement('div');webglHost.className='office-webgl';webglHost.hidden=true;viewport.prepend(webglHost);
 const message=document.createElement('p');message.className='office-render-message';viewport.before(message);
-let renderer=null,loading=false,latestState=null,latestInspect=null;
+let renderer=null,loading=false,latestState=null,latestInspect=null,alternateRoom=false,musicPlaying=false;
+window.addEventListener('hq-room-visibility',event=>{alternateRoom=event.detail?.open===true;renderer?.setEnabled(document.body.dataset.view==='3d'&&!alternateRoom);if(!alternateRoom)ensure3D();});
+window.addEventListener('hq-music-state',event=>{musicPlaying=event.detail?.playing===true;renderer?.setMusicPlaying?.(musicPlaying);});
 let clericalDesignKey='';
 function applyClericalDesign(){
  const design=latestState?.officeDesign?.design||{},key=document.body.dataset.view+JSON.stringify(design);if(key===clericalDesignKey)return;clericalDesignKey=key;
@@ -12,13 +14,13 @@ function applyClericalDesign(){
  room.style.borderColor=themed?(walls[design.wall]||walls.sage):'';room.style.background=themed?(floors[design.floor]||floors.oak):'';
 }
 async function ensure3D(){
- if(renderer||loading||!latestState||document.body.dataset.view!=='3d')return;
+ if(renderer||loading||!latestState||document.body.dataset.view!=='3d'||alternateRoom)return;
  loading=true;message.textContent='Loading your 3D office…';
  try{
  const {createOffice3D}=await import('/office3d.js');
- renderer=createOffice3D(webglHost,{onEmployee:id=>latestInspect?.(id),onOwner:(pane)=>{document.querySelector('#owner-computer').click();if(pane==='packets')document.querySelector('[data-pane=packets]').click();}});
+ renderer=createOffice3D(webglHost,{onEmployee:id=>latestInspect?.(id),onOwner:(pane)=>{if(pane==='music'){window.dispatchEvent(new Event('hq-music-open'));return;}if(pane==='meeting'){document.querySelector('#meeting-open').click();return;}document.querySelector('#owner-computer').click();if(pane==='packets')document.querySelector('[data-pane=packets]').click();}});
  viewport.classList.add('webgl-ready');webglHost.hidden=document.body.dataset.view!=='3d';
- renderer.update(latestState);renderer.setEnabled(document.body.dataset.view==='3d');
+ renderer.update(latestState);renderer.setMusicPlaying?.(musicPlaying);renderer.setEnabled(document.body.dataset.view==='3d'&&!alternateRoom);
  message.textContent='Drag to look around · Scroll or pinch to zoom · Click your computer, a desk or the printer.';
  }catch(error){
  message.textContent='3D rendering is unavailable on this device. Your office continues in the lightweight clerical view.';
@@ -36,7 +38,7 @@ export function setOfficeView(view){
  document.body.dataset.view=view;const files=document.querySelector('#clerical');if(files)files.open=view!=='3d';try{localStorage.setItem('hq-view',view);}catch{};
  const angleLabel=document.querySelector('#angle-label');if(angleLabel)angleLabel.hidden=true;
  for(const name of ['3d','2d','terminal'])document.querySelector('#view-'+name)?.setAttribute('aria-pressed',String(name===view));
- webglHost.hidden=view!=='3d';renderer?.setEnabled(view==='3d');if(view==='3d')ensure3D();
+ webglHost.hidden=view!=='3d';renderer?.setEnabled(view==='3d'&&!alternateRoom);if(view==='3d')ensure3D();
  applyClericalDesign();
 }
 const legacyAngle=document.querySelector('#office-angle');if(legacyAngle)legacyAngle.oninput=e=>{room.style.setProperty('--angle',e.target.value+'deg');renderer?.setAngle(e.target.value);};

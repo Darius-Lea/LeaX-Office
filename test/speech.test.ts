@@ -16,3 +16,19 @@ test('read-aloud chooses only local voices, reads focused prose and stops old pl
  globalThis.speechSynthesis=undefined as any;const unsupported=await readToMe('A focused instruction.',{onStatus:s=>statuses.push(s)});assert.equal(unsupported.started,false);assert.equal(unsupported.status,'unsupported');assert.equal(statuses.at(-1).status,'unsupported');
  }finally{stopReading();globalThis.speechSynthesis=oldSynth;globalThis.SpeechSynthesisUtterance=oldUtterance}
 });
+
+test('voice preferences use the actual installed regional inventory and preserve a bounded comfortable speed',async()=>{
+ const oldSynth=globalThis.speechSynthesis,oldUtterance=globalThis.SpeechSynthesisUtterance,storage=Object.getOwnPropertyDescriptor(globalThis,'localStorage');
+ const saved=new Map<string,string>();
+ Object.defineProperty(globalThis,'localStorage',{configurable:true,value:{getItem:key=>saved.get(key)||null,setItem:(key,value)=>saved.set(key,value)}});
+ const voices=[{voiceURI:'us-natural',name:'Installed Natural',lang:'en-US',localService:true},{voiceURI:'za-device',name:'Installed South Africa',lang:'en-ZA',localService:true},{voiceURI:'cloud-za',name:'Online ZA',lang:'en-ZA',localService:false}];
+ const spoken:any[]=[];globalThis.SpeechSynthesisUtterance=class{text:string;constructor(text:string){this.text=text}} as any;globalThis.speechSynthesis={getVoices:()=>voices,cancel(){},speak:u=>spoken.push(u)} as any;
+ const {getSpeechOptions,getSpeechPreferences,setSpeechPreferences,readToMe,stopReading}=await import('../public/speech.js');
+ try{
+  setSpeechPreferences({lang:'en-ZA',rate:.92});assert.equal(getSpeechOptions().selectedVoiceURI,'za-device');assert.equal(getSpeechOptions().voices.length,2);
+  await readToMe('Review this scope.');assert.equal(spoken.at(-1).voice.voiceURI,'za-device');assert.equal(spoken.at(-1).rate,.92);stopReading();
+  assert.equal(getSpeechPreferences().rate,.92);assert.ok([...saved.values()].some(v=>JSON.parse(v).voiceURI==='za-device'));
+  setSpeechPreferences({voiceURI:'fictional-wakanda',rate:4});assert.equal(getSpeechOptions().selectedVoiceURI,'za-device');assert.equal(getSpeechPreferences().rate,1.15);
+  setSpeechPreferences({lang:'en-GB',rate:.96});assert.equal(getSpeechOptions().voices.some(v=>v.lang==='en-GB'),false);assert.equal(getSpeechOptions().selectedVoiceURI,'us-natural');
+ }finally{stopReading();setSpeechPreferences({voiceURI:null,lang:'en-US',rate:.96});globalThis.speechSynthesis=oldSynth;globalThis.SpeechSynthesisUtterance=oldUtterance;if(storage)Object.defineProperty(globalThis,'localStorage',storage);else delete globalThis.localStorage;}
+});

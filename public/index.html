@@ -84,6 +84,7 @@
 <span class="dock-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m20 0v-2a4 4 0 0 0-3-3.87"/><circle cx="9" cy="7" r="4"/><path d="M16 3a4 4 0 0 1 0 8"/></svg></span>
 <span>Team</span>
 </button>
+<button id="meeting-open"><span class="dock-icon" aria-hidden="true">◈</span><span>Meet</span></button>
 <button id="packets-open">
 <span class="dock-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M8 13h8m-8 4h8"/></svg></span>
 <span>Reports</span>
@@ -117,6 +118,9 @@
 <p class="eyebrow">CHOOSE YOUR WORKSPACE</p>
 <button id="remodel-office">Remodel office & equipment</button>
 <button id="reset-office">Reset camera</button>
+<button id="office-music-open">Sound bar & music tablet</button>
+<button id="partner-access-open">Partner accounts & meetings</button>
+<button id="video-studio-open">Create a real marketing video</button>
 <button id="view-3d">3D office</button>
 <button id="view-2d">Clerical view</button>
 <button id="view-terminal">Terminal view</button>
@@ -153,6 +157,9 @@
 </details>
 </section>
 </div>
+<dialog id="meeting-dialog" aria-label="First-person company meeting room"></dialog>
+<dialog id="music-dialog" aria-labelledby="music-title"><header class="media-titlebar"><h2 id="music-title">Office sound bar</h2><button id="music-close" aria-label="Close music tablet">×</button></header><div class="music-tablet"><p>Choose your music. The player contacts YouTube only after you agree and load a link.</p><form id="music-form"><label>YouTube video link<input name="url" type="url" placeholder="https://www.youtube.com/watch?v=…" required maxlength="2048"></label><label class="media-consent"><input type="checkbox" name="consent" required>I agree to load the selected YouTube player.</label><button>Load music</button></form><div id="office-music-player"></div><p id="music-feedback" role="status"></p><p class="fine-print">Close this tablet to return to work. Use Stop and unload to end playback.</p></div></dialog>
+<dialog id="studio-dialog" aria-labelledby="studio-title"><header class="media-titlebar"><h2 id="studio-title">Marketing video studio</h2><button id="studio-close" aria-label="Close video studio">×</button></header><div id="marketing-video-container"></div></dialog>
 <dialog id="owner-dialog" aria-labelledby="computer-title">
 <div class="computer-titlebar">
 <div class="window-brand">
@@ -331,7 +338,7 @@
 </label>
 <button>Queue assignment</button>
 </form>
-</section><details id="capability-profile-details"><summary>Business profile & marketing documents</summary><p>Save verified company facts once. Your advisor can use them to prepare a consistent capability statement, introduction and weekly marketing plan.</p><form id="business-profile-form"><label>Services you can deliver<textarea name="services" maxlength="3000" required></textarea></label><div class="grid"><label>Actual service coverage<textarea name="coverage" maxlength="2000"></textarea></label><label>Ideal customers<textarea name="idealCustomers" maxlength="2000"></textarea></label></div><label>What makes your business useful?<textarea name="strengths" maxlength="2000"></textarea></label><label>Verified experience, references or proof<textarea name="proof" maxlength="3000" placeholder="Use only facts you can support. Do not imply certifications or past projects you do not have."></textarea></label><details><summary>Public business contact details</summary><div class="grid"><label>Contact name<input name="contactName" maxlength="120"></label><label>Business email<input name="email" type="email" maxlength="254"></label><label>Business phone<input name="phone" maxlength="60"></label><label>Business website<input name="website" type="url" maxlength="1000" placeholder="https://"></label></div></details><button>Save business profile</button></form><p id="business-profile-source" class="fine-print"></p><p><a href="/api/business/profile/print" target="_blank" rel="noopener">Open printable capability statement</a></p><div id="business-profile-documents"></div></details>
+</section><details id="capability-profile-details"><summary>Business profile & marketing documents</summary><p>Save verified company facts once. Your advisor can use them to prepare a consistent capability statement, introduction and weekly marketing plan.</p><div class="profile-assist-entry"><button type="button" id="profile-assist-open">Help fill this in with AI</button><button type="button" id="profile-video-open" class="secondary-button">Create a downloadable video</button><p>Tell your assistant what your business does. Review its suggestions before they change your profile.</p></div><form id="business-profile-form"><label>Services you can deliver<textarea name="services" maxlength="3000" required></textarea></label><div class="grid"><label>Actual service coverage<textarea name="coverage" maxlength="2000"></textarea></label><label>Ideal customers<textarea name="idealCustomers" maxlength="2000"></textarea></label></div><label>What makes your business useful?<textarea name="strengths" maxlength="2000"></textarea></label><label>Verified experience, references or proof<textarea name="proof" maxlength="3000" placeholder="Use only facts you can support. Do not imply certifications or past projects you do not have."></textarea></label><details><summary>Public business contact details</summary><div class="grid"><label>Contact name<input name="contactName" maxlength="120"></label><label>Business email<input name="email" type="email" maxlength="254"></label><label>Business phone<input name="phone" maxlength="60"></label><label>Business website<input name="website" type="url" maxlength="1000" placeholder="https://"></label></div></details><button>Save business profile</button></form><p id="business-profile-source" class="fine-print"></p><p><a href="/api/business/profile/print" target="_blank" rel="noopener">Open printable capability statement</a></p><div id="business-profile-documents"></div></details>
 </div>
 <section data-file-folder="employees" hidden>
 <h2>Your employees</h2>

@@ -14,6 +14,7 @@ import {syncDealCandidates} from './deals.ts';
 import {runWebResearch,webResearchState} from './web-research.ts';
 import {checkConnectivityWhenDue} from './connectivity.ts';
 import {resumeAgentConversations} from './conversations.ts';
+import {resumeMeetingResponses} from './meetings.ts';
 // Clock state persists across tab closure and process restarts. Explicit clock-out wins.
 let busy=false;
 export function requestManagerResearch(now=Date.now()){
@@ -36,6 +37,7 @@ export async function pulse(fetcher:typeof fetch=fetch){
  }
  planWork();
  resumeAgentConversations();
+ resumeMeetingResponses();
  void runPlannedContactResearch().catch(()=>console.error('Lead contact research needs attention; inspect its saved status'));
  // Inference has its own serialized queue and must not hold up source collection.
  const notices=solicitationState();if(!notices.checkedAt||Date.now()-notices.checkedAt>=21600000||(notices.keyConfigured&&['Setup required','Ready'].includes(notices.status)))void searchSolicitations(setting('standing_goal')).catch(()=>console.error('Current-notice search needs attention; inspect source status'));

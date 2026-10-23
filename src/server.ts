@@ -25,7 +25,7 @@ import {db,directory,setup,login,authenticated,enqueue,snapshot,audit,clock,sett
 import {solicitationState,searchSolicitations} from './solicitations.ts';
 import {contactState,researchContacts} from './contacts.ts';
 import {draftState,prepareContactDraft,prepareNoticeDraft,reviewDraft,composerLink} from './drafts.ts';
-import {OLLAMA,aiStatus,configureModel,queueAgent,processAgent,retryAgent,agentRuns,installRecommendedModel} from './ai.ts';
+import {OLLAMA,aiStatus,configureModel,queueAgent,processAgent,retryAgent,agentRuns,agentWorkArtifact,installRecommendedModel} from './ai.ts';
 import {awardAdvice} from './advice.ts';
 import {managerState} from './manager.ts';
 import {ROLE_CHARTERS} from './roles.ts';
@@ -35,6 +35,9 @@ import {connectivityState,checkConnectivity} from './connectivity.ts';
 import {webResearchState,runWebResearch} from './web-research.ts';
 import {conversationState,sendAgentMessage,retryAgentMessage} from './conversations.ts';
 import {knowledgeState,exportKnowledge,configureKnowledgeGitHub,disconnectKnowledgeGitHub,syncKnowledge} from './knowledge.ts';
+import {meetingState,meetingDetail,createMeeting,callMeeting,startMeeting,endMeeting,addMeetingAgenda,addMeetingMessage,queueMeetingResponses,addMeetingHumans,partnerMeetingState,joinPartnerMeeting,heartbeatPartnerMeeting,leavePartnerMeeting,messagePartnerMeeting} from './meetings.ts';
+import {profileAssistState,startProfileAssist,retryProfileAssist,applyProfileAssist} from './profile-assist.ts';
+import {createPartnerInvite,acceptPartnerInvite,partnerLogin,partnerSession,partnerLogout,partnerOwnerActor,partnerOwnerState,partnerOfficeState,revokePartner,requestPartnerMeeting,joinPartnerMedia,leavePartnerMedia,partnerMediaState,sendPartnerSignal} from './partners.ts';
 const port=Number(process.env.PORT||4310);
 const host=process.env.HOST || (process.env.RENDER==='true'?'0.0.0.0':'127.0.0.1');
 const publicBinding=!['127.0.0.1','localhost','::1'].includes(host);
@@ -57,11 +60,11 @@ function managedAISetupState(){
  try{const value=JSON.parse(setting('managed_ai_setup')||'null');if(!value||!['Preparing','Needs-attention','Paused','Completed'].includes(value.status))return null;return {status:value.status,checkedAt:Number(value.checkedAt)||null,inferenceVerified:value.status==='Completed'&&value.inferenceVerified===true};}catch{return null;}
 }
 const server=createServer(async(req,res)=>{
- res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; frame-ancestors 'none'");res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Cache-Control','no-store');
+ res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; frame-src https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self' blob:; frame-ancestors 'none'");res.setHeader('Permissions-Policy','camera=(self), microphone=(self)');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Cache-Control','no-store');
  const send=(status:number,data:any)=>{res.writeHead(status,{'Content-Type':'application/json'});res.end(JSON.stringify(data));};
  try{
  const url=new URL(req.url||'/',`http://127.0.0.1:${port}`);
- if(['GET','HEAD'].includes(req.method||'') && ['/', '/download','/download.css','/download.js','/app.js','/speech.js','/office.js','/office3d.js','/style.css','/report.css','/report.js'].includes(url.pathname)){const file=url.pathname==='/'?'index.html':url.pathname==='/download'?'download.html':url.pathname.slice(1);res.setHeader('Content-Type',file.endsWith('html')?'text/html':file.endsWith('js')?'text/javascript':'text/css');res.end(req.method==='HEAD'?undefined:readFileSync(new URL('../public/'+file,import.meta.url)));return;}
+ if(['GET','HEAD'].includes(req.method||'') && ['/', '/download','/partners','/partner.js','/partner.css','/download.css','/download.js','/app.js','/speech.js','/office.js','/office3d.js','/meeting3d.js','/meetings.js','/office-extensions.js','/voice-input.js','/office-music.js','/marketing-video.js','/style.css','/report.css','/report.js'].includes(url.pathname)){const file=url.pathname==='/'?'index.html':url.pathname==='/download'?'download.html':url.pathname==='/partners'?'partner.html':url.pathname.slice(1);res.setHeader('Content-Type',file.endsWith('html')?'text/html':file.endsWith('js')?'text/javascript':'text/css');res.end(req.method==='HEAD'?undefined:readFileSync(new URL('../public/'+file,import.meta.url)));return;}
  if(req.method==='GET'&&['/vendor/three.module.js','/vendor/three.core.js'].includes(url.pathname)){res.setHeader('Content-Type','text/javascript');res.setHeader('Cache-Control','public, max-age=86400');res.end(vendorFile(url.pathname.split('/').pop()!,'build/'+url.pathname.split('/').pop()));return;}
  if(req.method==='GET'&&['/vendor/FontLoader.js','/vendor/TextGeometry.js','/vendor/office-font.json'].includes(url.pathname)){const paths:Record<string,string>={'/vendor/FontLoader.js':'loaders/FontLoader.js','/vendor/TextGeometry.js':'geometries/TextGeometry.js','/vendor/office-font.json':'../fonts/helvetiker_regular.typeface.json'};const raw=vendorFile(url.pathname.split('/').pop()!,'examples/jsm/'+paths[url.pathname]).toString('utf8');res.setHeader('Content-Type',url.pathname.endsWith('json')?'application/json':'text/javascript');res.end(raw.replace(/from 'three'/g,"from '/vendor/three.module.js'"));return;}
  if(['GET','HEAD'].includes(req.method||'')&&['/download/windows','/download/windows.sha256'].includes(url.pathname)){serveWindowsDownload(req,res,process.env.HQ_INSTALLER_PATH||new URL('../downloads/AI-Headquarters-Setup.exe',import.meta.url),url.pathname.endsWith('.sha256'));return;}
@@ -69,14 +72,52 @@ const server=createServer(async(req,res)=>{
  const localPort=(server.address() as any)?.port||port;
  const allowedOrigins=publicBinding?[publicOrigin]:[`http://127.0.0.1:${localPort}`,`http://localhost:${localPort}`,...(publicOrigin?[publicOrigin]:[])];
  if(req.method==='POST' && !allowedOrigins.includes(req.headers.origin))return send(403,{error:'Invalid origin'});
- let body:any={};if(req.method==='POST'){let raw='';for await(const part of req){raw+=part;if(raw.length>(url.pathname==='/api/business/profile'?32768:16384))return send(413,{error:'Request too large'});}body=JSON.parse(raw||'{}');}
+ let body:any={};if(req.method==='POST'){let raw='';for await(const part of req){raw+=part;if(raw.length>(['/api/business/profile','/api/partners/media/signal'].includes(url.pathname)?32768:16384))return send(413,{error:'Request too large'});}body=JSON.parse(raw||'{}');}
+ if(req.method==='POST'&&['/api/partners/login','/api/partners/accept'].includes(url.pathname)){
+  const key='partner:'+(req.socket.remoteAddress||'local'),old=attempts.get(key);if(old&&Date.now()-old.time<60000&&old.count>=10)return send(429,{error:'Try again in one minute'});attempts.set(key,{count:old&&Date.now()-old.time<60000?old.count+1:1,time:old&&Date.now()-old.time<60000?old.time:Date.now()});
+  const result=url.pathname.endsWith('/accept')?acceptPartnerInvite(body):partnerLogin(body);if(!result)return send(401,{error:'Invalid credentials'});
+  res.setHeader('Set-Cookie',`hq_partner_session=${result.token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800${publicOrigin?'; Secure':''}`);return send(200,{member:result.member});
+ }
  if(['/api/setup','/api/login'].includes(url.pathname)&&req.method==='POST'){
  const key=req.socket.remoteAddress||'local';const a=attempts.get(key);if(a && Date.now()-a.time<60000 && a.count>=10)return send(429,{error:'Try again in one minute'});attempts.set(key,{count:a&&Date.now()-a.time<60000?a.count+1:1,time:a?.time&&Date.now()-a.time<60000?a.time:Date.now()});
  if(typeof body.password!=='string' || body.password.length>1024)return send(400,{error:'Invalid password'});
  if(url.pathname==='/api/setup'){if(body.code!==bootstrap)return send(403,{error:'Invalid setup code'});setup(body.password);}
  const token=login(body.password);if(!token)return send(401,{error:'Invalid credentials'});res.setHeader('Set-Cookie',`hq_session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800${publicOrigin?'; Secure':''}`);return send(200,{ok:true});}
  const token=(req.headers.cookie||'').split('; ').find(v=>v.startsWith('hq_session='))?.slice(11)||'';
+ const memberToken=(req.headers.cookie||'').split('; ').find(v=>v.startsWith('hq_partner_session='))?.slice('hq_partner_session='.length)||'';
+ const partnerRoute=url.pathname.slice('/api/partners/'.length).replace(/^meetings\//,'meeting/');
+ if(url.pathname.startsWith('/api/partners/')&&['me','meetings','logout','meeting-request','meeting/join','meeting/heartbeat','meeting/leave','meeting/message','media','media/join','media/leave','media/signal'].includes(partnerRoute)){
+  const actor=authenticated(token)?partnerOwnerActor():partnerSession(memberToken);if(!actor)return send(401,{error:'Sign in required'});
+  const path=partnerRoute;
+  if(req.method==='GET'&&path==='me')return send(200,{...partnerOfficeState(actor),meetings:partnerMeetingState(actor)});
+  if(req.method==='GET'&&path==='meetings')return send(200,partnerMeetingState(actor));
+  if(req.method==='POST'&&path==='logout'){partnerLogout(memberToken);res.setHeader('Set-Cookie',`hq_partner_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0${publicOrigin?'; Secure':''}`);return send(200,{ok:true});}
+  if(req.method==='POST'&&path==='meeting-request')return send(201,requestPartnerMeeting(actor,body));
+  if(req.method==='POST'&&path==='meeting/join')return send(200,joinPartnerMeeting(actor,body));
+  if(req.method==='POST'&&path==='meeting/heartbeat')return send(200,heartbeatPartnerMeeting(actor,body));
+  if(req.method==='POST'&&path==='meeting/leave')return send(200,leavePartnerMeeting(actor,body));
+  if(req.method==='POST'&&path==='meeting/message')return send(201,messagePartnerMeeting(actor,body));
+  if(req.method==='GET'&&path==='media')return send(200,partnerMediaState(actor,{id:url.searchParams.get('id')||'',since:Number(url.searchParams.get('since')||0)}));
+  if(req.method==='POST'&&path==='media/join')return send(200,joinPartnerMedia(actor,body));
+  if(req.method==='POST'&&path==='media/leave')return send(200,leavePartnerMedia(actor,body));
+  if(req.method==='POST'&&path==='media/signal')return send(201,sendPartnerSignal(actor,body));
+  return send(405,{error:'Method not available'});
+ }
  if(!authenticated(token))return send(401,{error:'Sign in required'});
+ if(req.method==='GET'&&url.pathname==='/api/partners/state')return send(200,partnerOwnerState());
+ if(req.method==='POST'&&url.pathname==='/api/partners/invite')return send(201,createPartnerInvite(body));
+ if(req.method==='POST'&&url.pathname==='/api/partners/revoke')return send(200,revokePartner(body));
+ if(req.method==='POST'&&url.pathname==='/api/partners/meeting-share')return send(200,addMeetingHumans(body));
+ if(req.method==='GET'&&url.pathname==='/api/meetings/state')return send(200,meetingState());
+ if(req.method==='GET'&&url.pathname.startsWith('/api/meetings/'))return send(200,meetingDetail(decodeURIComponent(url.pathname.slice('/api/meetings/'.length))));
+ if(req.method==='POST'&&url.pathname.startsWith('/api/meetings/')){
+  const operations:Record<string,(value:any)=>any>={create:createMeeting,call:callMeeting,start:startMeeting,end:endMeeting,agenda:addMeetingAgenda,message:addMeetingMessage,responses:queueMeetingResponses};const operation=operations[url.pathname.slice('/api/meetings/'.length)];if(!operation)return send(404,{error:'Unknown meeting action'});const result=operation(body);if(setting('clock')==='in')void processAgent().catch(()=>console.error('Meeting response needs attention; inspect saved meeting'));return send(200,result);
+ }
+ if(req.method==='GET'&&url.pathname==='/api/profile-assist/state')return send(200,profileAssistState(url.searchParams.get('id')||undefined));
+ if(req.method==='POST'&&url.pathname==='/api/profile-assist/start'){const result=await startProfileAssist(body);if(setting('clock')==='in')void processAgent().catch(()=>console.error('Profile draft needs attention; inspect saved request'));return send(202,result);}
+ if(req.method==='POST'&&url.pathname==='/api/profile-assist/retry'){const result=retryProfileAssist(body.id);if(setting('clock')==='in')void processAgent().catch(()=>console.error('Profile draft needs attention; inspect saved request'));return send(202,result);}
+ if(req.method==='POST'&&url.pathname==='/api/profile-assist/apply')return send(200,applyProfileAssist(body));
+ if(req.method==='GET'&&url.pathname.startsWith('/api/ai/work/')){const id=decodeURIComponent(url.pathname.slice('/api/ai/work/'.length)),run=db.prepare('SELECT * FROM ai_runs WHERE id=?').get(id);if(!run)return send(404,{error:'Saved AI work not found'});return send(200,{...(run as any),workArtifact:agentWorkArtifact(id)});}
  if(req.method==='GET'&&url.pathname.startsWith('/api/reports/')){const html=assignmentReport(decodeURIComponent(url.pathname.slice('/api/reports/'.length)),url.searchParams.get('download')==='1');res.setHeader('Content-Type','text/html; charset=utf-8');if(url.searchParams.get('download')==='1')res.setHeader('Content-Disposition','attachment; filename="Assignment-packet.html"');res.end(html);return;}
  if(req.method==='GET'&&url.pathname==='/api/download/windows'){res.setHeader('Content-Type','application/vnd.microsoft.portable-executable');res.setHeader('Content-Disposition','attachment; filename="AI-Headquarters-Setup.exe"');res.end(readFileSync(process.env.HQ_INSTALLER_PATH||new URL('../downloads/AI-Headquarters-Setup.exe',import.meta.url)));return;}
  if(req.method==='GET'&&url.pathname==='/api/state'){
