@@ -55,6 +55,24 @@ function sourceBackoff(now:number){
  }
  return failures?{until:lastAt+Math.min(WORK_POLICY.maxSourceBackoffMs,WORK_POLICY.sourceFailureBackoffMs*2**Math.min(failures-1,3)),failures}:null;
 }
+function researchWindow(now:number,goal:string){
+ const tasks=db.prepare("SELECT id,goal,created FROM tasks WHERE agent IN ('Alpha','Bravo') ORDER BY created DESC,rowid DESC LIMIT 300").all() as any[];
+ const configuredLast=Number(setting('last_research')||0),lastCreated=Number(tasks[0]?.created||0),last=Math.max(Number.isFinite(configuredLast)?configuredLast:0,lastCreated);
+ const spacing=last+WORK_POLICY.researchSpacingMs;
+ const lanes=allTermsFor(goal).map((lane,index)=>{const prior=tasks.find(task=>termsFor(task.goal).includes(lane));return {id:lane,recipe:'award:'+lane,agent:'Alpha',index,lastAt:Number(prior?.created||0),due:Number(prior?.created||0)+WORK_POLICY.laneRefreshMs};});
+ const used=budgets(now).research.used;
+ // If imported or owner-created jobs put usage above the cap, enough old jobs
+ // must leave the rolling window before another automatic read is permitted.
+ const budgetDue=used>=WORK_POLICY.researchCyclesPerDay?Number((db.prepare("SELECT created FROM tasks WHERE agent IN ('Alpha','Bravo') AND created>? ORDER BY created LIMIT 1 OFFSET ?").get(now-DAY,used-WORK_POLICY.researchCyclesPerDay) as any).created)+DAY:now;
+ const backoff=sourceBackoff(now);
+ return {spacing,lanes,eligible:lanes.filter(lane=>lane.due<=now),nextAt:Math.max(now,spacing,Math.min(...lanes.map(lane=>lane.due)),budgetDue,backoff?.until||0)};
+}
+// Earliest permitted source window, rather than a promise that saved handoffs
+// will have finished by that time. Reading this never starts or changes work.
+export function nextResearchAt(now=Date.now()):number|null{
+ const goal=setting('standing_goal');if(setting('clock')!=='in'||!goal?.trim())return null;
+ return researchWindow(now,goal).nextAt;
+}
 function discoveryBackoff(jobs:LeadResearch[]){
  const blocked=jobs.filter(job=>!job.identityConfirmed&&job.status==='Blocked'&&job.pages.some(page=>page.kind==='search'&&page.status==='Blocked'));
  return blocked.length?Math.max(...blocked.map(job=>job.checkedAt||0))+WORK_POLICY.discoveryFailureBackoffMs:0;
@@ -157,12 +175,10 @@ export function planWork(now=Date.now()):PlannerState{
  const usage=budgets(now),pendingContacts=jobs.filter(job=>job.status==='Queued').length;
  if(pendingContacts>=WORK_POLICY.maxContactBacklog)return save('Following through','The manager is prioritizing '+pendingContacts+' saved contact lookups before collecting more award records.','Finish eligible contact checks; unavailable discovery waits for its source, while a confirmed company site can proceed.',contact.nextActionAt,contact.reasons.length?contact.reasons:['Contact research is bounded to avoid an unmanageable backlog.'],now);
  const backoff=sourceBackoff(now);if(backoff&&backoff.until>now)return save('Source cooldown','The award source is unavailable; the manager retained saved work and scheduled a bounded retry.','Retry the award source after backoff; contact results, drafts and existing handoffs can still progress.',backoff.until,[...contact.reasons,'Repeated source failures are not employee slacking.'],now);
- const tasks=db.prepare("SELECT id,goal,created FROM tasks WHERE agent IN ('Alpha','Bravo') ORDER BY created DESC,rowid DESC LIMIT 300").all() as any[];
- if(usage.research.used>=WORK_POLICY.researchCyclesPerDay){const first=db.prepare("SELECT min(created) AS stamp FROM tasks WHERE agent IN ('Alpha','Bravo') AND created>?").get(now-DAY) as any;return save('Daily source limit','The manager completed the automatic research allowance for this rolling day.','Continue saved contact and owner-review work; restart source cycles as the allowance becomes available.',Number(first.stamp)+DAY,contact.reasons,now);}
- const lastCreated=tasks[0]?.created||0,last=Math.max(Number(setting('last_research')||0),lastCreated),spacing=last+WORK_POLICY.researchSpacingMs;
- const lanes=allTermsFor(goal).map((lane,index)=>{const lastTask=tasks.find(task=>termsFor(task.goal).includes(lane));return {id:lane,recipe:'award:'+lane,agent:'Alpha',index,lastAt:Number(lastTask?.created||0),due:Number(lastTask?.created||0)+WORK_POLICY.laneRefreshMs};});
- const eligible=lanes.filter(lane=>lane.due<=now);
- if(spacing>now||!eligible.length){const laneDue=Math.min(...lanes.map(lane=>lane.due)),next=Math.max(spacing,laneDue);return save('Monitoring','The manager has finished the currently eligible source checks and is monitoring the next research window.','Automatically assign the next eligible service lane; no CEO reminder is required.',next,[...contact.reasons,'Provider pacing prevents repeated requests for the same records.'],now);}
+ const window=researchWindow(now,goal);
+ if(usage.research.used>=WORK_POLICY.researchCyclesPerDay)return save('Daily source limit','The manager completed the automatic research allowance for this rolling day.','Continue saved contact and owner-review work; restart source cycles as the allowance becomes available.',window.nextAt,contact.reasons,now);
+ const {spacing,eligible}=window;
+ if(spacing>now||!eligible.length)return save('Monitoring','The manager has finished the currently eligible source checks and is monitoring the next research window.','Automatically assign the next eligible service lane; no CEO reminder is required.',window.nextAt,[...contact.reasons,'Provider pacing prevents repeated requests for the same records.'],now);
  const choice=rankWorkOptions(eligible.sort((a,b)=>a.lastAt-b.lastAt))[0];
  const task=enqueue(nextResearchGoal(goal,choice.index));setSetting('last_research',String(now));setSetting('research_lane',String(choice.index+1));
  // Keep the task timestamp aligned with the explicit planner clock for durable

@@ -36,7 +36,9 @@ test('HTTP auth, origin protection, retry, saved account across restart, and log
  assert.equal((await call('setup',{code:server.code,password:'test founder passphrase'},'https://evil.test')).status,403);
  assert.equal((await call('briefings/anything')).status,401);assert.equal((await call('briefings/anything/print')).status,401);assert.equal((await call('leads/research',{recordId:'anything'})).status,401);
  assert.equal((await call('learning/state')).status,401);assert.equal((await call('learning/feedback',{kind:'note',receiptId:'1',rating:'reward'})).status,401);
+ assert.equal((await call('manager/research',{})).status,401);
  const auth=await call('setup',{code:server.code,password:'test founder passphrase'});assert.equal(auth.status,200);cookie=auth.headers.get('set-cookie')!.split(';')[0];
+ assert.equal((await call('manager/research',{},'https://evil.test')).status,403);assert.equal((await call('manager/research',{})).status,400);
  assert.equal((await call('contacts/research',{url:'https://127.0.0.1/private',company:'Blocked target'})).status,400);assert.equal((await call('ai/run',{agent:'Einstein',prompt:'What next?'})).status,400);assert.equal((await call('ai/install',{confirm:false})).status,400);
  assert.equal((await call('company',{name:'Test Company',legalName:'Test LLC',goal:'Nationwide cabling research'})).status,200);
  assert.equal((await call('office/design',{wall:'navy',layout:'studio',monitors:'dual',coffee:false})).status,200);assert.equal((await call('office/design',{wall:'unsupported'})).status,400);

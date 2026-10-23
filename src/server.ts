@@ -27,7 +27,7 @@ import {awardAdvice} from './advice.ts';
 import {managerState} from './manager.ts';
 import {ROLE_CHARTERS} from './roles.ts';
 import {teamState} from './team.ts';
-import {startOffice} from './office.ts';
+import {startOffice,requestManagerResearch} from './office.ts';
 const port=Number(process.env.PORT||4310);
 const host=process.env.HOST || (process.env.RENDER==='true'?'0.0.0.0':'127.0.0.1');
 const publicBinding=!['127.0.0.1','localhost','::1'].includes(host);
@@ -75,6 +75,7 @@ const server=createServer(async(req,res)=>{
  if(req.method==='GET'&&url.pathname==='/api/state'){
  const state=snapshot(),workPlan=workPlannerState(),learning=learningState();return send(200,{...state,workPlan,learning,operations:operationsState({plan:workPlan,learning}),managedAISetup:managedAISetupState(),leadResearch:leadResearchState(),businessGuide:businessGuide(),officeDesign:getOfficeDesign(),businessProfile:profileState(),accountability:accountabilityState(),outcomes:outcomeState(),funding:fundingState(),pricing:pricingState(),opportunities:state.opportunities.map(record=>({...record,advice:awardAdvice(record,state.company.name)})),...teamState(),roleCharters:ROLE_CHARTERS,manager:managerState(),aiRuns:agentRuns(),aiConfigured:!!setting('ollama_model'),contactResearch:contactState(),drafts:draftState(),solicitations:solicitationState()});}
  if(req.method==='GET'&&url.pathname==='/api/learning/state')return send(200,learningState());
+ if(req.method==='POST'&&url.pathname==='/api/manager/research')return send(202,requestManagerResearch());
  if(req.method==='POST'&&url.pathname==='/api/learning/feedback'){
  const result=recordWorkFeedback(body),plan=planWork();return send(200,{...result,plan});}
  if(req.method==='GET'&&url.pathname.startsWith('/api/briefings/')){

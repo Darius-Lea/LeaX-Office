@@ -1,5 +1,5 @@
 import './outcomes.ts';
-import {db,setting,setSetting} from './store.ts';
+import {db,setting,setSetting,audit} from './store.ts';
 import {fundingState,searchFunding} from './funding.ts';
 import {searchSolicitations,solicitationState} from './solicitations.ts';
 import {processAgent,queueAgent} from './ai.ts';
@@ -7,9 +7,20 @@ import {tick} from './worker.ts';
 import {managerPatrol} from './manager.ts';
 import {teamPulse} from './team.ts';
 import {queueTaskLeadResearch} from './lead-research.ts';
-import {planWork,runPlannedContactResearch} from './work-planner.ts';
+import {planWork,runPlannedContactResearch,nextResearchAt} from './work-planner.ts';
+import {allTermsFor,termsFor} from './research.ts';
 // Clock state persists across tab closure and process restarts. Explicit clock-out wins.
 let busy=false;
+export function requestManagerResearch(now=Date.now()){
+ if(setting('clock')!=='in')throw Error('Clock in the office before asking Johnson to check the next research cycle.');
+ if(db.prepare("SELECT id FROM tasks WHERE status IN ('Queued','Running') LIMIT 1").get())throw Error('A research assignment is already queued or running; Johnson will continue it automatically.');
+ const previous=Number((db.prepare('SELECT max(rowid) AS id FROM manager_directives').get() as any)?.id||0);
+ const plan=planWork(now);
+ const assigned=db.prepare("SELECT d.reference,t.goal,t.created FROM manager_directives d JOIN tasks t ON t.id=d.reference WHERE d.rowid>? AND d.kind='award' AND t.agent='Alpha' AND t.status='Queued' ORDER BY d.rowid DESC LIMIT 1").get(previous) as any;
+ if(!assigned)throw Error('No new research cycle was queued. '+plan.summary+' '+plan.nextAction);
+ audit(assigned.reference,'Johnson checked the next saved research lane after an owner request; planner permissions, pacing and source limits were retained');
+ return {task:String(assigned.reference),lane:allTermsFor(setting('standing_goal')).indexOf(termsFor(assigned.goal)[0]),queuedAt:Number(assigned.created),nextResearchAt:nextResearchAt(now),plan};
+}
 export async function pulse(fetcher:typeof fetch=fetch){
  if(setting('clock')!=='in')return false;
  // Continue contact work independently of the award fetch and model queues.

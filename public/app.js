@@ -144,10 +144,37 @@ function operationTone(employee){return employee.tone||(/fault|failure|exception
 function operationsSnapshot(){return window.hqState?.operations||{employees:[],metrics:[],events:[],manager:{},summary:'Waiting for the work-status snapshot.'};}
 function showOperationsLog(){const state=operationsSnapshot();openPopup({title:'Recorded work log',eyebrow:'LIVE OPERATIONS',intro:'Receipts from saved work, newest first.',body:(state.events||[]).slice(0,25).map(event=>[workTime(event.created),event.agent?employeeName(window.hqState,event.agent):null,event.title,event.detail].filter(Boolean).join(' · ')).join('\n\n')||'No saved work receipts yet.'});}
 function showOperationsStatistics(){const state=operationsSnapshot();openPopup({title:'Your business statistics',eyebrow:'SAVED BUSINESS RECORDS',intro:'Counts and amounts come from saved source records and the results you recorded.',steps:(state.metrics||[]).map(item=>({title:item.label+' · '+item.value,body:item.detail||''}))});}
+function showSavedAssignments(){
+ const state=window.hqState||{},tasks=state.tasks||[],byId=new Map(tasks.map(task=>[task.id,task]));
+ const active=status=>['Running','Queued','Blocked','Failed','Needs website','Needs confirmation'].includes(status);
+ const rows=[
+  ...tasks.filter(row=>active(row.status)).map(row=>({agent:row.agent,status:row.status,kind:'Historical award research',detail:row.error||row.goal,receipt:{kind:'task',id:row.id}})),
+  ...(state.teamJobs||[]).filter(row=>active(row.status)).map(row=>({agent:row.agent,status:row.status,kind:'Saved research handoff',detail:row.error||byId.get(row.task)?.goal||'Saved evidence handoff',receipt:{kind:'task',id:row.task}})),
+  ...(state.aiRuns||[]).filter(row=>active(row.status)).map(row=>({agent:row.agent,status:row.status,kind:'Local AI assignment',detail:row.error||row.prompt,ai:true})),
+  ...(state.leadResearch||[]).filter(row=>active(row.status)).map(row=>({agent:'Juliet',status:row.status,kind:'Published contact research',detail:[row.company,row.message].filter(Boolean).join(' · '),receipt:{kind:'lead',id:row.recordId}})),
+ ];
+ const priority={Running:0,Queued:1,Blocked:2,Failed:2,'Needs website':3,'Needs confirmation':3};rows.sort((a,b)=>priority[a.status]-priority[b.status]);
+ const content=document.createElement('div');content.className='saved-assignments';
+ for(const item of rows.slice(0,40)){
+  const card=document.createElement('article');card.dataset.status=item.status;card.append(text('h3',employeeName(state,item.agent)+' · '+item.kind),text('strong',item.status),text('p',item.detail||'No additional saved detail.'));
+  const view=text('button','Inspect assignment');view.className='secondary-button';view.onclick=()=>{closePopup();if(item.ai)focusSection('assistant','ai-activity');else openOperationReceipt(item.receipt);};card.append(view);content.append(card);
+ }
+ if(!rows.length)content.append(text('p',state.clock==='in'?'No active saved assignments. The manager checks eligible work automatically.':'The office is clocked out. Completed work and reports remain saved.'));
+ if(rows.length>40)content.append(text('p','Showing 40 of '+rows.length+' saved assignments. Employee settings and task files contain the full history.'));
+ openPopup({title:'Saved assignments',eyebrow:'ASSIGNMENT TERMINAL',intro:'Actual saved jobs. Queued work has not started; blocked sources and owner checks are dependencies, not employee misconduct.',contentNode:content,readable:false,actions:[{label:'View the manager’s plan',onClick:showOperationsManager}]});
+}
+async function requestManagerCheck(){
+ openPopup({title:'Checking eligible work',eyebrow:'MANAGER REQUEST',intro:'The manager is checking saved work, source timing and remaining allowances.',readable:false});
+ try{
+  const result=await api('manager/research',{});await refresh();
+  openPopup({title:'Manager check completed',eyebrow:'SAVED WORK PLAN',intro:result.message||result.plan?.summary||window.hqState?.workPlan?.summary||'The manager checked the next eligible assignment.',body:'This optional check uses the saved company direction. Source limits, approval requirements and clock-out still apply.',actions:[{label:'View saved assignments',primary:true,onClick:showSavedAssignments},{label:'View the manager’s plan',onClick:showOperationsManager}]});
+ }catch(error){openPopup({title:'Manager’s current plan',eyebrow:'WORK STATUS',intro:error.message||'The manager could not start a new cycle.',actions:[{label:'View the manager’s plan',primary:true,onClick:showOperationsManager},{label:'View saved assignments',onClick:showSavedAssignments}]});}
+}
 function showOperationsManager(){
  const state=operationsSnapshot(),plan=state.manager||{},directives=plan.directives||window.hqState?.workPlan?.directives||[];
+ const patrol=window.hqState?.manager,researchWindow=patrol?.nextResearchAt?new Date(patrol.nextResearchAt).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'Waiting for eligible source conditions';
  const steps=directives.slice(0,5).map(item=>({title:item.title||item.action||item.agent&&employeeName(window.hqState,item.agent)||'Manager instruction',body:item.detail||item.description||item.summary||item.reason||''}));
- openPopup({title:'The manager’s work plan',eyebrow:'LIVE OPERATIONS',intro:plan.summary||state.summary,body:[plan.nextAction,plan.nextActionAt?'Next planning check: '+workTime(plan.nextActionAt):null].filter(Boolean).join('\n'),steps,actions:[{label:'View recorded work',onClick:showOperationsLog},{label:'Adjust company direction',onClick:()=>focusSection('files','company-form')}]});
+ openPopup({title:'The manager’s work plan',eyebrow:'LIVE OPERATIONS',intro:plan.summary||state.summary,body:[plan.nextAction,patrol?.checkedAt?'Last patrol: '+workTime(patrol.checkedAt):null,patrol?.nextCheckAt?'Next patrol: '+workTime(patrol.nextCheckAt):null,'Research window: '+researchWindow+'. Existing jobs and source limits still apply.',plan.nextActionAt?'Next planning check: '+workTime(plan.nextActionAt):null].filter(Boolean).join('\n'),steps,actions:[{label:'View saved assignments',primary:true,onClick:showSavedAssignments},{label:'Ask manager to check now',onClick:requestManagerCheck},{label:'View recorded work',onClick:showOperationsLog},{label:'Adjust company direction',onClick:()=>focusSection('files','company-form')}]});
 }
 function showLearningState(){
  const state=window.hqState?.learning;if(!state){openPopup({title:'Learning is not available yet',intro:'Saved work and feedback will appear here when the office connects.'});return;}
@@ -183,6 +210,9 @@ function showOperationsEmployee(employee){
  openPopup({title:employee.name,eyebrow:employee.role||'TEAM WORK STATUS',intro:employee.status||'Review saved work',body:[employee.currentAction,employee.detail,receipt?'Saved receipt: '+receipt.label+' · '+receipt.status:null,!receipt?.canCorrect?'Normal waiting has no correction penalty.':null].filter(Boolean).join('\n\n'),actions});
 }
 $('#operations-manager').onclick=showOperationsManager;$('#operations-history').onclick=showOperationsLog;$('#operations-learning').onclick=showLearningState;$('#operations-statistics').onclick=showOperationsStatistics;
+$('#operations-assignments').onclick=showSavedAssignments;
+$('#operations-molecule').onclick=()=>{const symbol=$('#operations-molecule');symbol.classList.remove('spinning');void symbol.offsetWidth;symbol.classList.add('spinning');};
+$('#operations-molecule').addEventListener('animationend',()=>$('#operations-molecule').classList.remove('spinning'));
 function renderOperations(s){
  const state=s.operations;if(!state){$('#operations-summary').textContent='Waiting for the manager’s saved work-status snapshot.';return;}
  $('#operations-summary').textContent=state.summary||'Current work is recorded below.';const refreshed=workTime(state.updatedAt);$('#operations-updated').textContent=refreshed?'Updated '+refreshed+' · '+(s.clock==='in'?'Clocked in':'Clocked out'):'';

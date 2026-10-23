@@ -2,12 +2,12 @@ import {createHash} from 'node:crypto';
 import {db,setting,setSetting,audit} from './store.ts';
 import './team.ts';
 import {observeExpiredClaim,observeMissingOutput} from './accountability.ts';
-import {workPlannerState} from './work-planner.ts';
+import {workPlannerState,nextResearchAt as researchEligibilityAt} from './work-planner.ts';
 
 const FOLLOW_UP_ROLES=['Juliet','Hotel','Delta','Einstein'];
 const PATROL_INTERVAL=60000;
 export type ManagerIssue={type:string;task:string;agent:string;message:string};
-export type ManagerStatus={checkedAt:number;visitedAgent:string|null;summary:string;issues:ManagerIssue[];sourceWaits?:ManagerIssue[];nextCheckAt:number;recovered:string[];plan?:{status:string;summary:string;nextAction:string;nextActionAt:number|null;reasons:string[]}};
+export type ManagerStatus={checkedAt:number;visitedAgent:string|null;summary:string;issues:ManagerIssue[];sourceWaits?:ManagerIssue[];nextCheckAt:number;nextResearchAt:number|null;recovered:string[];plan?:{status:string;summary:string;nextAction:string;nextActionAt:number|null;reasons:string[]}};
 
 // The worker preserves both source access failures and invalid source/local data
 // under the same legacy error prefix. Only known transport/access failures are
@@ -17,14 +17,17 @@ function isSourceWait(task:{agent:string;error:string|null}){
  return task.agent==='Alpha'&&error.startsWith('Research unavailable:')&&!/SyntaxError|\bJSON\b|schema|provenance|evidence|checkpoint|exceeds|missing valid|No research tool|SQLite|database/i.test(error)&&/\bHTTP\s*\d{3}\b|fetch failed|\bnetwork\b|\boffline\b|timed?\s*out|timeout|AbortError|\b(?:ECONN\w*|ENOTFOUND|EAI_AGAIN|ETIMEDOUT)\b|socket (?:closed|hang up)/i.test(error);
 }
 
-export function managerState():ManagerStatus|null{
- const saved=setting('manager_status');return saved?JSON.parse(saved):null;
+export function managerState(now=Date.now()):ManagerStatus|null{
+ const saved=setting('manager_status');if(!saved)return null;const status=JSON.parse(saved) as ManagerStatus;
+ // Older saved records and the merged manager console use this field. Compute
+ // it from current gates so a previous six-hour schedule cannot become stale.
+ status.nextResearchAt=researchEligibilityAt(now);return status;
 }
 
 // The office caller authorizes patrols while clocked in. No network requests or
 // consequential actions occur here; only expired local claims and handoffs recover.
 export function managerPatrol(now=Date.now()):ManagerStatus{
- const previous=managerState();
+ const previous=managerState(now);
  if(previous&&now<previous.nextCheckAt)return previous;
  const issues:ManagerIssue[]=[];const sourceWaits:ManagerIssue[]=[];const recovered:string[]=[];
  db.exec('BEGIN IMMEDIATE');
@@ -90,7 +93,7 @@ export function managerPatrol(now=Date.now()):ManagerStatus{
   const summary=(issues.length?`${issues.length} items need attention; ${recovered.length} interrupted claims recovered. ${running} running, ${pending} queued research assignments, ${followups} follow-up stages pending.`:
    running||pending||followups?`No supervision exceptions found. ${running} running, ${pending} queued research assignments, ${followups} follow-up stages pending.`:
    planned.summary)+waitSummary;
-  const status:ManagerStatus={checkedAt:now,visitedAgent,summary,issues,sourceWaits,nextCheckAt:now+PATROL_INTERVAL,recovered,plan};
+  const status:ManagerStatus={checkedAt:now,visitedAgent,summary,issues,sourceWaits,nextCheckAt:now+PATROL_INTERVAL,nextResearchAt:researchEligibilityAt(now),recovered,plan};
   const stableIssues=issues.map(issue=>JSON.stringify(issue)).sort();
   const signature=createHash('sha256').update(JSON.stringify(stableIssues)).digest('hex');
   if(issues.length&&signature!==setting('manager_issue_signature')){
