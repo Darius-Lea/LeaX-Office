@@ -102,3 +102,9 @@ html,body{background:#0b1620}
 #office-section::before{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;backdrop-filter:blur(2.5px);-webkit-backdrop-filter:blur(2.5px);-webkit-mask-image:radial-gradient(ellipse at 50% 48%,transparent 52%,#000 100%);mask-image:radial-gradient(ellipse at 50% 48%,transparent 52%,#000 100%)}
 #office-section .office-webgl{filter:contrast(1.06) saturate(1.05)}
 @media(max-width:700px),(prefers-reduced-transparency:reduce){#office-section::before{display:none}}
+/* Keep the guidance cards from hiding the office: tighter size, and they fade back while the pointer is over the 3D view */
+.office-hud{width:250px;transition:opacity .3s ease}
+.office-brief{padding:13px 14px}
+.office-brief h2{font-size:16px;line-height:1.25}
+.office-brief p{font-size:12px;line-height:1.5}
+@media(hover:hover){#office-section:hover .office-hud:not(:hover):not(:focus-within){opacity:.5}}
