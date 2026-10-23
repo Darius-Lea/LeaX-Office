@@ -98,3 +98,7 @@ html,body{background:#0b1620}
 .office-supervision{background:var(--hq-glass);border:1px solid var(--hq-hair);color:#cfe3de}
 .office-supervision p,.office-supervision summary{color:#a9c4c4}
 #message{min-width:0;transition:opacity .2s}
+/* Lens look (visual only): soft edge defocus and a gentle teal/amber grade over the 3D office. Pointer events pass through. */
+#office-section::before{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;backdrop-filter:blur(2.5px);-webkit-backdrop-filter:blur(2.5px);-webkit-mask-image:radial-gradient(ellipse at 50% 48%,transparent 52%,#000 100%);mask-image:radial-gradient(ellipse at 50% 48%,transparent 52%,#000 100%)}
+#office-section .office-webgl{filter:contrast(1.06) saturate(1.05)}
+@media(max-width:700px),(prefers-reduced-transparency:reduce){#office-section::before{display:none}}
