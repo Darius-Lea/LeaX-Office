@@ -1,6 +1,16 @@
 # Current implementation status — 2026-10-23
 
-## Current milestone — 0.2.0-preview.6
+## Current milestone — 0.2.0-preview.7
+
+Added durable CEO conversations for every saved employee through the genuine local-model queue and existing tool allowlist. Questions persist without a model; clock-out prevents automatic resumption; chat takes priority over automatic advice and retains bounded same-employee context, selected work and active owner feedback. Completed model output supplies the reply; failed or missing inference never supplies a canned answer. Chats avoid duplicate generic briefing notes.
+
+Added actual public-API diagnostics and source schedules, plus no-key GDELT project-news and UK Contracts Finder OCDS adapters. Production server/background entries schedule bounded reads only while clocked in; each provider persists running/completed/blocked receipts, pacing, findings/history and interruption recovery. Alpha's live monitor includes actual source reads. News remains a clue, and procurement requires fresh active-stage/deadline evidence. These connectors do not cover every bid site; paid/login sources are unconnected. Live new-source validation was proxy-blocked; tests use explicit synthetic responses.
+
+Company research can automatically attribute a site only with distinctive legal-name agreement across the actual search title, homepage title and same-origin Organization data. Dated receipts distinguish automated evidence from owner confirmation; refreshed automated evidence is rechecked. Partial/no-contact results stay explicit. Published vendor/procurement link labels retain actual quoted evidence without asserting decision-maker responsibility. Email windows explain the introduction, support copy/default/Gmail/Outlook composers after review, offer a concise authorized-role call script, and require a separate actual-sent report for follow-up.
+
+Owner feedback exposes real before/after priority parameters. A memory breakdown separates source evidence, work, results, contacts and learned parameters. Optional explicit private-GitHub archiving verifies a private exact repository and encrypts allowlisted generic work preferences/counts using AES-256-GCM and scrypt with an unsaved passphrase. Raw business knowledge and secrets are excluded; credentials live in separate encrypted private files. This is not full-memory sync, automatic release training, model-weight fine-tuning or every-second learning. Local memory remains durable across retained-data updates. Newer visual commits from main are preserved. Windows/live-model/source/signing release gates remain.
+
+## Previous milestone — 0.2.0-preview.6
 
 Implemented a source-linked Opportunity workspace joining saved sources, exact-company published contacts, drafts, planning estimates, owner qualification, next actions, due dates and history. Today opens case-specific work and prioritizes due follow-ups and reported customer progress before optional setup. Owner-reported outcome stages and cash share the existing business-results ledger; corrections/voids recompute the case without double-counting receipts. A result corrected to another company no longer contributes to the old case. Original sources and prior case revisions remain intact.
 

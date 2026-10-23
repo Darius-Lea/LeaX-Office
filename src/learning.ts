@@ -115,9 +115,11 @@ export function recordWorkFeedback(input:unknown){
  const reason=String(value.reason||'').trim();if(reason.length>1200||value.rating==='correct'&&reason.length<3)throw Error('Describe the specific output to improve in 3–1200 characters');
  const item=receipt(value.kind,String(value.receiptId),value.agent);
  if(!(value.rating==='reward'?item.canReward:item.canCorrect))throw Error(value.rating==='reward'?'This output has no verified saved execution/source evidence to reward':'Waiting or source setup is not an output failure');
+ const before=score(parameter(item.recipe),Number((db.prepare('SELECT examples FROM learning_model WHERE id=1').get() as any).examples));
  const result=train(item,value.rating,reason||(value.rating==='reward'?'Owner marked this saved work useful':'Owner requested an output correction'),'owner',Date.now());
  const model=db.prepare('SELECT version,examples,updated FROM learning_model WHERE id=1').get() as any;
- return {...result,model:{version:model.version,trainedExamples:model.examples,updatedAt:model.updated}};
+ const after=score(parameter(item.recipe),model.examples);
+ return {...result,model:{version:model.version,trainedExamples:model.examples,updatedAt:model.updated},effect:{recipe:item.recipe,changed:!result.duplicate,ownerWeight:result.duplicate?0:OWNER_WEIGHT,before,after,explanation:result.duplicate?'Already saved: this click did not train again.':value.rating==='reward'?'This saved work received positive evidence. Its recipe gains preference among permitted choices; no permissions or source limits changed.':'This saved work received corrective evidence. Its recipe loses preference and the manager receives your correction. Waiting for a source or approval is not a fault.'}};
 }
 export function collectLearningEvidence(now=Date.now()){
  if(!Number.isFinite(now))throw Error('A valid observation time is required');let added=0,retracted=0;

@@ -4,6 +4,7 @@ import {workPlannerState} from './work-planner.ts';
 import {learningState} from './learning.ts';
 import {outcomeState} from './outcomes.ts';
 import {classifySolicitation} from './solicitations.ts';
+import {webResearchState} from './web-research.ts';
 
 type Receipt={kind:string;id:string;label:string;status:string;canReward:boolean;canCorrect:boolean};
 type EmployeeOperation={id:string;name:string;role:string;status:string;currentAction:string;detail:string;receipt?:Receipt};
@@ -14,13 +15,15 @@ const money=(cents:number|null)=>cents===null?'Not complete':new Intl.NumberForm
 
 // This is a read-only projection of durable receipts. A panel refresh never
 // starts work, invents an activity or treats a legitimate wait as a fault.
-export function operationsState(options:{now?:number;plan?:any;learning?:any}={}){
+export function operationsState(options:{now?:number;plan?:any;learning?:any;webResearch?:ReturnType<typeof webResearchState>}={}){
  const now=options.now??Date.now(),plan=options.plan??workPlannerState(now),learning=options.learning??learningState();
+ const publicSources=options.webResearch??webResearchState(now);
  const clockedIn=setting('clock')==='in',manager=managerState();
  const employees=db.prepare('SELECT * FROM employees ORDER BY rowid').all() as any[];
  const tasks=db.prepare('SELECT id,agent,goal,status,error,created FROM tasks ORDER BY created DESC,id').all() as any[];
  const team=rows('team_jobs','SELECT j.*,t.goal FROM team_jobs j JOIN tasks t ON t.id=j.task');
  const ai=rows('ai_runs','SELECT id,agent,prompt,status,error,created FROM ai_runs ORDER BY created DESC');
+ const web=rows('web_research_runs','SELECT id,provider,status,term,started,finished,found,added,message FROM web_research_runs ORDER BY started DESC,rowid DESC');
  const leads=rows('lead_research','SELECT record_id,company,status,message,website,identity_confirmed,requested_at FROM lead_research ORDER BY requested_at DESC');
  const incidents=rows('accountability_incidents',"SELECT * FROM accountability_incidents WHERE status='Awaiting CEO' ORDER BY created DESC");
  const drafts=rows('outgoing_drafts',"SELECT id,status,created FROM outgoing_drafts WHERE status IN ('Pending approval','Approved for composer')");
@@ -28,29 +31,38 @@ export function operationsState(options:{now?:number;plan?:any;learning?:any}={}
  const staff:EmployeeOperation[]=employees.map(employee=>{
   const ownTasks=tasks.filter(task=>task.agent===employee.id),ownTeam=team.filter(job=>job.agent===employee.id),ownAI=ai.filter(run=>run.agent===employee.id);
   const task=ownTasks.find(row=>row.status==='Running'),stage=ownTeam.find(row=>row.status==='Running'),run=ownAI.find(row=>row.status==='Running'),lead=employee.id==='Juliet'?leads.find(row=>row.status==='Running'):null;
+  const sourceRun=employee.id==='Alpha'?web.find(row=>row.status==='Running'):null,queuedSource=employee.id==='Alpha'?web.find(row=>row.status==='Queued'):null;
+  const latestSource=employee.id==='Alpha'?web[0]:null,source=publicSources.providers.find(row=>row.id===(sourceRun||queuedSource||latestSource)?.provider);
+  const nextSource=employee.id==='Alpha'?[...publicSources.providers].filter(row=>Number.isFinite(row.nextCheckAt)).sort((a,b)=>Number(a.nextCheckAt)-Number(b.nextCheckAt))[0]:null;
+  const sourceSchedule=nextSource?'Next public-source check: '+nextSource.name+' '+(Number(nextSource.nextCheckAt)<=now?'is due now.':'at '+new Date(Number(nextSource.nextCheckAt)).toISOString()+'.'):'';
   const queuedTask=ownTasks.find(row=>row.status==='Queued'),queuedStage=ownTeam.find(row=>row.status==='Queued'),queuedAI=ownAI.find(row=>row.status==='Queued'),queuedLead=employee.id==='Juliet'?leads.find(row=>row.status==='Queued'):null;
   const latestTask=(employee.id==='Alpha'?tasks.filter(row=>['Alpha','Bravo'].includes(row.agent)):ownTasks).find(row=>['Completed','Blocked'].includes(row.status));
   const latestAI=ownAI.find(row=>['Completed','Blocked'].includes(row.status));
   const fault=incidents.find(row=>row.agent===employee.id);
   let status='Waiting',currentAction='Waiting for the next evidence handoff',detail='The manager assigns implemented work when its inputs are ready.';
-  if(task||stage||run||lead){
-   status='Working';currentAction=task?text(task.goal,170):stage?text(stage.goal,170):run?'Local AI analysis: '+text(run.prompt,130):'Contact research: '+text(lead.company,130);
-   detail=task?'Executing a saved source/review assignment.':stage?'Preparing the saved handoff output.':run?'A real local-model request is running.':text(lead.message);
+  if(task||stage||run||lead||sourceRun){
+   status='Working';currentAction=task?text(task.goal,170):stage?text(stage.goal,170):run?'Local AI analysis: '+text(run.prompt,130):lead?'Contact research: '+text(lead.company,130):'Reading '+text(source?.name||sourceRun.provider,130);
+   detail=task?'Executing a saved source/review assignment.':stage?'Preparing the saved handoff output.':run?'A real local-model request is running.':lead?text(lead.message):text('Actual public-source request saved as Running. '+sourceRun.message+' Search: '+sourceRun.term);
   }else if(!clockedIn){status='Off duty';currentAction='Clocked out';detail='Saved work is retained. Automatic new work is paused.';}
   else if(employee.id==='Johnson'){
    status='Monitoring';currentAction=text(plan.summary||manager?.summary||'Checking queues and available work',170);
    detail=manager?'Last recorded patrol '+new Date(manager.checkedAt).toISOString()+'. '+text(plan.nextAction||'Next queue check is scheduled.'):'The first recorded patrol has not run yet.';
   }else if(fault){status='Needs correction';currentAction='Recorded execution fault';detail=text(fault.reason);}
-  else if(queuedTask||queuedStage||queuedAI||queuedLead){
-   status='Queued';currentAction=queuedTask?text(queuedTask.goal,170):queuedStage?'Saved '+text(employee.role,100)+' handoff':queuedAI?'Local AI assignment queued':'Contact research: '+text(queuedLead.company,130);
+  else if(queuedTask||queuedStage||queuedAI||queuedLead||queuedSource){
+   status='Queued';currentAction=queuedTask?text(queuedTask.goal,170):queuedStage?'Saved '+text(employee.role,100)+' handoff':queuedAI?'Local AI assignment queued':queuedLead?'Contact research: '+text(queuedLead.company,130):'Public-source check: '+text(source?.name||queuedSource.provider,130);
    detail=queuedLead?text(plan.nextAction||queuedLead.message):'This assignment is saved; queued work is not yet executing.';
   }else if(employee.capability==='planned'){status='Setup required';currentAction='Execution tools are not connected for this role';detail='A saved role name alone does not provide an execution tool.';}
   else if(employee.id==='Delta'&&drafts.length){status='Awaiting approval';currentAction=drafts.length+' saved introduction'+(drafts.length===1?'':'s')+' awaiting review or final send';detail='Saved drafts need an owner action. Sending remains the owner’s decision.';}
   else if(employee.id==='Juliet'&&leads.some(row=>row.status==='Needs confirmation'||row.status==='Needs website')){
    status='Awaiting confirmation';currentAction='Company website identity needs a check';detail='A candidate or missing company site cannot be treated as a verified vendor contact.';
+  }else if(latestSource?.status==='Blocked'){
+   status='Waiting on a tool';currentAction=text(source?.name||latestSource.provider,130)+' is unavailable';detail=text(sourceSchedule+' '+latestSource.message);
   }else if(latestTask?.status==='Blocked'||latestAI?.status==='Blocked'){
    status='Waiting on a tool';currentAction='A source or model request needs recovery';detail=text((latestTask?.status==='Blocked'?latestTask.error:null)||(latestAI?.status==='Blocked'?latestAI.error:null)||plan.nextAction);
-  }else if(employee.id==='Alpha'){currentAction=text(plan.nextAction||'Waiting for an eligible research lane',170);detail=text(plan.reasons?.[0]||'Source pacing and research budgets protect useful collection.');}
+  }else if(employee.id==='Alpha'){
+   currentAction=text(plan.nextAction||'Waiting for an eligible research lane',170);
+   detail=latestSource?.status==='Completed'?text((source?.name||latestSource.provider)+' completed a real source read with '+Number(latestSource.found||0)+' saved finding'+(Number(latestSource.found||0)===1?'':'s')+'. '+sourceSchedule):text(plan.reasons?.[0]||'Source pacing and research budgets protect useful collection.');
+  }
   const eligible=receipts.filter((receipt:any)=>receipt.agent===employee.id).sort((a:any,b:any)=>(b.createdAt||0)-(a.createdAt||0));
   const chosen=(fault?eligible.find((receipt:any)=>receipt.kind==='incident'&&receipt.id===fault.id):null)||eligible.find((receipt:any)=>receipt.canReward||receipt.canCorrect);
   const receipt:Receipt|undefined=chosen?{kind:chosen.kind,id:chosen.id,label:text(chosen.label,180),status:text(chosen.status,80),canReward:chosen.canReward===true,canCorrect:chosen.canCorrect===true}:undefined;
@@ -61,9 +73,9 @@ export function operationsState(options:{now?:number;plan?:any;learning?:any}={}
  const sourceRecords=Number((db.prepare('SELECT count(*) AS n FROM opportunities').get() as any).n);
  const notices=rows('solicitations','SELECT * FROM solicitations').filter(row=>classifySolicitation(row,now)==='Open for review').length;
  const outcomes=outcomeState(now),working=staff.filter(row=>row.status==='Working').length;
- const queued=tasks.filter(row=>row.status==='Queued').length+team.filter(row=>row.status==='Queued').length+ai.filter(row=>row.status==='Queued').length+leads.filter(row=>row.status==='Queued').length;
+ const queued=tasks.filter(row=>row.status==='Queued').length+team.filter(row=>row.status==='Queued').length+ai.filter(row=>row.status==='Queued').length+leads.filter(row=>row.status==='Queued').length+web.filter(row=>row.status==='Queued').length;
  const metrics=[
-  {label:'Executing now',value:String(working),detail:'Employees with an actual Running task, model request or contact lookup.'},
+  {label:'Executing now',value:String(working),detail:'Employees with an actual Running task, public-source read, model request or contact lookup.'},
   {label:'Queued jobs',value:String(queued),detail:'Saved jobs awaiting their worker, inputs or source pacing.'},
   {label:'Award records',value:String(sourceRecords),detail:'Historical contract evidence, not open jobs or customers.'},
   {label:'Current notices',value:String(notices),detail:'Fresh active future-deadline notices for review; eligibility remains unconfirmed.'},

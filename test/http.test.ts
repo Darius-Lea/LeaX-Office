@@ -37,8 +37,14 @@ test('HTTP auth, origin protection, retry, saved account across restart, and log
  assert.equal((await call('briefings/anything')).status,401);assert.equal((await call('briefings/anything/print')).status,401);assert.equal((await call('leads/research',{recordId:'anything'})).status,401);
  assert.equal((await call('learning/state')).status,401);assert.equal((await call('learning/feedback',{kind:'note',receiptId:'1',rating:'reward'})).status,401);
  assert.equal((await call('manager/research',{})).status,401);
+ for(const path of ['connectivity/status','knowledge/state','conversations/Alpha'])assert.equal((await call(path)).status,401);
+ for(const path of ['connectivity/check','web-research/run','knowledge/export','knowledge/github/configure','knowledge/github/sync','knowledge/github/disconnect','conversations/message','conversations/retry'])assert.equal((await call(path,{})).status,401);
  for(const path of ['deals/create','deals/update','deals/outcome','backups/create'])assert.equal((await call(path,{})).status,401);assert.equal((await call('deals/missing')).status,401);
  const auth=await call('setup',{code:server.code,password:'test founder passphrase'});assert.equal(auth.status,200);cookie=auth.headers.get('set-cookie')!.split(';')[0];
+ for(const path of ['connectivity/check','web-research/run','knowledge/export','knowledge/github/configure','knowledge/github/sync','knowledge/github/disconnect','conversations/message','conversations/retry'])assert.equal((await call(path,{},'https://evil.test')).status,403);
+ assert.equal((await call('connectivity/status')).status,200);assert.equal((await call('knowledge/state')).status,200);assert.equal((await call('conversations/Alpha')).status,200);
+ const sent=await call('conversations/message',{agent:'Alpha',text:'Synthetic CEO message: explain your actual saved work'});assert.equal(sent.status,202);const chat=await sent.json();assert.equal(chat.status,'Setup required');assert.equal(chat.conversation.messages.filter((message:any)=>message.role==='agent')[0].text,'');
+ assert.equal((await call('knowledge/export',{passphrase:'too-short',confirm:true})).status,400);assert.equal((await call('knowledge/github/configure',{repository:'public-fixture',token:'invalid'})).status,400);
  assert.equal((await call('manager/research',{},'https://evil.test')).status,403);assert.equal((await call('manager/research',{})).status,400);
  assert.equal((await call('deals/create',{sourceKind:'manual',company:'Synthetic HTTP customer'},'https://evil.test')).status,403);assert.equal((await call('backups/create',{},'https://evil.test')).status,403);
  const created=await call('deals/create',{sourceKind:'manual',company:'Synthetic HTTP customer',title:'Synthetic HTTP opportunity'});assert.equal(created.status,201);let opportunity=await created.json();

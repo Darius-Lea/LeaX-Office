@@ -9,6 +9,10 @@ node_modules/
 .sam-access.encrypted
 .connection-master.key.*.tmp
 .sam-access.encrypted.*.tmp
+.knowledge-master.key
+.knowledge-access.encrypted
+.knowledge-master.key.*.tmp
+.knowledge-access.encrypted.*.tmp
 server-state.json
 *.sqlite
 *.sqlite-wal

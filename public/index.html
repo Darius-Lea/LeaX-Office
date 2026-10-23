@@ -16,7 +16,7 @@
 <span class="owner-tag">OWNER WORKSPACE</span>
 </div>
 <div class="bar-right">
-<span id="connection-status" class="connection-status">Private workspace</span>
+<button id="connection-status" class="connection-status" type="button" title="Check actual source access and tool status">Internet & tools</button>
 <time id="office-time" aria-label="Current time">
 </time>
 </div>
@@ -238,6 +238,7 @@
 <div data-computer-pane="assistant" hidden>
 <section>
 <h3>Ask your assistant</h3>
+<div class="assistant-conversation-entry"><p>Talk with any employee about saved work. Conversations stay with your office; actual replies require the local AI engine.</p><button id="talk-assistant" type="button">Talk to an employee</button></div>
 <p id="owner-bid-status">
 </p>
 <p>Real model analysis runs on the computer hosting this app, using saved evidence. Generated advice can be wrong; no external actions are executed.</p>
@@ -270,7 +271,7 @@
 <div id="contact-results">
 </div>
 <h3>Owner-reviewed email drafts</h3>
-<p>Opening your mail application does not send a message. You make the final send decision there. Published contacts are not verified recipients or permission to send.</p>
+<p>Your team prepared these introductions so you can ask whether a company needs subcontractors or installation partners. Review a draft, approve its content, then send it from your own email. A draft is not an offered job.</p>
 <div id="email-drafts">
 </div>
 </section>
@@ -354,6 +355,7 @@
 </div>
 </section>
 <section data-file-folder="research" hidden>
+<section class="web-research-section" aria-labelledby="web-research-title"><p class="eyebrow">BEYOND HISTORICAL AWARDS</p><h2 id="web-research-title">Project signals & public notices</h2><p id="web-research-summary">No saved public-source findings yet.</p><button id="web-research-check" class="secondary-button">Check public sources</button><button id="web-research-tools" class="secondary-button">Source access & schedule</button><div id="web-research-records" class="web-research-records"></div></section>
 <h2>Current notices to review for bidding</h2>
 <p>These are separate from historical awards. Active status and a future confirmed deadline only qualify a notice for review—not proof that your company is eligible.</p>
 <p id="solicitation-status">

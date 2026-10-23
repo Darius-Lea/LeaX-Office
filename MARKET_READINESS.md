@@ -1,4 +1,6 @@
-# Release status: 0.2.0-preview.6
+# Release status: 0.2.0-preview.7
+
+Preview.7 preserves the newer office visuals and adds employee conversations, honest source diagnostics, public news/UK notice adapters, source-evidenced website attribution, clearer email/call handoffs and optional private encrypted generic-learning archives. New adapters remain live-unvalidated because the workspace proxy denied access. Chat uses the real optional local-model queue; persisted preferences are online job-selection learning, not model-weight training. Private GitHub archiving requires owner-supplied private access in the app and never uploads raw business records. It is an archive, not an automatic knowledge import into future releases. These changes do not resolve the Windows signing/device and commercial execution gates below.
 
 The current build is a single downloadable Windows x64 setup executable with automatic local AI. It is not yet a validated commercial release.
 

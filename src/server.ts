@@ -31,6 +31,10 @@ import {managerState} from './manager.ts';
 import {ROLE_CHARTERS} from './roles.ts';
 import {teamState} from './team.ts';
 import {startOffice,requestManagerResearch} from './office.ts';
+import {connectivityState,checkConnectivity} from './connectivity.ts';
+import {webResearchState,runWebResearch} from './web-research.ts';
+import {conversationState,sendAgentMessage,retryAgentMessage} from './conversations.ts';
+import {knowledgeState,exportKnowledge,configureKnowledgeGitHub,disconnectKnowledgeGitHub,syncKnowledge} from './knowledge.ts';
 const port=Number(process.env.PORT||4310);
 const host=process.env.HOST || (process.env.RENDER==='true'?'0.0.0.0':'127.0.0.1');
 const publicBinding=!['127.0.0.1','localhost','::1'].includes(host);
@@ -76,7 +80,18 @@ const server=createServer(async(req,res)=>{
  if(req.method==='GET'&&url.pathname.startsWith('/api/reports/')){const html=assignmentReport(decodeURIComponent(url.pathname.slice('/api/reports/'.length)),url.searchParams.get('download')==='1');res.setHeader('Content-Type','text/html; charset=utf-8');if(url.searchParams.get('download')==='1')res.setHeader('Content-Disposition','attachment; filename="Assignment-packet.html"');res.end(html);return;}
  if(req.method==='GET'&&url.pathname==='/api/download/windows'){res.setHeader('Content-Type','application/vnd.microsoft.portable-executable');res.setHeader('Content-Disposition','attachment; filename="AI-Headquarters-Setup.exe"');res.end(readFileSync(process.env.HQ_INSTALLER_PATH||new URL('../downloads/AI-Headquarters-Setup.exe',import.meta.url)));return;}
  if(req.method==='GET'&&url.pathname==='/api/state'){
- const state=snapshot({recordPage:Number(url.searchParams.get('recordPage')||0),taskPage:Number(url.searchParams.get('taskPage')||0),query:url.searchParams.get('historyQuery')||''}),workPlan=workPlannerState(),learning=learningState(),deals=dealState();return send(200,{...state,backups:backupState(),deals,workPlan,learning,operations:operationsState({plan:workPlan,learning}),managedAISetup:managedAISetupState(),leadResearch:leadResearchState(),businessGuide:businessGuide(Date.now(),deals),officeDesign:getOfficeDesign(),businessProfile:profileState(),accountability:accountabilityState(),outcomes:outcomeState(),funding:fundingState(),pricing:pricingState(),opportunities:state.opportunities.map(record=>({...record,advice:awardAdvice(record,state.company.name)})),...teamState(),roleCharters:ROLE_CHARTERS,manager:managerState(),aiRuns:agentRuns(),aiConfigured:!!setting('ollama_model'),contactResearch:contactState(),drafts:draftState(),solicitations:solicitationState()});}
+ const state=snapshot({recordPage:Number(url.searchParams.get('recordPage')||0),taskPage:Number(url.searchParams.get('taskPage')||0),query:url.searchParams.get('historyQuery')||''}),workPlan=workPlannerState(),learning=learningState(),deals=dealState();return send(200,{...state,connectivity:connectivityState(),webResearch:webResearchState(),knowledge:knowledgeState(),backups:backupState(),deals,workPlan,learning,operations:operationsState({plan:workPlan,learning}),managedAISetup:managedAISetupState(),leadResearch:leadResearchState(),businessGuide:businessGuide(Date.now(),deals),officeDesign:getOfficeDesign(),businessProfile:profileState(),accountability:accountabilityState(),outcomes:outcomeState(),funding:fundingState(),pricing:pricingState(),opportunities:state.opportunities.map(record=>({...record,advice:awardAdvice(record,state.company.name)})),...teamState(),roleCharters:ROLE_CHARTERS,manager:managerState(),aiRuns:agentRuns(),aiConfigured:!!setting('ollama_model'),contactResearch:contactState(),drafts:draftState(),solicitations:solicitationState()});}
+ if(req.method==='GET'&&url.pathname==='/api/connectivity/status')return send(200,connectivityState());
+ if(req.method==='POST'&&url.pathname==='/api/connectivity/check')return send(200,await checkConnectivity());
+ if(req.method==='POST'&&url.pathname==='/api/web-research/run')return send(200,await runWebResearch(setting('standing_goal')));
+ if(req.method==='GET'&&url.pathname==='/api/knowledge/state')return send(200,knowledgeState());
+ if(req.method==='POST'&&url.pathname==='/api/knowledge/export'){res.setHeader('Content-Disposition','attachment; filename="AI-Headquarters-private-learning.enc.json"');return send(200,await exportKnowledge(body));}
+ if(req.method==='POST'&&url.pathname==='/api/knowledge/github/configure')return send(200,await configureKnowledgeGitHub(body));
+ if(req.method==='POST'&&url.pathname==='/api/knowledge/github/disconnect')return send(200,disconnectKnowledgeGitHub());
+ if(req.method==='POST'&&url.pathname==='/api/knowledge/github/sync')return send(200,await syncKnowledge(body));
+ if(req.method==='GET'&&url.pathname.startsWith('/api/conversations/'))return send(200,conversationState(decodeURIComponent(url.pathname.slice('/api/conversations/'.length))));
+ if(req.method==='POST'&&url.pathname==='/api/conversations/message'){const result=sendAgentMessage(body);if(setting('clock')==='in'&&result.runId)void processAgent().catch(()=>console.error('Employee reply needs attention; inspect the saved conversation'));return send(202,result);}
+ if(req.method==='POST'&&url.pathname==='/api/conversations/retry')return send(202,retryAgentMessage(body));
  if(req.method==='GET'&&url.pathname==='/api/learning/state')return send(200,learningState());
  if(req.method==='POST'&&url.pathname==='/api/backups/create')return send(201,await createManagedBackup());
  if(req.method==='POST'&&url.pathname==='/api/deals/create')return send(201,createDeal(body));
@@ -114,7 +129,7 @@ const server=createServer(async(req,res)=>{
  if(req.method==='POST'&&url.pathname==='/api/drafts/review'){
  if(typeof body.approve!=='boolean')return send(400,{error:'Choose save or approve'});
  reviewDraft(body.id,body.subject,body.body,body.approve);return send(200,{ok:true});}
- if(req.method==='POST'&&url.pathname==='/api/drafts/composer'){return send(200,{url:composerLink(body.id)});}
+ if(req.method==='POST'&&url.pathname==='/api/drafts/composer'){return send(200,{url:composerLink(body.id,body.provider)});}
  if(req.method==='GET'&&url.pathname==='/api/ai/status')return send(200,{...await aiStatus(),hosted:publicBinding});
  if(req.method==='POST'&&url.pathname==='/api/ai/configure'){return send(200,await configureModel(body.model));}
  if(req.method==='POST'&&url.pathname==='/api/ai/install'){

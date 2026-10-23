@@ -1,5 +1,5 @@
 import {db,clock,setting} from './store.ts';
-import {pulse} from './office.ts';
+import {pulse,runConnectedResearch} from './office.ts';
 import {restoreSavedConnections} from './connections.ts';
 import {maintainBackups} from './backups.ts';
 restoreSavedConnections();
@@ -10,7 +10,7 @@ let stopping=false;
 process.on('SIGTERM',()=>{stopping=true;});
 process.on('SIGINT',()=>{stopping=true;});
 while(!stopping){
- try{await pulse();await maintainBackups();}catch(error){console.error('Background office failure:',String(error));}
+ try{runConnectedResearch();await pulse();await maintainBackups();}catch(error){console.error('Background office failure:',String(error));}
  if(!stopping)await new Promise(resolve=>setTimeout(resolve,1000));
 }
 db.close();

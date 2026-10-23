@@ -9,7 +9,7 @@ export function draftReadiness(body:string){
  return {ready:!unfinished,issues:unfinished?['Replace the unfinished owner details before approving. Add your authorized contact in Business profile, or edit this draft.']:[]};
 }
 function signature(){const profile=profileState().profile;return profile.contactName&&(profile.email||profile.phone)?[profile.contactName,profile.email,profile.phone,profile.website].filter(Boolean).join('\n'):null;}
-export function draftState(){return (db.prepare('SELECT * FROM outgoing_drafts ORDER BY created DESC LIMIT 30').all() as any[]).map(draft=>({...draft,readiness:draftReadiness(draft.body)}));}
+export function draftState(){return (db.prepare('SELECT * FROM outgoing_drafts ORDER BY created DESC LIMIT 30').all() as any[]).map(draft=>({...draft,readiness:draftReadiness(draft.body),guidance:{purpose:draft.subject.startsWith('Clarification request')?'Ask the official notice contact for scope, requirements and submission instructions before deciding whether to bid.':'Introduce your company and ask whether the recipient currently needs subcontractors or can direct you to vendor onboarding.',recipient:draft.recipient,source:draft.source,nextStep:'Check the published recipient and wording, finish your contact details, then approve. Copy the email or open your mail service and send it yourself. Record the real send and follow-up afterward.',delivery:'Prepared only. Opening or copying a draft does not send email or prove that this contact can award work.'}}));}
 export function prepareContactDraft(contactId:string,address:string){
  if(typeof address!=='string'||address.length>254||!/^([^\s<>@]+)@([^\s<>@]+)\.[^\s<>@]+$/.test(address))throw Error('Choose a published email address');
  const source=db.prepare("SELECT * FROM contact_research WHERE id=? AND status='Completed'").get(contactId) as any;
@@ -29,11 +29,14 @@ export function reviewDraft(id:string,subject:string,body:string,approve:boolean
  const change=db.prepare('UPDATE outgoing_drafts SET subject=?,body=?,status=? WHERE id=?').run(subject.trim(),body.trim(),approve?'Approved for composer':'Pending approval',id);
  if(!change.changes)throw Error('Draft not found');audit('draft:'+id,approve?'Owner approved opening the email composer; no email sent':'Owner edited draft; approval reset');
 }
-export function composerLink(id:string){
+export function composerLink(id:string,provider:string='default'){
+ if(!['default','gmail','outlook'].includes(provider))throw Error('Choose your default mail app, Gmail or Outlook');
  const draft=db.prepare("SELECT * FROM outgoing_drafts WHERE id=? AND status='Approved for composer'").get(id) as any;
  if(!draft)throw Error('Review and approve this draft before opening your mail application');
  if(!draftReadiness(draft.body).ready)throw Error('This saved draft still contains unfinished owner details. Edit and approve it before opening your mail application.');
- audit('draft:'+id,'Owner requested local mail composer; final send remains in the mail app');
+ audit('draft:'+id,'Owner requested '+provider+' mail composer; final send remains in the mail service');
+ if(provider==='gmail')return 'https://mail.google.com/mail/?'+new URLSearchParams({view:'cm',fs:'1',to:draft.recipient,su:draft.subject,body:draft.body});
+ if(provider==='outlook')return 'https://outlook.office.com/mail/deeplink/compose?'+new URLSearchParams({to:draft.recipient,subject:draft.subject,body:draft.body});
  return 'mailto:'+encodeURIComponent(draft.recipient)+'?subject='+encodeURIComponent(draft.subject)+'&body='+encodeURIComponent(draft.body);
 }
 

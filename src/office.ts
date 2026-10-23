@@ -11,6 +11,9 @@ import {queueTaskLeadResearch} from './lead-research.ts';
 import {planWork,runPlannedContactResearch,nextResearchAt} from './work-planner.ts';
 import {allTermsFor,termsFor} from './research.ts';
 import {syncDealCandidates} from './deals.ts';
+import {runWebResearch,webResearchState} from './web-research.ts';
+import {checkConnectivityWhenDue} from './connectivity.ts';
+import {resumeAgentConversations} from './conversations.ts';
 // Clock state persists across tab closure and process restarts. Explicit clock-out wins.
 let busy=false;
 export function requestManagerResearch(now=Date.now()){
@@ -32,6 +35,7 @@ export async function pulse(fetcher:typeof fetch=fetch){
  if(recent)queueTaskLeadResearch(recent.task);setSetting('lead_briefing_bootstrap_v1','done');
  }
  planWork();
+ resumeAgentConversations();
  void runPlannedContactResearch().catch(()=>console.error('Lead contact research needs attention; inspect its saved status'));
  // Inference has its own serialized queue and must not hold up source collection.
  const notices=solicitationState();if(!notices.checkedAt||Date.now()-notices.checkedAt>=21600000||(notices.keyConfigured&&['Setup required','Ready'].includes(notices.status)))void searchSolicitations(setting('standing_goal')).catch(()=>console.error('Current-notice search needs attention; inspect source status'));
@@ -55,10 +59,23 @@ export async function pulse(fetcher:typeof fetch=fetch){
  const pending=Number((db.prepare("SELECT count(*) AS n FROM ai_runs WHERE status IN ('Queued','Running')").get() as any).n);
  if(signal&&signal!==setting('ai_business_review')&&pending<4){queueAgent('Einstein','Review the latest owner-reported business results and saved capability profile. Explain what changed and what the CEO should do next to qualify a customer, improve a message, protect margin or collect agreed payments. Create a short practical business workflow using recorded facts. Quotes and job wins are not receipts; recorded cash is not verified profit. Do not invent decision-makers, grants, approval odds, customers or earnings. Identify missing evidence and ask the owner for only the information needed inside the app. No external sending or applications.',undefined);setSetting('ai_business_review',signal);}
 
+ const publicSources=webResearchState(),sourceRevision=publicSources.records.length?String(Math.max(...publicSources.records.map(record=>record.checkedAt))):null;
+ if(sourceRevision&&sourceRevision!==setting('ai_public_source_review')&&Number((db.prepare("SELECT count(*) AS n FROM ai_runs WHERE status IN ('Queued','Running')").get() as any).n)<4){
+  queueAgent('Einstein','Review the saved public-source findings with read_public_sources. Tell the CEO about up to two relevant project clues or fresh procurement notices, why their actual scope might fit our saved services, and the next evidence to establish. Distinguish news from open notices, buyer from contractor, publisher country from project location, and published procurement contacts from subcontracting decision-makers. If no relevant actionable finding exists, say so concisely. Do not invent company names, contact details, current demand, deadlines or income. Use source links. No sending, bidding or account access. Keep it under 180 words.');
+  setSetting('ai_public_source_review',sourceRevision);
+ }
+
  }
  return worked||teamWorked;}finally{busy=false;}
 }
+// Entry points schedule additional internet readers independently of the serial
+// award pipeline. Each reader owns durable pacing and checks clock state.
+export function runConnectedResearch(){
+ if(setting('clock')!=='in')return;
+ void checkConnectivityWhenDue().catch(()=>console.error('Internet check needs attention; inspect Internet & tools'));
+ void runWebResearch(setting('standing_goal')).catch(()=>console.error('Public-source research needs attention; inspect its saved source status'));
+}
 export function startOffice(){
- const timer=setInterval(()=>{void maintainBackups().catch(()=>console.error('Automatic backup needs attention; inspect Data protection in the office.'));pulse().catch(error=>console.error('Office worker failure:',String(error)));},1000);
+ const timer=setInterval(()=>{runConnectedResearch();void maintainBackups().catch(()=>console.error('Automatic backup needs attention; inspect Data protection in the office.'));pulse().catch(error=>console.error('Office worker failure:',String(error)));},1000);
  timer.unref();return timer;
 }
