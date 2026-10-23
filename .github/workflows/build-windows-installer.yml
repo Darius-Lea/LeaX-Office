@@ -1,0 +1,75 @@
+name: Build Windows installer
+
+on:
+  push:
+    branches:
+      - codex/desktop-reliability-and-autonomous-office
+    paths:
+      - '.github/workflows/build-windows-installer.yml'
+      - 'installer/**'
+      - 'scripts/build-native-installer.py'
+      - 'scripts/build-production.mjs'
+      - 'src/**'
+      - 'public/**'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: windows-installer-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Check out release source
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24.19.0'
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: '1.27.3'
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Install JavaScript build dependency
+        run: npm ci --ignore-scripts
+
+      - name: Build Windows x64 installer
+        run: python scripts/build-native-installer.py --go go
+
+      - name: Verify installer checksum
+        shell: pwsh
+        run: |
+          $line = (Get-Content downloads/AI-Headquarters-Setup.exe.sha256 -Raw).Trim()
+          $expected = ($line -split '\s+')[0].ToLowerInvariant()
+          $actual = (Get-FileHash downloads/AI-Headquarters-Setup.exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actual -ne $expected) { throw 'Installer SHA-256 does not match its sidecar.' }
+          Write-Host "Verified SHA-256: $actual"
+
+      - name: Publish installer to release branch
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add downloads/AI-Headquarters-Setup.exe downloads/AI-Headquarters-Setup.exe.sha256
+          git diff --cached --quiet
+          if ($LASTEXITCODE -eq 0) { Write-Host 'Installer is already current.'; exit 0 }
+          git commit -m 'Build Windows installer'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          git push origin "HEAD:$env:GITHUB_REF_NAME"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

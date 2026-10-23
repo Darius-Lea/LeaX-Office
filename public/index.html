@@ -137,9 +137,14 @@
 <div class="floor-label">
 <span>THE OFFICE</span>
 <span id="floor-caption">Drag to look around · Click a desk to inspect</span>
+<button id="meeting-room-enter" class="meeting-room-enter" type="button" title="Enter the first-person meeting room view">Meeting room <span aria-hidden="true">↗</span></button>
 </div>
 <div id="office-viewport">
 <div id="office-room" class="office-room">
+</div>
+<div id="meeting-view-controls" class="meeting-view-controls" hidden>
+<div><span class="meeting-view-kicker">AI HEADQUARTERS · CONFERENCE SUITE</span><strong>First-person view</strong><small>Drag to look around · Press Esc to return</small></div>
+<button id="meeting-room-exit" type="button">Return to office</button>
 </div>
 </div>
 <label id="angle-label" hidden>Rotate office<input id="office-angle" type="range" min="-40" max="40" value="-18">
