@@ -1,4 +1,5 @@
 import {profileState} from './business-profile.ts';
+import {dealState} from './deals.ts';
 import {fundingState} from './funding.ts';
 import {outcomeState} from './outcomes.ts';
 import {randomUUID} from 'node:crypto';
@@ -110,9 +111,11 @@ function grounding(agent:string,contextTask:string|null){
  const profile=profileState();const ownerProvidedBusinessProfile={sourceLabel:profile.sourceLabel,company:profile.company,profile:Object.fromEntries(Object.entries(profile.profile).map(([key,value])=>[key,String(value).slice(0,['email','website'].includes(key)?300:500)]))};
  const brief=contextTask?taskBriefing(contextTask):null;
  const leadBrief=brief?{company:brief.company,nextStep:brief.nextStep,instruction:brief.instruction,location:brief.location,signal:brief.signal,contact:brief.contact,intel:brief.intel,missing:brief.missing,source:brief.source,research:{status:brief.research.status,message:brief.research.message}}:null;
- const context:any={company,standingGoal:String(goal||'').slice(0,1500),ownerProvidedBusinessProfile,ownerReportedResults,fundingResearch,contextTask,leadBrief,evidenceScope:contextTask?'Only records linked to this selected research task; at most 10 records, not all task evidence':'Latest saved evidence across research tasks; at most 10 records',currentNotices,publishedContacts,evidence,tasks,previousAdvisory:prior};
+ const evidenceUrls=new Set(evidence.map(row=>row.url));
+ const trackedOpportunities=dealState().cases.filter(row=>row.stage!=='Closed'&&(!contextTask||evidenceUrls.has(row.source.url))).slice(0,3).map(row=>({id:row.id,company:row.company,stage:row.stage,source:row.source,scope:row.scope.slice(0,500),location:row.location.slice(0,180),currentNeed:row.currentNeed.slice(0,500),qualification:row.qualification,qualificationSource:'Owner attestations, not independently verified',nextAction:row.nextAction.slice(0,300),dueAt:row.dueAt,recommendation:{title:row.recommendation.title,why:row.recommendation.why,instruction:row.recommendation.instruction.slice(0,400)}}));
+ const context:any={company,standingGoal:String(goal||'').slice(0,1500),ownerProvidedBusinessProfile,ownerReportedResults,trackedOpportunities,fundingResearch,contextTask,leadBrief,evidenceScope:contextTask?'Only records linked to this selected research task; at most 10 records, not all task evidence':'Latest saved evidence across research tasks; at most 10 records',currentNotices,publishedContacts,evidence,tasks,previousAdvisory:prior};
  // Preserve a complete context object rather than slicing JSON in the middle of a claim.
- for(const key of ['previousAdvisory','publishedContacts','tasks','evidence','currentNotices']){while(JSON.stringify(context).length>CONTEXT_LIMIT&&context[key].length)context[key].pop();}
+ for(const key of ['previousAdvisory','publishedContacts','tasks','evidence','currentNotices','trackedOpportunities']){while(JSON.stringify(context).length>CONTEXT_LIMIT&&context[key].length)context[key].pop();}
  while(JSON.stringify(context).length>CONTEXT_LIMIT&&ownerReportedResults.events.length>1)ownerReportedResults.events.pop();
  while(JSON.stringify(context).length>CONTEXT_LIMIT&&fundingResearch.records.length>1)fundingResearch.records.pop();
  if(leadBrief){

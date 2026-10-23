@@ -1,6 +1,16 @@
-# Current implementation status — 2026-10-22
+# Current implementation status — 2026-10-23
 
-## Current milestone — 0.2.0-preview.5
+## Current milestone — 0.2.0-preview.6
+
+Implemented a source-linked Opportunity workspace joining saved sources, exact-company published contacts, drafts, planning estimates, owner qualification, next actions, due dates and history. Today opens case-specific work and prioritizes due follow-ups and reported customer progress before optional setup. Owner-reported outcome stages and cash share the existing business-results ledger; corrections/voids recompute the case without double-counting receipts. A result corrected to another company no longer contributes to the old case. Original sources and prior case revisions remain intact.
+
+Completed reviewed research can create a persisted batch of up to three distinct valid strong-fit company cases, with a ten-active-case ceiling. Batches remain bounded across replay/restart; manual separate jobs for the same company remain allowed. A saved award is potential-partner research, not a current job or confirmed demand. Qualification remains an owner attestation. Source outages no longer generate misleading owner-attention nags in the legacy desktop views. Optional model advice receives bounded case context; no new tools or sending permissions are granted.
+
+Added daily verified SQLite backups with seven-copy managed retention, failure recovery and explicit same-host limits. Exports stream a consistent verified copy and clean private staging on completion, failure or disconnect. Added sixty-item search/paging for research and task history, retained all database records and actual active work, and made polling single-flight/visibility-aware. The isolated 10,000-record base-snapshot benchmark was about 22.8 MB before and 139 KB afterward (99.39% smaller), not a full-state performance claim.
+
+Draft approval and composer access now reject unfinished owner placeholders; saved public business details populate new signatures. Juliet preserves richer CRM contact observations when refreshing award evidence. Native healthy-office reuse requires the exact configured model tag, not any installed model. Final automated, browser and package checks are in TEST_RESULTS.md. Windows-device execution, publisher signing, actual live local inference, keyed current notices and successful broad contact discovery remain unvalidated.
+
+## Previous milestone — 0.2.0-preview.5
 
 Implemented automatic manager planning over saved work: useful contact/CRM/draft/briefing follow-through precedes another eligible research lane. Planning persists directives and next actions, applies daily budgets, lane pacing, source backoff and backlog limits, and honors clock-out before claiming further work. The CEO no longer needs to restart an otherwise eligible empty queue. Waiting for a source, required site confirmation, model setup or approval remains visible and does not earn strikes.
 

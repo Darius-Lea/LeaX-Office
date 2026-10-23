@@ -12,7 +12,7 @@ export type ManagerStatus={checkedAt:number;visitedAgent:string|null;summary:str
 // The worker preserves both source access failures and invalid source/local data
 // under the same legacy error prefix. Only known transport/access failures are
 // normal source waits; malformed evidence and unknown pipeline faults still surface.
-function isSourceWait(task:{agent:string;error:string|null}){
+export function isSourceWait(task:{agent:string;error:string|null}){
  const error=String(task.error||'');
  return task.agent==='Alpha'&&error.startsWith('Research unavailable:')&&!/SyntaxError|\bJSON\b|schema|provenance|evidence|checkpoint|exceeds|missing valid|No research tool|SQLite|database/i.test(error)&&/\bHTTP\s*\d{3}\b|fetch failed|\bnetwork\b|\boffline\b|timed?\s*out|timeout|AbortError|\b(?:ECONN\w*|ENOTFOUND|EAI_AGAIN|ETIMEDOUT)\b|socket (?:closed|hang up)/i.test(error);
 }

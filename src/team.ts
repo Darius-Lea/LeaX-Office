@@ -17,8 +17,15 @@ export function teamPulse(){
  const records=db.prepare('SELECT o.* FROM opportunities o JOIN task_findings f ON f.opportunity=o.id WHERE f.task=?').all(job.task) as any[];
  const company=JSON.parse(setting('company'));let title='',body='';
  if(job.agent==='Juliet'){
- for(const record of records){const e=JSON.parse(record.evidence);db.prepare('INSERT OR REPLACE INTO prospects VALUES(?,?,?)').run(record.title.toLowerCase(),JSON.stringify({company:record.title,url:record.url,description:e.description,contactStatus:'Decision-maker email/phone not found by this source; not verified'}),Date.now());}
- title='Prospect register updated';body=`Saved ${new Set(records.map(r=>r.title.toLowerCase())).size} distinct recipient companies from this cycle. These are historical award recipients, not qualified leads. Contact details remain unknown. Source-link sample below is limited to the first 20 records.\n`+records.slice(0,20).map(r=>r.title+' — '+r.url).join('\n');
+ for(const record of records){
+  const e=JSON.parse(record.evidence),key=record.title.toLowerCase();let prior:any={};try{prior=JSON.parse((db.prepare('SELECT evidence FROM prospects WHERE name=?').get(key) as any)?.evidence||'{}')}catch{}
+  const sources=Array.isArray(prior.historicalAwards)?prior.historicalAwards.filter(item=>typeof item?.url==='string'):[];
+  if(prior.url&&!sources.some(item=>item.url===prior.url))sources.push({url:prior.url,description:prior.description||''});
+  if(!sources.some(item=>item.url===record.url))sources.push({url:record.url,description:e.description||''});
+  const evidence={...prior,company:record.title,url:record.url,description:e.description,historicalAwards:sources.slice(-20),contactStatus:prior.contactStatus||'Decision-maker email/phone not found by this source; not verified'};
+  db.prepare('INSERT INTO prospects VALUES(?,?,?) ON CONFLICT(name) DO UPDATE SET evidence=excluded.evidence,updated=excluded.updated').run(key,JSON.stringify(evidence),Date.now());
+ }
+ title='Prospect register updated';body=`Saved ${new Set(records.map(r=>r.title.toLowerCase())).size} distinct recipient companies from this cycle. These are historical award recipients, not qualified leads. This award source supplies no contact details; existing published-contact observations are retained separately. Source-link sample below is limited to the first 20 records.\n`+records.slice(0,20).map(r=>r.title+' — '+r.url).join('\n');
  }else if(job.agent==='Hotel'){
  title='Delivery qualification checklist';body=`For ${company.name}, confirm before pursuing any work: state and country service coverage, technician availability, travel costs, relevant licensing, insurance, customer onboarding, background checks and margin. No capacity or eligibility is assumed.\n`+records.map(r=>{const e=JSON.parse(r.evidence);return `${r.title}: ${e.state||'state unknown'} / ${e.country||'country unknown'} — coverage, capacity and qualifications UNVERIFIED`;}).join('\n');
  }else if(job.agent==='Delta'){

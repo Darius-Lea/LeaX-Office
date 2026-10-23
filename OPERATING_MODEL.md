@@ -41,6 +41,18 @@ The owner can inspect an eligible saved receipt, reward useful work, or record a
 
 This is online learning of work priorities, not language-model fine-tuning or a claim that avatars understand punishment. Deduplication prevents repeated clicks from multiplying the same training signal. Excusing an incident removes it from active failure training while keeping the audit history. Normal waiting, setup, source outages and approval dependencies never count as misconduct.
 
+## Opportunity work records — preview.6
+
+The owner computer keeps each potential company/job's source, published contacts, prepared work, next action, date, qualifications and history in an Opportunity workspace. Today prioritizes the exact due case and reported commercial progress. The owner can record a real response, update the plan or reschedule; a reminder does not send a follow-up. Scope, contact responsibility, delivery capacity and payment-term checks are owner attestations, not independent verification.
+
+After a completed reviewed cycle, source-fit screening can save a durable batch of up to three distinct company cases. Ten active cases pause more automatic additions. Invalid evidence is held, replay uses the same batch and manual cases may represent distinct jobs for one company. Award cases remain historical partner signals; source availability or published contact details do not establish current need. Overseas and specialist work require appropriate delivery/qualification review.
+
+Commercial stage changes derive from linked nonvoid owner-reported results. Introductions, interested replies, proposals and wins are distinct from receipts. Cash and paid costs use the existing ledger once; corrected or voided entries change case totals and a correction to another company removes old attribution. Closing an opportunity retains its sources, edits and result history. Ambiguous company-level drafts and worksheets are not guessed onto a specific job.
+
+New drafts use saved business facts where available. Unfinished owner details block approval and composer access, and editing revokes approval. The owner still decides whether to send in the mail app. Juliet refreshes source context without discarding richer CRM contact observations. Optional local advice receives bounded case facts; it cannot manufacture demand, grant odds, jobs or income.
+
+Daily verified backups protect local work even when business execution is clocked out. Seven managed copies are retained; failed creation keeps earlier valid copies and retries. The owner should download a private off-device copy because a lost disk or temporary-host reset can remove same-host backups. Searchable history pages preserve all database records, while active work and real queue totals remain visible. See TEST_RESULTS.md for measured validation and remaining device limits.
+
 ## Revenue workflow and acceptance gates
 
 1. **Discover:** source-linked historical recipients or current opportunities. Label which type each record is. Record freshness and service/geographic relevance.
@@ -61,7 +73,7 @@ Measure verified outputs: new relevant companies, current opportunities, source-
 
 ## Priorities for the next real business value
 
-1. Make business data durable across host replacement and verify backup/restore.
+1. Validate the implemented daily backup/restore on target Windows devices and add explicitly authorized off-device recovery or durable storage across host replacement.
 2. Add permitted current tender/vendor-program sources and evidence-backed public vendor-services contacts. Capture source URL, extraction date, contact type, geography and verification status; never guess emails or phone numbers.
 3. Add service relevance, freshness and qualification gates before drafting. Surface licensing, technician capacity, insurance, travel and commercial unknowns.
 4. Connect approved business email with official authorization, recipient verification, duplicate prevention, opt-outs, bounded volume, reply tracking and recorded approvals.

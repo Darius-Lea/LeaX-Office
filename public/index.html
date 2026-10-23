@@ -172,6 +172,7 @@
 <p class="sidebar-label">WORKSPACE</p>
 <button data-pane="home">
 <span aria-hidden="true">⌂</span> Today</button>
+<button data-pane="pipeline"><span aria-hidden="true">↗</span> Opportunities <span id="deal-due-badge" class="mini-count"></span></button>
 <button data-pane="inbox">
 <span aria-hidden="true">✉</span> Inbox <span id="computer-unread" class="mini-count">
 </span>
@@ -199,8 +200,8 @@
 <h2>Make your next move count.</h2>
 <p>One useful step at a time, grounded in the work your team has saved.</p>
 </div>
+<button id="today-opportunities" class="today-opportunities" hidden><span><strong id="today-opportunity-title">Your opportunities</strong><small id="today-opportunity-detail"></small></span><span aria-hidden="true">↗</span></button>
 <section id="patrol-alerts" class="attention-panel" hidden><div class="section-heading"><div><p class="eyebrow">A CALL FROM YOUR PATROL</p><h3>CEO decision needed</h3></div><span class="attention-dot" aria-hidden="true"></span></div><p class="fine-print">Only repeated execution failures or missing promised output are escalated. Waiting for sources, your approval or the next cycle is normal.</p><div id="patrol-incidents"></div></section>
-<section id="source-access-card" class="connection-attention" hidden><div><p class="eyebrow">CURRENT FEDERAL OPPORTUNITIES</p><h3>One private access step is needed</h3><p>Get your free SAM.gov key, then enter it here in Connections. We’ll show you how. Historical research and local AI can work without it.</p></div><button id="source-access-open">Set up private access</button></section>
 <section id="business-guide">
 <p class="eyebrow">RECOMMENDED NEXT STEP</p>
 <h3 id="guide-headline">Give your team a clear direction.</h3>
@@ -225,6 +226,14 @@
 </section>
 </div>
 <p class="fine-print">Research is the first step toward a client, not revenue. Qualify the need, agree scope and payment terms, deliver accepted work, then collect payment.</p>
+<div class="backup-summary" id="backup-summary-home"><span><strong>Your saved work</strong><small id="backup-summary-text">Checking backup status…</small></span><button id="backup-status-open" class="secondary-button">Backup & transfer</button></div>
+<details class="optional-connections"><summary>Optional federal opportunity search</summary><section id="source-access-card" class="connection-attention" hidden><div><p class="eyebrow">CURRENT FEDERAL OPPORTUNITIES</p><h3>One private access step is needed</h3><p>Get your free SAM.gov key, then enter it here in Connections. We’ll show you how. Historical research and local AI can work without it.</p></div><button id="source-access-open">Set up private access</button></section></details>
+</div>
+<div data-computer-pane="pipeline" hidden>
+<div class="pane-heading opportunity-heading"><div><p class="eyebrow">FROM A LEAD TO A REAL CONVERSATION</p><h2>Your opportunities</h2><p>Keep the evidence, next step and actual results together. A researched company becomes a prospect to qualify, never an automatic sale.</p></div><button id="deal-create" class="secondary-button">Add your own customer</button></div>
+<div id="deal-summary" class="deal-summary" aria-label="Opportunity progress"></div>
+<div class="deal-filters"><label>Find a company or project<input id="deal-search" type="search" autocomplete="off" placeholder="Search your saved opportunities"></label><label>Show<select id="deal-filter"><option value="active">Active opportunities</option><option value="due">Follow-ups due</option><option value="interested">Interested conversations</option><option value="proposal">Proposals</option><option value="won">Won work</option><option value="closed">Closed opportunities</option><option value="all">All saved opportunities</option></select></label></div>
+<div id="deal-list" class="deal-list" aria-live="polite"></div><p id="deal-notice" class="fine-print">Sales progress and money are based on the outcomes you record. Nothing is sent automatically.</p>
 </div>
 <div data-computer-pane="assistant" hidden>
 <section>
@@ -340,6 +349,7 @@
 </section>
 <section data-file-folder="assignments" hidden>
 <h2>Assignments & handoffs</h2>
+<label class="history-search">Search saved history<input data-history-query type="search" maxlength="200" placeholder="Find an assignment or company"></label><div class="history-pager"><button id="task-history-newer" class="secondary-button">Newer</button><span id="task-history-status"></span><button id="task-history-older" class="secondary-button">Older</button></div>
 <div id="tasks">
 </div>
 </section>
@@ -353,6 +363,7 @@
 </div>
 <h2>Historical award research</h2>
 <p>An award is a government contract already issued to the named company, not money or an open job for your company.</p>
+<label class="history-search">Search saved history<input data-history-query type="search" maxlength="200" placeholder="Find a company, scope or assignment"></label><div class="history-pager"><button id="record-history-newer" class="secondary-button">Newer</button><span id="record-history-status"></span><button id="record-history-older" class="secondary-button">Older</button></div>
 <p>Historical awards identify potential partners. Source review does not verify contacts, eligibility, subcontracting interest or current availability.</p>
 <div id="opportunities">
 </div>

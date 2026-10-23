@@ -22,7 +22,7 @@ test('native bootstrap readiness requires completed verified inference and never
   for(const value of [{status:'Preparing',inferenceVerified:true},{status:'Completed',inferenceVerified:false},{status:'Needs-attention',inferenceVerified:true}]){
    db.prepare("INSERT OR REPLACE INTO settings VALUES('managed_ai_setup',?)").run(JSON.stringify({...value,privateFixture:'not-public'}));const result=await status();assert.equal(result.aiReady,false);assert.equal(JSON.stringify(result).includes('not-public'),false);
   }
-  db.prepare("INSERT OR REPLACE INTO settings VALUES('managed_ai_setup',?)").run(JSON.stringify({status:'Completed',inferenceVerified:true}));assert.equal((await status()).aiReady,true);
+  db.prepare("INSERT OR REPLACE INTO settings VALUES('managed_ai_setup',?)").run(JSON.stringify({status:'Completed',inferenceVerified:true}));assert.equal((await status()).aiReady,true);assert.equal((await status()).aiModel,'synthetic-installed-model');
   db.prepare("UPDATE settings SET value='malformed' WHERE key='managed_ai_setup'").run();assert.equal((await status()).aiReady,false);
  }finally{if(db)db.close();if(server?.child.exitCode===null)await stop(server.child);rmSync(directory,{recursive:true,force:true})}
 });
@@ -37,8 +37,15 @@ test('HTTP auth, origin protection, retry, saved account across restart, and log
  assert.equal((await call('briefings/anything')).status,401);assert.equal((await call('briefings/anything/print')).status,401);assert.equal((await call('leads/research',{recordId:'anything'})).status,401);
  assert.equal((await call('learning/state')).status,401);assert.equal((await call('learning/feedback',{kind:'note',receiptId:'1',rating:'reward'})).status,401);
  assert.equal((await call('manager/research',{})).status,401);
+ for(const path of ['deals/create','deals/update','deals/outcome','backups/create'])assert.equal((await call(path,{})).status,401);assert.equal((await call('deals/missing')).status,401);
  const auth=await call('setup',{code:server.code,password:'test founder passphrase'});assert.equal(auth.status,200);cookie=auth.headers.get('set-cookie')!.split(';')[0];
  assert.equal((await call('manager/research',{},'https://evil.test')).status,403);assert.equal((await call('manager/research',{})).status,400);
+ assert.equal((await call('deals/create',{sourceKind:'manual',company:'Synthetic HTTP customer'},'https://evil.test')).status,403);assert.equal((await call('backups/create',{},'https://evil.test')).status,403);
+ const created=await call('deals/create',{sourceKind:'manual',company:'Synthetic HTTP customer',title:'Synthetic HTTP opportunity'});assert.equal(created.status,201);let opportunity=await created.json();
+ const edited=await call('deals/update',{id:opportunity.id,expectedRevision:opportunity.revision,nextAction:'Confirm the actual customer scope',dueAt:Date.now()-1000});assert.equal(edited.status,200);opportunity=await edited.json();assert.equal(opportunity.priority,'overdue');assert.equal((await call('deals/update',{id:opportunity.id,expectedRevision:1,notes:'Stale fixture edit'})).status,400);
+ const reported=await call('deals/outcome',{dealId:opportunity.id,expectedRevision:opportunity.revision,type:'reply_interested',occurredAt:Date.now()-1000});assert.equal(reported.status,201);opportunity=await reported.json();assert.equal(opportunity.stage,'Interested');assert.equal(opportunity.financials.cashReceivedCents,0);assert.equal((await (await call('deals/'+opportunity.id)).json()).company,'Synthetic HTTP customer');
+ assert.equal((await call('state?recordPage=-1')).status,400);assert.equal((await call('state?taskPage=invalid')).status,400);const paged=await (await call('state?historyQuery=matching-no-fixture')).json();assert.equal(paged.history.records.total,0);assert.equal(paged.history.pageSize,60);
+ const protectedCopy=await call('backups/create',{});assert.equal(protectedCopy.status,201);assert.equal((await protectedCopy.json()).status,'Completed');
  assert.equal((await call('contacts/research',{url:'https://127.0.0.1/private',company:'Blocked target'})).status,400);assert.equal((await call('ai/run',{agent:'Einstein',prompt:'What next?'})).status,400);assert.equal((await call('ai/install',{confirm:false})).status,400);
  assert.equal((await call('company',{name:'Test Company',legalName:'Test LLC',goal:'Nationwide cabling research'})).status,200);
  assert.equal((await call('office/design',{wall:'navy',layout:'studio',monitors:'dual',coffee:false})).status,200);assert.equal((await call('office/design',{wall:'unsupported'})).status,400);

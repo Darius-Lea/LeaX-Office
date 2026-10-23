@@ -1,5 +1,9 @@
 # Install AI Headquarters on Windows
 
+Preview.6 keeps your existing office database and adds **Opportunities** in the owner computer. Open a source lead and choose **Track potential partner**, or add a customer you already know. Keep the next action, follow-up date, qualification checks and reported results together. Today opens the specific opportunity that needs attention. Historical awards remain potential-partner research, and reported wins remain separate from received payments.
+
+**Protect your saved office** shows the latest verified automatic backup and offers a private download. Daily backups retain seven managed copies on the same host, including while business work is clocked out. Keep a downloaded copy on another device or drive; these local copies cannot survive a lost disk or free-host reset. Research and assignment history now have search and page controls; older records remain in the database.
+
 Use the **native Windows x64 setup executable**, not GitHub’s source ZIP or the old `.cmd` launcher. The old PowerShell launcher can be rejected by Windows signing policy; the native setup does not execute PowerShell or change that policy.
 
 1. Visit your app website’s **/download** page and choose **Download for Windows**. The page shows real transfer progress and checks the file before handing it to your browser to save. Cancel and retry are available; a direct browser link remains a fallback. Existing host: https://leax-office.onrender.com/download . No sign-in, ZIP extraction or project-folder browsing is needed.

@@ -1,4 +1,9 @@
 # Run and recover
+
+Preview.6 adds authenticated opportunity creation/editing/results, verified managed backups and paged research history. GET `/api/state` accepts zero-based `recordPage`, `taskPage` and literal `historyQuery`; it retains active work alongside the selected task page. Old records are not deleted. Database exports stream a consistent checked copy and remove their request staging after completion or disconnect. Automatic backups run as local maintenance independently of the business clock, with seven-copy managed retention. Same-host backups do not make an ephemeral Render filesystem durable.
+
+The updated native download and application are published on `codex/desktop-reliability-and-autonomous-office`. Deploying that code to the live free Render service is a separate action: export its private database before any redeploy that can replace temporary storage. Native setup updates retain `%LOCALAPPDATA%\AIHeadquarters\data`; they do not silently synchronize with Render.
+
 From repository root with Node 24.19+ within 24.x: npm ci --ignore-scripts; npm test; npm start. The normal server includes its own bounded office loop; use npm run worker only as an alternative standalone processing mode. Cloud environments do not need additional worktrees. Future tasks must restart processes; snapshots do not preserve them.
 The app is loopback only, HTTP for local use. Do not bind publicly or use it as a production SaaS deployment. PORT defaults to 4310. HQ_DATA_DIR defaults to data/ under working directory. Keep startup working directory consistent.
 

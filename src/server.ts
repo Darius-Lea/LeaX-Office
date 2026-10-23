@@ -1,4 +1,7 @@
 import {getOfficeDesign,saveOfficeDesign} from './office-design.ts';
+import {backupState,createManagedBackup} from './backups.ts';
+import {dealState,dealDetail,createDeal,updateDeal,recordDealOutcome} from './deals.ts';
+import {serveDatabaseExport} from './transfers.ts';
 import {serveWindowsDownload} from './download.ts';
 import {operationsState} from './operations.ts';
 import {learningState,recordWorkFeedback,collectLearningEvidence} from './learning.ts';
@@ -58,7 +61,7 @@ const server=createServer(async(req,res)=>{
  if(req.method==='GET'&&['/vendor/three.module.js','/vendor/three.core.js'].includes(url.pathname)){res.setHeader('Content-Type','text/javascript');res.setHeader('Cache-Control','public, max-age=86400');res.end(vendorFile(url.pathname.split('/').pop()!,'build/'+url.pathname.split('/').pop()));return;}
  if(req.method==='GET'&&['/vendor/FontLoader.js','/vendor/TextGeometry.js','/vendor/office-font.json'].includes(url.pathname)){const paths:Record<string,string>={'/vendor/FontLoader.js':'loaders/FontLoader.js','/vendor/TextGeometry.js':'geometries/TextGeometry.js','/vendor/office-font.json':'../fonts/helvetiker_regular.typeface.json'};const raw=vendorFile(url.pathname.split('/').pop()!,'examples/jsm/'+paths[url.pathname]).toString('utf8');res.setHeader('Content-Type',url.pathname.endsWith('json')?'application/json':'text/javascript');res.end(raw.replace(/from 'three'/g,"from '/vendor/three.module.js'"));return;}
  if(['GET','HEAD'].includes(req.method||'')&&['/download/windows','/download/windows.sha256'].includes(url.pathname)){serveWindowsDownload(req,res,process.env.HQ_INSTALLER_PATH||new URL('../downloads/AI-Headquarters-Setup.exe',import.meta.url),url.pathname.endsWith('.sha256'));return;}
- if(req.method==='GET' && url.pathname==='/api/status'){const ai=managedAISetupState();return send(200,{product:'ai-headquarters',setupRequired:!db.prepare('SELECT id FROM founder').get(),aiReady:ai?.inferenceVerified===true&&!!setting('ollama_model')});}
+ if(req.method==='GET' && url.pathname==='/api/status'){const ai=managedAISetupState();return send(200,{product:'ai-headquarters',setupRequired:!db.prepare('SELECT id FROM founder').get(),aiReady:ai?.inferenceVerified===true&&!!setting('ollama_model'),...(!publicBinding&&ai?.inferenceVerified===true?{aiModel:setting('ollama_model')||null}:{})});}
  const localPort=(server.address() as any)?.port||port;
  const allowedOrigins=publicBinding?[publicOrigin]:[`http://127.0.0.1:${localPort}`,`http://localhost:${localPort}`,...(publicOrigin?[publicOrigin]:[])];
  if(req.method==='POST' && !allowedOrigins.includes(req.headers.origin))return send(403,{error:'Invalid origin'});
@@ -73,8 +76,13 @@ const server=createServer(async(req,res)=>{
  if(req.method==='GET'&&url.pathname.startsWith('/api/reports/')){const html=assignmentReport(decodeURIComponent(url.pathname.slice('/api/reports/'.length)),url.searchParams.get('download')==='1');res.setHeader('Content-Type','text/html; charset=utf-8');if(url.searchParams.get('download')==='1')res.setHeader('Content-Disposition','attachment; filename="Assignment-packet.html"');res.end(html);return;}
  if(req.method==='GET'&&url.pathname==='/api/download/windows'){res.setHeader('Content-Type','application/vnd.microsoft.portable-executable');res.setHeader('Content-Disposition','attachment; filename="AI-Headquarters-Setup.exe"');res.end(readFileSync(process.env.HQ_INSTALLER_PATH||new URL('../downloads/AI-Headquarters-Setup.exe',import.meta.url)));return;}
  if(req.method==='GET'&&url.pathname==='/api/state'){
- const state=snapshot(),workPlan=workPlannerState(),learning=learningState();return send(200,{...state,workPlan,learning,operations:operationsState({plan:workPlan,learning}),managedAISetup:managedAISetupState(),leadResearch:leadResearchState(),businessGuide:businessGuide(),officeDesign:getOfficeDesign(),businessProfile:profileState(),accountability:accountabilityState(),outcomes:outcomeState(),funding:fundingState(),pricing:pricingState(),opportunities:state.opportunities.map(record=>({...record,advice:awardAdvice(record,state.company.name)})),...teamState(),roleCharters:ROLE_CHARTERS,manager:managerState(),aiRuns:agentRuns(),aiConfigured:!!setting('ollama_model'),contactResearch:contactState(),drafts:draftState(),solicitations:solicitationState()});}
+ const state=snapshot({recordPage:Number(url.searchParams.get('recordPage')||0),taskPage:Number(url.searchParams.get('taskPage')||0),query:url.searchParams.get('historyQuery')||''}),workPlan=workPlannerState(),learning=learningState(),deals=dealState();return send(200,{...state,backups:backupState(),deals,workPlan,learning,operations:operationsState({plan:workPlan,learning}),managedAISetup:managedAISetupState(),leadResearch:leadResearchState(),businessGuide:businessGuide(Date.now(),deals),officeDesign:getOfficeDesign(),businessProfile:profileState(),accountability:accountabilityState(),outcomes:outcomeState(),funding:fundingState(),pricing:pricingState(),opportunities:state.opportunities.map(record=>({...record,advice:awardAdvice(record,state.company.name)})),...teamState(),roleCharters:ROLE_CHARTERS,manager:managerState(),aiRuns:agentRuns(),aiConfigured:!!setting('ollama_model'),contactResearch:contactState(),drafts:draftState(),solicitations:solicitationState()});}
  if(req.method==='GET'&&url.pathname==='/api/learning/state')return send(200,learningState());
+ if(req.method==='POST'&&url.pathname==='/api/backups/create')return send(201,await createManagedBackup());
+ if(req.method==='POST'&&url.pathname==='/api/deals/create')return send(201,createDeal(body));
+ if(req.method==='POST'&&url.pathname==='/api/deals/update')return send(200,updateDeal(body));
+ if(req.method==='POST'&&url.pathname==='/api/deals/outcome')return send(201,recordDealOutcome(body));
+ if(req.method==='GET'&&url.pathname.startsWith('/api/deals/'))return send(200,dealDetail(decodeURIComponent(url.pathname.slice('/api/deals/'.length))));
  if(req.method==='POST'&&url.pathname==='/api/manager/research')return send(202,requestManagerResearch());
  if(req.method==='POST'&&url.pathname==='/api/learning/feedback'){
  const result=recordWorkFeedback(body),plan=planWork();return send(200,{...result,plan});}
@@ -86,8 +94,7 @@ const server=createServer(async(req,res)=>{
  const result=queueLeadResearch(body.recordId,{website:body.website,confirmCompany:body.confirmCompany});
  void processLeadResearch(undefined,body.recordId).catch(()=>console.error('Lead contact research needs attention; inspect its saved status'));
  return send(202,result);}
- if(req.method==='GET'&&url.pathname==='/api/export/database'){
- const path=join(directory,'transfer-'+Date.now()+'.sqlite');await backup(db,path);res.setHeader('Content-Type','application/vnd.sqlite3');res.setHeader('Content-Disposition','attachment; filename="AI-Headquarters-backup.sqlite"');res.end(readFileSync(path));return;}
+ if(req.method==='GET'&&url.pathname==='/api/export/database'){await serveDatabaseExport(req,res);return;}
  if(req.method==='POST'&&url.pathname==='/api/office/design')return send(200,saveOfficeDesign(body));
  if(req.method==='POST'&&url.pathname==='/api/business/profile')return send(200,saveProfile(body));
  if(req.method==='GET'&&url.pathname==='/api/business/profile/print'){const download=url.searchParams.get('download')==='1';res.setHeader('Content-Type','text/html; charset=utf-8');if(download)res.setHeader('Content-Disposition','attachment; filename="Company-capability-statement.html"');res.end(profileDocument(download));return;}

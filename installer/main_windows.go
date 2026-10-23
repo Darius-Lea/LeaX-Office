@@ -64,6 +64,7 @@ type localStatus struct {
 	Product       string `json:"product"`
 	SetupRequired bool   `json:"setupRequired"`
 	AIReady       bool   `json:"aiReady"`
+	AIModel       string `json:"aiModel"`
 }
 
 func utf(s string) *uint16 { return syscall.StringToUTF16Ptr(s) }
@@ -599,7 +600,7 @@ func startOffice(wantShortcut bool) error {
 			return openOffice(s, existing)
 		}
 		if strings.EqualFold(s.App, expectedApp) && existing.AIReady && owned(aiState()) {
-			if models, e := aiGetTags(); e == nil && len(models) > 0 {
+			if models, e := aiGetTags(); e == nil && verifiedModelAvailable(existing.AIReady, existing.AIModel, models) {
 				if wantShortcut {
 					if launcher, e := installLauncher(); e == nil {
 						makeShortcut(launcher)

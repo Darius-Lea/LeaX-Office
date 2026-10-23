@@ -1,6 +1,14 @@
-# Release status: 0.2.0-preview.5
+# Release status: 0.2.0-preview.6
 
 The current build is a single downloadable Windows x64 setup executable with automatic local AI. It is not yet a validated commercial release.
+
+## Preview.6 improvements
+
+One Opportunity workspace now connects source facts, published contacts, drafts, pricing, next actions, reminders, owner qualification and history. Today opens the relevant case, while results stay owner-reported and use one cash ledger. Automatic working cases are bounded to three distinct suitable source-backed companies per completed cycle and ten active cases; historical awards do not become open jobs.
+
+Daily integrity-checked SQLite backups retain seven managed copies; transfers stream and remove private staging. Same-host copies do not replace off-device recovery. Searchable sixty-item history pages preserve all records, and hidden/single-flight polling reduces unnecessary transfers. The isolated base-snapshot benchmark improved from about 22.8 MB to 139 KB for 10,000 records; whole-app/device performance still requires measurement.
+
+Unfinished owner placeholders block draft approval/composer opening, saved profile facts populate signatures, CRM refresh preserves published contacts, and native AI reuse checks the exact selected tag. Bounded local advice can consider case context. These controls do not verify customers, send messages, fine-tune a model or establish profitability. Final validation results are in TEST_RESULTS.md; the release gates below remain.
 
 ## Delivered
 

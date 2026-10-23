@@ -4,6 +4,9 @@ import {awardAdvice,type FocusedAdvice} from './advice.ts';
 import {verifyFinding} from './research.ts';
 import {solicitationState,classifySolicitation,deadlineTimestamp} from './solicitations.ts';
 import {draftState} from './drafts.ts';
+import {dealState} from './deals.ts';
+import {isSourceWait} from './manager.ts';
+import {profileState} from './business-profile.ts';
 
 const READINESS_KEY='business_readiness_v1';
 const CHECKLIST=[
@@ -16,7 +19,7 @@ const CHECKLIST=[
 type ReadinessId=typeof CHECKLIST[number]['id'];
 type Confirmation={confirmed:boolean;updatedAt:number};
 type SavedReadiness=Partial<Record<ReadinessId,Confirmation>>;
-export type GuideAction={id:string;title:string;why:string;detail:string;pane:'assistant'|'contacts'|'files'|'packets'|'pricing'|'results'|'connections';section?:string;priority:'attention'|'next'|'prepare';explanation?:FocusedAdvice};
+export type GuideAction={id:string;title:string;why:string;detail:string;pane:'assistant'|'contacts'|'files'|'packets'|'pricing'|'results'|'connections'|'pipeline';section?:string;dealId?:string;priority:'attention'|'next'|'prepare';explanation?:FocusedAdvice};
 function savedReadiness():SavedReadiness{
  let value:any;try{value=JSON.parse(setting(READINESS_KEY)||'{}')}catch{return {}}
  const result:SavedReadiness={};for(const item of CHECKLIST){const entry=value?.[item.id];if(typeof entry?.confirmed==='boolean'&&Number.isSafeInteger(entry?.updatedAt)&&entry.updatedAt>0)result[item.id]={confirmed:entry.confirmed,updatedAt:entry.updatedAt};}return result;
@@ -54,26 +57,43 @@ function explainAction(action:GuideAction):FocusedAdvice{
  return {title:action.title,why:action.why,steps:specific,successCheck:action.id==='review-current-notice'?'You have a documented decision to pursue or skip the notice.':action.id==='connect-federal-search'?'The source confirms access; saved research and local AI remain available without this connection.':money?'The next decision uses a real scope, checked costs and clear payment terms.':'You have a specific next step and have saved what actually happened.',stopRule:money?'Do not treat a quote, reported win or incomplete cash log as guaranteed profit.':'Stop or ask for clarification when need, authority or delivery requirements are not established.'};
 }
 const sourceUrl=(raw:unknown)=>typeof raw==='string'&&/^https:\/\/www\.usaspending\.gov\/award\/CONT_[A-Za-z0-9_.:%-]+$/.test(raw);
-export function businessGuide(now=Date.now()){
+let researchCache:{key:string;checkedAt:number;historical:number;partners:number}|undefined;
+function researchSummary(company:string,now:number){
+ const stamp=db.prepare('SELECT count(*) AS count,max(rowid) AS newest FROM opportunities').get() as any,key=JSON.stringify([company,stamp.count,stamp.newest]);
+ if(researchCache?.key===key&&now>=researchCache.checkedAt&&now-researchCache.checkedAt<30000)return researchCache;
+ let historical=0;const partners=new Set<string>();
+ // Source evidence is append-only. Cache counts briefly, and iterate instead of
+ // materializing the entire lifetime archive in memory on every screen poll.
+ for(const row of db.prepare('SELECT id,title,url,evidence FROM opportunities').iterate() as Iterable<any>){
+  try{if(!sourceUrl(row.url)||!verifyFinding(JSON.parse(row.evidence),row.url))continue;historical++;if(['strong service match','specialist review'].includes(awardAdvice(row,company).fit))partners.add(row.title.trim().toLowerCase());}catch{}
+ }
+ return researchCache={key,checkedAt:now,historical,partners:partners.size};
+}
+export function businessGuide(now=Date.now(),tracked?:ReturnType<typeof dealState>){
  let company:{name:string;legalName?:string}={name:'Your company'};try{const c=JSON.parse(setting('company')||'{}');if(typeof c.name==='string')company=c;}catch{}
  const saved=savedReadiness();const readiness=CHECKLIST.map(item=>({...item,confirmed:saved[item.id]?.confirmed===true,updatedAt:saved[item.id]?.updatedAt||null}));
  const confirmed=readiness.filter(item=>item.confirmed).length;
- const records=db.prepare('SELECT id,title,url,evidence,reviewed FROM opportunities ORDER BY rowid DESC').all() as any[];
- const sourced=records.filter(row=>{try{return sourceUrl(row.url)&&verifyFinding(JSON.parse(row.evidence),row.url)}catch{return false}});
- const relevant=sourced.filter(row=>{const e=JSON.parse(row.evidence);const a=awardAdvice(row,company.name);return e.country==='USA'&&['strong service match','specialist review'].includes(a.fit)});
- const partners=[...new Set(relevant.map(row=>row.title.trim().toLowerCase()))].length;
+ const research=researchSummary(company.name,now),partners=research.partners;
  const notices=solicitationState();const currentNotices=notices.records.filter((row:any)=>classifySolicitation(row,now)==='Open for review');
  const contactRows=db.prepare("SELECT company,url,contacts FROM contact_research WHERE status='Completed'").all() as any[];
  const publicContacts=new Set<string>();for(const row of contactRows){let contacts:any;try{contacts=JSON.parse(row.contacts)}catch{continue}if(!Array.isArray(contacts))continue;for(const contact of contacts){if(['email','phone'].includes(contact?.type)&&typeof contact.value==='string'&&typeof contact.sourceUrl==='string'&&contact.sourceUrl===row.url)publicContacts.add(contact.type+':'+contact.value)}}
  const drafts=draftState() as any[];const pending=drafts.filter(d=>d.status==='Pending approval').length,approved=drafts.filter(d=>d.status==='Approved for composer').length;
- const tasks=db.prepare('SELECT status FROM tasks').all() as any[];const blocked=tasks.filter(t=>t.status==='Blocked').length;const running=tasks.filter(t=>t.status==='Running').length,queued=tasks.filter(t=>t.status==='Queued').length;
+ const counts=db.prepare('SELECT status,count(*) AS n FROM tasks GROUP BY status').all() as any[];const running=Number(counts.find(row=>row.status==='Running')?.n||0),queued=Number(counts.find(row=>row.status==='Queued')?.n||0);
+ const latestSuccess=Number((db.prepare("SELECT max(created) AS stamp FROM tasks WHERE agent='Bravo' AND status='Completed'").get() as any).stamp||0);
+ const failed=db.prepare("SELECT agent,error,created FROM tasks WHERE status IN ('Blocked','Failed')").all() as any[];
+ const blocked=failed.filter(row=>!isSourceWait(row)).length,waitingSource=failed.filter(row=>isSourceWait(row)&&row.created>=latestSuccess).length;
  const results=outcomeState(now);
- const actions:GuideAction[]=[...results.recommendations];
+ const opportunities=tracked??dealState(now),linkedIds=new Set(opportunities.cases.flatMap(item=>item.outcomes.map((outcome:any)=>outcome.id)));
+ const unlinkedResults=results.events.some(row=>!row.void&&!linkedIds.has(row.id));
+ const caseActions:GuideAction[]=opportunities.actions.map((action:any)=>({id:'opportunity-'+action.dealId,dealId:action.dealId,title:action.title,why:action.why,detail:action.instruction,pane:'pipeline',priority:action.priority}));
+ const actions:GuideAction[]=[...caseActions,...results.recommendations.filter(action=>unlinkedResults||['recorded-cash-review','recorded-cost-completeness'].includes(action.id))];
+ const profile=profileState().profile;
+ if(!profile.services||!profile.coverage||!profile.contactName||!profile.email&&!profile.phone)actions.push({id:'complete-business-profile',title:'Give your team your real services and contact details',why:'Accurate services, delivery coverage and an authorized business contact make your introductions useful and prevent unfinished drafts.',detail:'Save the services and locations your team can actually deliver, your authorized contact name and a business email or phone. Existing research stays saved; no SAM.gov key is needed for this step.',pane:'files',section:'business-profile-form',priority:'prepare'});
  if(pending)actions.push({id:'review-drafts',title:`Review ${pending===1?'your saved introduction':pending+' saved introductions'}`,why:'An accurate introduction can start a vendor or customer conversation. Nothing has been sent.',detail:'Confirm the recipient and source, replace owner placeholders, check your claims and approve a draft only when it is ready. Your mail app still requires your final send.',pane:'contacts',section:'email-drafts',priority:'next'});
  if(currentNotices.length)actions.push({id:'review-current-notice',title:'Check a current notice before deciding to bid',why:'A fresh active notice with a future deadline is a place to investigate current work; it does not establish eligibility.',detail:'Open the original notice. Check scope, amendments, question deadlines, set-asides, registration, insurance, licenses, crew coverage and total delivery cost. Decide whether to pursue before preparing a bid.',pane:'files',section:'solicitation-records',priority:'next'});
  if(approved)actions.push({id:'open-approved-draft',title:'Use your reviewed introduction',why:'An approved draft is ready for your final review in your mail application; approval is not a sent message or an interested client.',detail:'Open the approved draft in your mail app, make the final send decision there and keep the reply/follow-up in your own records. Reply tracking is not connected in this version.',pane:'contacts',section:'email-drafts',priority:'next'});
  if(publicContacts.size&&!pending&&!approved)actions.push({id:'prepare-introduction',title:'Prepare a source-backed introduction',why:'You have saved published business contacts. A relevant introduction is a next step toward checking current customer need.',detail:'Use a published email from the matching company’s contact record to prepare a draft. Check the person’s role, company identity and appropriateness first; a public listing is not verified permission or a decision-maker.',pane:'contacts',section:'contact-results',priority:'next'});
- if(partners&&!publicContacts.size)actions.push({id:'find-partner-contact',title:'Find an official vendor contact for a relevant company',why:`${partners===1?'A saved award recipient has':partners+' saved award recipients have'} a potentially relevant US service scope. An existing award can identify a prime-contractor partner; it is not an offer of work.`,detail:'Review the source award, then locate that company’s official vendor/subcontractor page. Enter its public HTTPS contact page in Contacts to collect published details. Confirm current partner need and delivery coverage before outreach.',pane:'files',section:'opportunities',priority:'next'});
+ if(partners&&!publicContacts.size)actions.push({id:'find-partner-contact',title:'Find an official vendor contact for a relevant company',why:`${partners===1?'A saved award recipient has':partners+' saved award recipients have'} a potentially relevant service scope. An existing award can identify a prime-contractor partner; it is not an offer of work.`,detail:'Review the source award, then locate that company’s official vendor/subcontractor page. Confirm current partner need and practical coverage, including international requirements where applicable, before outreach.',pane:'files',section:'opportunities',priority:'next'});
  if(publicContacts.size&&!saved.pricing?.confirmed)actions.push({id:'prepare-job-price',title:'Prepare a cost-based job price',why:'A quote needs actual scope and delivery costs before you can assess its margin.',detail:'After a buyer confirms need and scope, use Price a job for labor, materials, travel, overhead and contingency. The saved worksheet is an owner draft; confirm taxes, fees, payment terms and the final offer before sending anything.',pane:'pricing',priority:'prepare'});
  if(!notices.keyConfigured)actions.push({id:'connect-federal-search',title:'Connect federal job search when you are ready',why:'A free personal SAM.gov key enables the official current-notice search. Saved historical awards and local AI do not need this key.',detail:'Open Connections for the plain-language account/key steps and private key field. Use your own free account; this does not register your business for a contract or establish bidding eligibility.',pane:'connections',priority:'prepare'});
  const missing=readiness.find(item=>!item.confirmed);
@@ -81,9 +101,9 @@ export function businessGuide(now=Date.now()){
  if(blocked)actions.push({id:'review-blocked-work',title:'Review work that needs attention',why:`${blocked===1?'One assignment is':blocked+' assignments are'} blocked. The saved error explains what prevented progress.`,detail:'Open the assignment’s error. Resolve the source or connection problem, then retry from its saved checkpoint. Completed records remain saved; no failed research should be treated as a completed lead.',pane:'files',section:'tasks',priority:'attention'});
  if(!partners&&!currentNotices.length&&!publicContacts.size)actions.push({id:'research-direction',title:running||queued?'Give the team a clear target while research runs':'Review your target customers and services',why:'Useful research starts with a clear service scope and customers you can actually serve.',detail:running||queued?`${running} running and ${queued} queued research assignments are recorded. Use Company & direction to refine services, customer types and practical coverage; research does not itself win work.`:'Check Company & direction, then clock in to research the saved objective. A relevant result still needs source review, current demand, qualification and pricing.',pane:'files',section:'company-form',priority:'prepare'});
  if(!actions.length)actions.push({id:'plan-next-client',title:'Plan the next qualified customer conversation',why:'Saved research and readiness help you prepare, but only a confirmed need and agreed scope can lead to a job.',detail:'Ask the assistant to choose a researched company, explain why it fits and list the missing facts. Verify the contact, need and delivery economics before making an offer.',pane:'assistant',section:'assistant-form',priority:'next'});
- const ranks:Record<string,number>={'recorded-cash-review':10,'recorded-followup-due':11,'recorded-interest-qualification':12,'recorded-win-plan':13,'recorded-cost-completeness':14,'recorded-offer-review':15,'recorded-outreach-review':16,'open-approved-draft':30,'review-drafts':40,'prepare-introduction':45,'find-partner-contact':50,'prepare-job-price':60,'review-blocked-work':75,'research-direction':80,'connect-federal-search':90};
+ const ranks:Record<string,number>={'recorded-cash-review':10,'recorded-followup-due':11,'recorded-interest-qualification':12,'recorded-win-plan':13,'recorded-cost-completeness':14,'recorded-offer-review':15,'recorded-outreach-review':16,'open-approved-draft':30,'complete-business-profile':35,'review-drafts':40,'prepare-introduction':45,'find-partner-contact':50,'prepare-job-price':60,'review-blocked-work':75,'research-direction':80,'connect-federal-search':90};
  const urgentNotice=currentNotices.some((n:any)=>{const deadline=deadlineTimestamp(n.responseDeadLine);return deadline!==null&&deadline-now<=2*86400000});
- const rank=(action:GuideAction)=>action.id==='review-current-notice'?(urgentNotice?20:55):action.id.startsWith('readiness-')?70:ranks[action.id]??65;
+ const rank=(action:GuideAction)=>action.dealId?(action.priority==='attention'?5:opportunities.cases.find(item=>item.id===action.dealId)?.stage==='Won'?13:['Interested','Proposal','Contacted'].includes(opportunities.cases.find(item=>item.id===action.dealId)?.stage||'')?12:44):action.id==='review-current-notice'?(urgentNotice?20:55):action.id.startsWith('readiness-')?70:ranks[action.id]??65;
  const nextActions=actions.map((action,index)=>({action,index})).sort((a,b)=>rank(a.action)-rank(b.action)||a.index-b.index).slice(0,3).map(({action})=>({...action,explanation:explainAction(action)})),primaryAction=nextActions[0];
  return {
   company:company.name,objective:setting('standing_goal')||'',mission:'Build qualified customer demand, price for margin and collect agreed payments. Expand only when verified demand and delivery costs support it.',
@@ -91,16 +111,16 @@ export function businessGuide(now=Date.now()){
   summary:partners||currentNotices.length?`${company.name} has saved research to review. Turn one relevant record into a verified conversation before spending time on a quote.`:`Build a clear offer, then find a customer whose current need matches what ${company.name} can deliver.`,
   primaryAction,nextActions,readiness,ownerResults:{...results.financials,...results.metrics,dueFollowUps:results.dueFollowUps,source:results.source},
   readinessSummary:{confirmed,total:readiness.length,label:`${confirmed} of ${readiness.length} owner readiness items confirmed`},
-  metrics:{historicalRecords:sourced.length,relevantPartners:partners,currentNotices:currentNotices.length,publishedContacts:publicContacts.size,pendingDrafts:pending,approvedDrafts:approved},
+  metrics:{historicalRecords:research.historical,relevantPartners:partners,currentNotices:currentNotices.length,publishedContacts:publicContacts.size,pendingDrafts:pending,approvedDrafts:approved},opportunitySummary:opportunities.summary,
   pipeline:[
-   {id:'discover',label:'Research',count:sourced.length+currentNotices.length,state:sourced.length+currentNotices.length?'saved':'waiting',detail:'Saved historical award records plus fresh current notices. These are research records, not qualified customers.',pane:'files'},
-   {id:'qualify',label:'Check fit',count:partners,state:partners?'needs-review':'waiting',detail:'Unique US award recipients with relevant source descriptions. Coverage, licensing and current subcontractor demand remain unverified.',pane:'files'},
+   {id:'discover',label:'Research',count:research.historical+currentNotices.length,state:research.historical+currentNotices.length?'saved':'waiting',detail:'Saved historical award records plus fresh current notices. These are research records, not qualified customers.',pane:'files'},
+   {id:'qualify',label:'Check fit',count:partners,state:partners?'needs-review':'waiting',detail:'Unique recipients with relevant descriptions. Country-specific coverage, licensing and current demand remain unverified.',pane:'files'},
    {id:'contact',label:'Start a conversation',count:publicContacts.size,state:publicContacts.size?'published':'waiting',detail:'Distinct saved public email/phone listings; not verified decision-makers or interested buyers.',pane:'contacts'},
    {id:'draft',label:'Review an introduction',count:pending+approved,state:pending?'owner-review':approved?'approved-unsent':'waiting',detail:`${pending} pending owner review; ${approved} approved for composer. No sent messages or replies are recorded by this app.`,pane:'contacts'},
    {id:'quote',label:'Price the work',count:null,state:'owner-step',detail:'After a customer confirms need, obtain scope and schedule. Use Price a job to save a cost-based planning worksheet with labor, materials, travel, overhead, contingency and margin. Confirm taxes, fees and payment terms. Sending quotes and accepted-contract tracking are not implemented.',pane:'pricing'},
    {id:'collect',label:'Deliver & collect',count:null,state:'owner-step',detail:'Agree scope and terms in writing, deliver accepted work, invoice and verify collection. This version does not track independently verified contracts, invoices or bank collections. Record the outcomes, actual receipts and paid costs you report in Results; they remain owner-reported.',pane:'assistant'},
   ],
-  sourceStatus:{historical:{status:setting('clock')!=='in'?'Paused':blocked?'Needs attention':running?'Running':queued?'Queued':'Ready',running,queued,blocked},current:{status:notices.status,keyConfigured:notices.keyConfigured,message:notices.message}},
+  sourceStatus:{historical:{status:setting('clock')!=='in'?'Paused':blocked?'Needs attention':running?'Running':queued?'Queued':waitingSource?'Source cooldown':'Ready',running,queued,blocked,waitingSource},current:{status:notices.status,keyConfigured:notices.keyConfigured,message:notices.message}},
   limitations:['Recorded receipts, costs and business outcomes are owner reports, not independently verified profit or bank balances.','Readiness confirmations are owner attestations, not verified qualifications.','Historical awards identify possible partners; they are not open bids or current demand.','Public contacts and unsent drafts are not clients, contracts or revenue.','No sales, profit or income is guaranteed. External sending, bid submission and invoice collection are not connected.'],
   generatedAt:now,
  };
