@@ -71,6 +71,24 @@ dialog::backdrop{background:#02080ccc;backdrop-filter:blur(6px)}
 @keyframes hq-rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @media(prefers-reduced-motion:reduce){.operations-panel,.operations-toggle,.office-brief,.notification-toast,dialog[open]{animation:none}.office-dock button:hover{transform:none}}
 @media(max-width:600px){#office-section::after{background:radial-gradient(ellipse at 50% 45%,transparent 62%,#030a1080 100%)}}
+#office-viewport{position:relative}
+.meeting-room-enter{pointer-events:auto;background:#102a2df0;border:1px solid #8be4cf55;border-radius:10px;padding:9px 13px;color:#dff7ec;font-size:10px;letter-spacing:.025em;box-shadow:0 9px 28px #02080c48,inset 0 1px 0 #ffffff18;backdrop-filter:blur(16px);transition:transform .22s,box-shadow .22s,background .22s}
+.meeting-room-enter:hover{background:#174239;box-shadow:0 0 26px #62e4ce38;transform:translateY(-1px)}
+.meeting-room-enter span{padding-left:8px;color:#86dac8}
+.meeting-view-controls{position:absolute;z-index:14;top:19px;right:18px;display:flex;align-items:center;justify-content:space-between;gap:12px;width:min(410px,calc(100% - 36px));padding:12px 13px 12px 16px;border:1px solid #d6fff129;border-radius:15px;background:linear-gradient(135deg,#09191fe8,#0c282be0);color:#e8f7f0;box-shadow:0 17px 55px #02070ab3,inset 0 1px 0 #ffffff16;backdrop-filter:blur(22px) saturate(1.25);animation:hq-meeting-arrive .75s cubic-bezier(.16,.75,.28,1) both}
+.meeting-view-controls>div{display:grid;gap:2px;min-width:0}
+.meeting-view-controls strong{font-size:13px;letter-spacing:.01em}
+.meeting-view-controls small{font-size:9px;color:#9ebeb5}
+.meeting-view-kicker{font-size:8px;letter-spacing:.15em;color:#76ddc6;font-weight:750}
+.meeting-view-controls button{flex-shrink:0;border:1px solid #7de0c548;background:#d4fff012;padding:9px 13px;border-radius:9px;color:#e9f8f1;font-size:10px;box-shadow:inset 0 1px 0 #ffffff12}
+.meeting-view-controls button:hover{background:#74e2c729;box-shadow:0 0 24px #69e3cc20}
+body[data-camera='meeting'] .office-hud,body[data-camera='meeting'] .office-dock,body[data-camera='meeting'] .floor-label,body[data-camera='meeting'] .office-supervision,body[data-camera='meeting'] .office-render-message,body[data-camera='meeting'] .operations-toggle,body[data-camera='meeting'] .operations-panel,body[data-camera='meeting'] .notifications-panel,body[data-camera='meeting'] .view-menu{visibility:hidden;pointer-events:none;opacity:0;transition:opacity .25s ease,transform .35s ease}
+body[data-camera='meeting'] .office-dock{transform:translate(-50%,24px)}
+body[data-camera='meeting'][data-operations='open'] #office-section{right:0}
+body[data-camera='meeting'] #office-section::after{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;background:radial-gradient(ellipse at center,transparent 52%,#02090b66 100%);box-shadow:inset 0 0 140px #02090b33}
+@keyframes hq-meeting-arrive{from{opacity:0;filter:blur(8px);transform:translateY(-8px) scale(.98)}to{opacity:1;filter:blur(0);transform:translateY(0) scale(1)}}
+@media(max-width:650px){.meeting-room-enter{padding:8px 10px;font-size:9px}.meeting-view-controls{top:12px;left:12px;transform:none;width:calc(100% - 24px);gap:10px;padding:11px 12px}.meeting-view-controls strong{font-size:11px}.meeting-view-controls small{font-size:8px}.meeting-view-controls button{padding:9px 10px;font-size:9px}}
+@media(prefers-reduced-motion:reduce){.meeting-view-controls{animation:none}}
 /* Review fixes: no light strip beside the panel, dark status card, empty message pill hidden */
 html,body{background:#0b1620}
 #office-section{background:#0b1620}

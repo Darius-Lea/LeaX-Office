@@ -1,5 +1,11 @@
 # Current implementation status — 2026-10-23
 
+## Current feature slice — first-person meeting room
+
+Added a seated first-person camera mode to the existing WebGL conference suite. The owner can enter from any office view or the in-scene marker, look around by dragging or using arrow/WASD keys, see a first-person hands/arms model, and return to the previously saved orbit camera through a cinematic transition or Escape. The conference area now has glass partitions, acoustic fins, a presentation display, conference camera/sound bar hardware, and dedicated lighting. The entry control respects the saved meeting-area setting and adapts to reduced-motion preferences.
+
+This is a visual navigation milestone. It does not start an AI discussion, gather staff, capture voice, connect Poly Studio hardware, create human accounts, or provide remote meetings. Those are later operational features and are not represented as active by this scene.
+
 ## Current milestone — 0.2.0-preview.6
 
 Implemented a source-linked Opportunity workspace joining saved sources, exact-company published contacts, drafts, planning estimates, owner qualification, next actions, due dates and history. Today opens case-specific work and prioritizes due follow-ups and reported customer progress before optional setup. Owner-reported outcome stages and cash share the existing business-results ledger; corrections/voids recompute the case without double-counting receipts. A result corrected to another company no longer contributes to the old case. Original sources and prior case revisions remain intact.
