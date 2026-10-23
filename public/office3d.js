@@ -358,6 +358,38 @@ export function createOffice3D(host,{onEmployee,onOwner,onMeetingMode=()=>{}}){
   const previous=renderer.clippingPlanes;renderer.clippingPlanes=[reflPlane];renderer.setRenderTarget(reflRT);renderer.clear();renderer.render(scene,reflCam);renderer.setRenderTarget(null);renderer.clippingPlanes=previous;reflMesh.visible=true;}
  const faceMaterials=new Map(),screenMaterials=new Set();
  function faceMaterial(index){if(faceMaterials.has(index%8))return faceMaterials.get(index%8);const texture=canvasTexture(256,256,(ctx)=>{ctx.clearRect(0,0,256,256);for(const x of [73,183]){ctx.fillStyle='#684b3c';ctx.beginPath();ctx.ellipse(x,74,29,5,index%2?.04:-.04,0,Math.PI*2);ctx.fill();ctx.fillStyle='#e9e4db';ctx.beginPath();ctx.ellipse(x,110,22,8,0,0,Math.PI*2);ctx.fill();ctx.fillStyle=index%3===0?'#587166':'#5d493c';ctx.beginPath();ctx.arc(x,110,7,0,Math.PI*2);ctx.fill();ctx.fillStyle='#252c28';ctx.beginPath();ctx.arc(x,110,3.7,0,Math.PI*2);ctx.fill();ctx.fillStyle='#ffffff';ctx.fillRect(x+2,106,2.5,2.5);ctx.strokeStyle='#8b6555';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(x,111,23,9,0,Math.PI,Math.PI*2);ctx.stroke();}ctx.strokeStyle='#9d6659';ctx.lineWidth=4;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(103,196);ctx.quadraticCurveTo(128,205,153,196);ctx.stroke();ctx.strokeStyle='#c18d78';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(114,206);ctx.quadraticCurveTo(128,210,142,206);ctx.stroke();if(index%4===1){ctx.strokeStyle='#39433e';ctx.lineWidth=5;for(const x of [73,183]){ctx.beginPath();ctx.roundRect(x-31,94,62,36,9);ctx.stroke();}ctx.beginPath();ctx.moveTo(105,108);ctx.lineTo(151,108);ctx.stroke();}});const face=new THREE.MeshStandardMaterial({map:texture,transparent:true,depthWrite:false,roughness:.8,side:THREE.DoubleSide});faceMaterials.set(index%8,face);return face;}
+  // Finer detail for every figure: softer skin, brows, lips, chin, shoulders, lapels, belt, cuffs, thumbs, soles and a distinct hairstyle per person.
+ function enhancePerson(p,color,skin,hairColor,trousers,index,standing,arms,legs){
+  const skinColor=new THREE.Color(skin),skinHex=skinColor.getHexString();
+  const skinMat=material(skin,{roughness:.58,emissive:skinColor.clone().multiplyScalar(.3),emissiveIntensity:.35});
+  p.traverse(o=>{if(o.isMesh&&!Array.isArray(o.material)&&o.material.color&&!o.material.map&&!o.material.transparent&&o.material.color.getHexString()===skinHex)o.material=skinMat;});
+  const clothMat=material(color,cloth),dark=new THREE.Color(color).multiplyScalar(.62).getStyle();
+  const part=(geo,mat,x,y,z,sx,sy,sz)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.castShadow=true;m.receiveShadow=true;p.add(m);return m;};
+  // face
+  p.add(mesh(sphereGeo,'#9c5a52',0,1.572,-.19,.034,.011,.014,{roughness:.55}));
+  for(const side of [-1,1])p.add(rounded(hairColor,side*.052,1.683,-.192,.062,.011,.012,{roughness:.9}));
+  part(sphereGeo,skinMat,0,1.538,-.146,.082,.058,.078);
+  // shoulders and collar line
+  part(sphereGeo,clothMat,0,1.35,.01,.2,.07,.125);
+  for(const side of [-1,1])part(sphereGeo,clothMat,side*.25,1.3,standing?0:-.02,.088,.098,.098);
+  // jacket lapels, pocket square and belt
+  for(const side of [-1,1]){const lapel=rounded(dark,side*.075,1.15,-.168,.075,.3,.016,cloth);lapel.rotation.z=side*.14;p.add(lapel);}
+  p.add(rounded('#f2efe6',.125,1.0,-.172,.05,.035,.012,{roughness:.85}));
+  p.add(rounded('#14100d',0,.875,0,.415,.034,.287,{roughness:.5}));p.add(box('#c9b87a',0,.875,-.146,.05,.03,.012,{metalness:.9,roughness:.25}));
+  // hair: a different silhouette per person
+  const style=index%4;
+  if(style===0)part(sphereGeo,material(hairColor,{roughness:.88}),0,1.752,0,.15,.07,.17);
+  else if(style===1){const fringe=rounded(hairColor,0,1.76,-.1,.2,.045,.1,{roughness:.88});fringe.rotation.x=-.25;p.add(fringe);}
+  else if(style===2){part(sphereGeo,material(hairColor,{roughness:.9}),0,1.548,-.118,.1,.058,.07);p.add(rounded(hairColor,0,1.588,-.19,.07,.012,.015,{roughness:.9}));}
+  else part(sphereGeo,material(hairColor,{roughness:.88}),.05,1.762,-.02,.14,.06,.16);
+  // hands and sleeves
+  arms.forEach((arm,i)=>{const side=i?1:-1,elbow=arm.children[1];if(!elbow)return;
+   const thumb=rounded(skin,side*.05,-.325,-.02,.021,.052,.024,{roughness:.8});thumb.rotation.z=-side*.35;elbow.add(thumb);
+   elbow.add(cylinder('#ecece4',0,-.292,0,.056,.03,{roughness:.85}));});
+  // soles
+  if(standing)for(const leg of legs)leg.add(rounded('#0d1411',0,-.655,-.065,.166,.03,.298,{roughness:.7}));
+  else for(const side of [-1,1])p.add(rounded('#0d1411',side*.115,.03,-.4,.166,.03,.298,{roughness:.7}));
+ }
  function makePerson(color,index=0,standing=false){const p=new THREE.Group(),skin=['#b88160','#e5bba0','#926449','#cc9a77'][index%4],hairColor=['#3a3029','#252d2b','#68503a','#352c28'][index%4],trousers=index%2?'#35434b':'#39453e';
  p.add(rounded(trousers,0,.68,0,.39,.24,.29,cloth));
  const torso=mesh(sphereGeo,color,0,1.055,0,.255,.335,.158,cloth);p.add(torso);p.add(rounded(color,0,.815,-.012,.40,.14,.28,cloth));
@@ -372,7 +404,7 @@ export function createOffice3D(host,{onEmployee,onOwner,onMeetingMode=()=>{}}){
  const tie=rounded(index%2?'#ba9c65':'#788d83',0,1.185,-.164,.034,.17,.018,cloth);p.add(tie);for(const y of [.95,1.04])p.add(sphere('#42524c',.028,y,-.157,.009,{metalness:.2,roughness:.5}));
  const arms=[],legs=[];for(const side of [-1,1]){const arm=new THREE.Group();arm.position.set(side*.253,1.28,standing?0:-.025);const sleeve=mesh(sphereGeo,color,0,-.126,standing?0:-.06,.073,.18,.075,cloth);if(!standing)sleeve.rotation.x=.4;arm.add(sleeve);const elbow=new THREE.Group();elbow.position.set(0,standing?-.29:-.23,standing?0:-.125);elbow.rotation.x=standing?.04:1.23;elbow.add(cylinder(skin,0,-.15,0,.051,.3,{roughness:.8}));elbow.add(rounded(color,0,-.025,0,.112,.065,.116,cloth));const palm=sphere(skin,0,-.325,-.006,.061,{roughness:.8});palm.scale.multiply(new THREE.Vector3(.85,1.15,.62));elbow.add(palm);for(let finger=0;finger<3;finger++)elbow.add(rounded(skin,(finger-1)*.022,-.372,-.01,.017,.055,.024,{roughness:.82}));arm.add(elbow);p.add(arm);arms.push(arm);
  if(standing){const leg=new THREE.Group();leg.position.set(side*.115,.69,0);leg.add(cylinder(trousers,0,-.265,0,.079,.54,cloth));leg.add(rounded('#27342e',0,-.59,-.065,.16,.12,.29,{roughness:.52}));p.add(leg);legs.push(leg);}else{const thigh=cylinder(trousers,side*.115,.615,-.155,.087,.4,cloth);thigh.rotation.x=Math.PI/2;p.add(thigh);p.add(sphere(trousers,side*.115,.57,-.34,.083,cloth));p.add(cylinder(trousers,side*.115,.32,-.34,.073,.5,cloth));p.add(rounded('#27342e',side*.115,.075,-.4,.16,.12,.29,{roughness:.52}));}}
- p.userData={arms,legs};return p;}
+ enhancePerson(p,color,skin,hairColor,trousers,index,standing,arms,legs);p.userData={arms,legs};return p;}
  function makeOfficer(index=6,standing=true){
  const person=makePerson('#233a57',index,standing);person.userData.officer=true;
  person.add(cylinder('#20344c',0,1.87,.015,.225,.12));person.add(box('#132439',0,1.817,-.17,.37,.035,.22));
