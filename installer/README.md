@@ -19,3 +19,6 @@ Preview.2 adds the GUI-free `--store-sam-key` helper command for the authenticat
 
 
 Preview.5 installer repair: the verified local office now opens before large AI downloads, so a model setup failure does not block access to saved files and evidence tools. Automatic AI preparation continues in the visible setup window; only completed inference selects the model and reports readiness. Cancelling that later stage preserves the handed-off office. Damaged runtime caches are replaced from a freshly verified staging directory, with prior files retained and rollback on a failed replacement. Public download now shows progress, verifies file bytes and supports retry/cancel and HTTP resume. Linux tests/cross-builds do not establish actual Windows installation success.
+
+## Package parity
+The native build runs `scripts/verify-installer.py` after compilation. To check an existing executable, first run the production build, then run that Python verifier. It rejects a stale embedded manifest, mismatched executable checksum, duplicate/unexpected entries or any different application file. This verifies code packaging, not actual installation or live integrations.

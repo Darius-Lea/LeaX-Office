@@ -1,0 +1,9 @@
+import {randomBytes,createCipheriv,createDecipheriv} from 'node:crypto';
+import {readFileSync,writeFileSync,renameSync,existsSync,unlinkSync} from 'node:fs';
+import {join} from 'node:path';
+import {directory} from './store.ts';
+const keyPath=join(directory,'.mail-master.key'),recordPath=join(directory,'.mail-account.encrypted');
+function privateWrite(path:string,data:any){const stage=path+'.'+randomBytes(8).toString('hex')+'.tmp';try{writeFileSync(stage,data,{flag:'wx',mode:0o600});renameSync(stage,path);}finally{if(existsSync(stage))unlinkSync(stage);}}
+export function readMailAccount():any{if(!existsSync(recordPath))return null;const key=readFileSync(keyPath);if(key.length!==32)throw Error('Private mail storage needs repair');const bytes=readFileSync(recordPath);if(bytes.length>65536)throw Error('Invalid private mail record');const r=JSON.parse(bytes.toString('utf8'));if(r.version!==1)throw Error('Unsupported private mail record');const iv=Buffer.from(r.iv,'base64'),tag=Buffer.from(r.tag,'base64');if(iv.length!==12||tag.length!==16)throw Error('Invalid private mail record');const decipher=createDecipheriv('aes-256-gcm',key,iv);decipher.setAuthTag(tag);return JSON.parse(Buffer.concat([decipher.update(Buffer.from(r.value,'base64')),decipher.final()]).toString('utf8'));}
+export function writeMailAccount(value:any){if(!existsSync(keyPath))privateWrite(keyPath,randomBytes(32));const key=readFileSync(keyPath);if(key.length!==32)throw Error('Private mail storage needs repair');const iv=randomBytes(12),cipher=createCipheriv('aes-256-gcm',key,iv);const encrypted=Buffer.concat([cipher.update(JSON.stringify(value),'utf8'),cipher.final()]);privateWrite(recordPath,JSON.stringify({version:1,iv:iv.toString('base64'),tag:cipher.getAuthTag().toString('base64'),value:encrypted.toString('base64')}));}
+export function removeMailAccount(){if(existsSync(recordPath))unlinkSync(recordPath);}

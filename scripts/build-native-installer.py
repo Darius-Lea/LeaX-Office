@@ -2,7 +2,7 @@
 Requires Go >=1.24 and network access to pinned Go modules. No Windows execution occurs.
 Usage: python scripts/build-native-installer.py --go /path/to/go
 """
-import argparse, hashlib, os, pathlib, subprocess, zipfile
+import argparse, hashlib, os, pathlib, subprocess, sys, zipfile
 parser=argparse.ArgumentParser();parser.add_argument('--go',default='go');args=parser.parse_args()
 root=pathlib.Path(__file__).resolve().parents[1];installer=root/'installer';out=root/'downloads';out.mkdir(exist_ok=True)
 production=root/'dist'/'application'
@@ -16,4 +16,5 @@ env={**os.environ,'GOOS':'windows','GOARCH':'amd64','CGO_ENABLED':'0'}
 target=out/'AI-Headquarters-Setup.exe'
 subprocess.run([args.go,'build','-trimpath','-ldflags=-H windowsgui -s -w','-o',str(target),'.'],cwd=installer,env=env,check=True)
 (target.with_suffix('.exe.sha256')).write_text(hashlib.sha256(target.read_bytes()).hexdigest()+'  '+target.name+'\n')
+subprocess.run([sys.executable,str(root/'scripts'/'verify-installer.py')],cwd=root,check=True)
 print(f'Built {target.name}: {target.stat().st_size:,} bytes. Unsigned; actual Windows installation untested by this build.')

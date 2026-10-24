@@ -26,6 +26,7 @@ export function prepareContactDraft(contactId:string,address:string){
 export function reviewDraft(id:string,subject:string,body:string,approve:boolean){
  if(typeof id!=='string'||typeof subject!=='string'||!subject.trim()||subject.length>200||/[\r\n]/.test(subject)||typeof body!=='string'||!body.trim()||body.length>10000)throw Error('Subject (1–200 characters) and body (1–10000 characters) required');
  if(approve&&!draftReadiness(body).ready)throw Error(draftReadiness(body).issues[0]);
+ if(db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='mail_deliveries'").get()&&db.prepare('SELECT 1 FROM mail_deliveries WHERE draft_id=?').get(id))throw Error('This draft has a send receipt. Preserve it and create a new draft instead.');
  const change=db.prepare('UPDATE outgoing_drafts SET subject=?,body=?,status=? WHERE id=?').run(subject.trim(),body.trim(),approve?'Approved for composer':'Pending approval',id);
  if(!change.changes)throw Error('Draft not found');audit('draft:'+id,approve?'Owner approved opening the email composer; no email sent':'Owner edited draft; approval reset');
 }

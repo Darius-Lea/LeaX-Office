@@ -168,11 +168,11 @@ export function updateDeal(input:unknown){
  }catch(error){db.exec('ROLLBACK');throw error;}
  return dealDetail(prior.id);
 }
-export function recordDealOutcome(input:unknown){
+export function recordDealOutcome(input:unknown,inTransaction=false){
  const body=object(input),prior=saved(body.dealId);revision(prior,body.expectedRevision,false);
  if(body.company!==undefined&&body.company!==prior.company)throw Error('The result company must match this opportunity');
  const reference=body.reference===undefined?prior.title:text(body.reference,200,'Job or conversation reference');const now=Date.now();let result:any;
- db.exec('BEGIN IMMEDIATE');try{
+ if(!inTransaction)db.exec('BEGIN IMMEDIATE');try{
   revision(saved(prior.id),body.expectedRevision,false);
   result=saveOutcome({type:body.type,company:prior.company,reference,occurredAt:body.occurredAt,amount:body.amount,notes:body.notes,nextFollowUpAt:body.nextFollowUpAt,...(body.outcomeId?{id:body.outcomeId}:{})});
   const link=db.prepare('SELECT deal_id FROM deal_outcome_links WHERE outcome_id=?').get(result.id) as any;if(link&&link.deal_id!==prior.id)throw Error('This reported result already belongs to another opportunity; do not count it twice');
@@ -182,8 +182,8 @@ export function recordDealOutcome(input:unknown){
    db.prepare('UPDATE deal_cases SET next_action=?,due_at=?,revision=revision+1,updated=? WHERE id=?').run(action,due,now,prior.id);
    event(prior.id,'result',result.label+' · Owner reported',result.notes||'Saved in the existing business-results ledger. This does not send a message or verify a customer/bank event.',now);audit('deal:'+prior.id,'Linked an owner-reported result to its opportunity; existing ledger remains the only cash record');
   }
-  db.exec('COMMIT');
- }catch(error){db.exec('ROLLBACK');throw error;}
+  if(!inTransaction)db.exec('COMMIT');
+ }catch(error){if(!inTransaction)db.exec('ROLLBACK');throw error;}
  return {...dealDetail(prior.id),savedOutcome:result};
 }
 export function dealState(now=Date.now()){
