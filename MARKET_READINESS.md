@@ -1,4 +1,6 @@
-# Release status: 0.2.0-preview.10
+# Release status: 0.2.0-preview.11
+
+Preview.11 adds local transparent employee portraits outside meetings and speech-driven raised hands inside meetings. These graphics do not establish AI inference or a connected call. The human camera panel stays inside the app; completed remote video, Windows-device execution/signing and live model/source quality still need validation.
 
 Preview.10 makes meetings CEO-led, exposes the real popup board, routes questions to one chosen employee, and keeps human video inside the app. Voice samples/pace and optional consented browser online voices improve control without claiming natural audio on every device. Scoped partner pages are meeting workspaces; one main furnished 3D office remains. Actual Windows execution, live-model/source quality and connected remote video remain release gates. The product remains an unsigned preview.
 

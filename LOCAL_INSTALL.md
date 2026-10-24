@@ -1,5 +1,13 @@
 # Install AI Headquarters on Windows
 
+## Faces and meeting gestures — preview.11
+
+Update using the latest setup below and open your local office. Outside meetings, talk to an employee to see their transparent-background portrait beside the conversation. Use the portrait's close button to hide it and **Show employee face** to restore it. Conversation history and unfinished text remain saved as before.
+
+In **Meet**, choose a saved answer's **Listen in the room** button. The board closes and that employee raises an open hand when actual read-aloud begins, then lowers it when speech stops. Voice availability/quality still depend on your device and consent settings. No portrait overlay appears in the meeting room.
+
+Human **Video call** remains inside the board; no outside meeting site or tab is required. Remote callers still need the same reachable company installation, an invitation, camera/microphone permission and a working peer connection. Connected remote calls and actual Windows installation remain device/network validation gates.
+
 ## Meeting update — preview.10
 
 Open the latest Windows setup below to update your existing local office. Your founder account, saved work and office design stay in the retained data folder.
@@ -28,7 +36,7 @@ For remote partners, use **Partner offices & meetings** on one reachable HTTPS i
 
 Bitcoin monitoring is optional, read-only public-address lookup. No CPU/GPU miner or mining income is implemented. Public paid-meeting requests need an owner-supplied official payment URL; check payments at that provider. Do not advertise a connected bank, automatic appointments or malware scanning.
 
-Latest **preview.10** update: [Download Windows setup](https://github.com/Darius-Lea/LeaX-Office/raw/refs/heads/codex/desktop-reliability-and-autonomous-office/downloads/AI-Headquarters-Setup.exe). Open the downloaded executable to update while retaining your data folder. **Internet & tools** shows real source access and schedules; **My computer → Assistant** opens saved employee conversations. Model preparation must finish successfully for actual AI replies. Email preparation explains the purpose and opens your own mail service for final send; it does not connect to your inbox. Optional private learning archives are separate from full office backups.
+Latest **preview.11** update: [Download Windows setup](https://github.com/Darius-Lea/LeaX-Office/raw/refs/heads/codex/desktop-reliability-and-autonomous-office/downloads/AI-Headquarters-Setup.exe). Open the downloaded executable to update while retaining your data folder. **Internet & tools** shows real source access and schedules; **My computer → Assistant** opens saved employee conversations. Model preparation must finish successfully for actual AI replies. Email preparation explains the purpose and opens your own mail service for final send; it does not connect to your inbox. Optional private learning archives are separate from full office backups.
 
 Preview.6 keeps your existing office database and adds **Opportunities** in the owner computer. Open a source lead and choose **Track potential partner**, or add a customer you already know. Keep the next action, follow-up date, qualification checks and reported results together. Today opens the specific opportunity that needs attention. Historical awards remain potential-partner research, and reported wins remain separate from received payments.
 

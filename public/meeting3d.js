@@ -267,7 +267,7 @@ export function createMeeting3D(host, {onEmployee, onTablet, onBoard, onExit, on
       round(shin, soleMaterial, 0, -.44, .075, .14, .1, .28);
     }
     const hit = box(group, basic({visible: false}), 0, 1.0, 0, .8, 1.7, .7, false); hit.userData.action = employee.id; interactives.push(hit);
-    const actor = {group, body, head, mouth, legs, arms, hands, employee, index, phase: 'Invited', progress: 0, wait: 0, label: null, hologram};
+    const actor = {group, body, head, mouth, legs, arms, hands, employee, index, phase: 'Invited', progress: 0, wait: 0, handLift: 0, label: null, hologram};
     actors.set(employee.id, actor); return actor;
   }
   // The visible CEO forearms are camera-relative, with cuffs, wrists and fingers.
@@ -386,7 +386,26 @@ export function createMeeting3D(host, {onEmployee, onTablet, onBoard, onExit, on
     l1.rotation.x = r1.rotation.x = seated ? -Math.PI / 2 : 0;
     l2.rotation.x = r2.rotation.x = seated ? Math.PI / 2 : 0;
     actor.body.position.y = seated ? 0 : .35;
-    actor.arms.forEach((arm, i) => { arm.rotation.x = seated ? (i % 2 ? -1.13 : -.12) : 0; });
+    actor.arms.forEach((arm, i) => { arm.rotation.x = seated ? (i % 2 ? -1.13 : -.12) : 0; arm.rotation.z = 0; });
+    actor.handLift = 0;
+  }
+  function isSpeaking(actor) { return enabled && activeMeeting && !document.hidden && actor.phase === 'Seated' && voiceSpeaking && voiceAgent === actor.employee.id; }
+  function poseRaisedHand(actor, value) {
+    // The existing right shoulder and elbow form one articulated arm. The palm
+    // stays open and rises beside the face; no extra geometry or waving loop.
+    const eased = value * value * (3 - 2 * value), shoulder = actor.arms[2], elbow = actor.arms[3];
+    shoulder.rotation.x = -.12 + .04 * eased; shoulder.rotation.z = 2.4 * eased;
+    elbow.rotation.x = -1.13 + 1.05 * eased; elbow.rotation.z = .6 * eased;
+    actor.hands[1].rotation.x = Math.PI / 2;
+  }
+  function advanceHand(actor, dt, immediate = false) {
+    const target = isSpeaking(actor) ? 1 : 0, before = actor.handLift;
+    if (immediate || reduced.matches || paused || !activeMeeting || !enabled || document.hidden) actor.handLift = target;
+    else actor.handLift += Math.sign(target - actor.handLift) * Math.min(Math.abs(target - actor.handLift), dt * 4.5);
+    if (Math.abs(actor.handLift - target) < .0001) actor.handLift = target;
+    if (actor.phase === 'Seated') poseRaisedHand(actor, actor.handLift);
+    if (before !== actor.handLift) shadowsDirty = dirty = true;
+    return actor.handLift !== target;
   }
   function settle(actor) {
     const seat = seatPositions[actor.index]; actor.group.position.set(seat.x, 0, seat.z); actor.group.rotation.y = seat.angle;
@@ -424,7 +443,7 @@ export function createMeeting3D(host, {onEmployee, onTablet, onBoard, onExit, on
       }); rosterSignature = nextRoster; rebuildAvatarBatches(); shadowsDirty = true;
     }
     if (newInvite) for (const actor of actors.values()) beginArrival(actor, actor.index);
-    if (!activeMeeting) for (const actor of actors.values()) { actor.group.visible = false; setPhase(actor, 'Invited'); }
+    if (!activeMeeting) for (const actor of actors.values()) { actor.group.visible = false; seatedPose(actor, false); setPhase(actor, 'Invited'); }
     inviteKey = nextKey;
     const nextChair = JSON.stringify([chairPresentation(state), voiceAgent, voiceSpeaking]);
     if (nextChair !== chairSignature) { chairSignature = nextChair; for (const actor of actors.values()) actorLabel(actor); }
@@ -530,6 +549,10 @@ export function createMeeting3D(host, {onEmployee, onTablet, onBoard, onExit, on
         if (speaking && !reduced.matches) { actor.head.rotation.z = Math.sin(elapsed * 2.2) * .025; animating = true; } else actor.head.rotation.z = 0;
       }
     }
+    for (const actor of actors.values()) {
+      if (advanceHand(actor, dt)) animating = true;
+      if (paused || !activeMeeting) { actor.mouth.scale.y = .012; actor.head.rotation.z = 0; }
+    }
     camera.rotation.set(pitch, yaw, 0, 'YXZ');
     if (dirty || animating) {
       updateAvatarMatrices(); renderer.shadowMap.needsUpdate = shadowsDirty || (walking && elapsed - lastShadow > .25);
@@ -546,7 +569,7 @@ export function createMeeting3D(host, {onEmployee, onTablet, onBoard, onExit, on
     else { lastFrame = 0; markDirty(); }
   }) : null;
   intersection?.observe(host);
-  function visibility() { if (document.hidden) { if (frame) cancelAnimationFrame(frame); frame = 0; lastFrame = 0; } else { lastFrame = 0; markDirty(); } }
+  function visibility() { if (document.hidden) { if (frame) cancelAnimationFrame(frame); frame = 0; lastFrame = 0; for (const actor of actors.values()) advanceHand(actor, 0, true); } else { lastFrame = 0; markDirty(); } }
   listen(document, 'visibilitychange', visibility);
   listen(reduced, 'change', () => { if (reduced.matches && activeMeeting) for (const actor of actors.values()) settle(actor); refreshTargets(); paintScreen(currentState); markDirty(); });
   listen(canvas, 'webglcontextlost', e => { e.preventDefault(); contextLost = true; if (frame) cancelAnimationFrame(frame); frame = 0; });
@@ -554,10 +577,10 @@ export function createMeeting3D(host, {onEmployee, onTablet, onBoard, onExit, on
   resize(); update({});
   return {
     update,
-    setEnabled(value) { enabled = !!value; if (!enabled && frame) { cancelAnimationFrame(frame); frame = 0; } if (enabled) { lastFrame = 0; resize(); markDirty(); } },
+    setEnabled(value) { enabled = !!value; if (!enabled) { if (frame) cancelAnimationFrame(frame); frame = 0; for (const actor of actors.values()) advanceHand(actor, 0, true); } if (enabled) { lastFrame = 0; resize(); markDirty(); } },
     resetCamera() { yaw = 0; pitch = -.065; markDirty(); },
     // Read-only visual phases are deliberately distinct from employee work state.
-    getPresentation() { return [...actors.values()].map(a => ({id: a.employee.id, phase: a.phase})); },
+    getPresentation() { const position = new THREE.Vector3(); workforce.updateMatrixWorld(true); return [...actors.values()].map(a => ({id: a.employee.id, phase: a.phase, speaking: isSpeaking(a), handRaised: a.handLift > .85, handLift: a.handLift, rightHandHeight: a.hands[1].getWorldPosition(position).y, headHeight: a.head.getWorldPosition(position).y})); },
     dispose() {
       if (disposed) return; disposed = true; enabled = false; if (frame) cancelAnimationFrame(frame); frame = 0;
       observer.disconnect(); intersection?.disconnect(); for (const remove of events) remove(); events.length = 0; pointers.clear();

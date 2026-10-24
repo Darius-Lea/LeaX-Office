@@ -1,5 +1,11 @@
 # Architecture
 
+## Preview.11 employee presentation
+
+A small first-party SVG module renders deterministic portraits locally from saved employee IDs, with transparent background, text-safe labels and explicit show/hide/speaking/dispose methods. The focused-window controller owns one portrait at a time, disposes it on content/employee changes, and suppresses it while either meeting-room view is active. No image fetch, GPU renderer or idle JavaScript animation loop is introduced for portraits.
+
+The meeting speech controller uses a separate busy flag during voice preparation; its speaking ID is set only by actual playback status. Existing shoulder/elbow/palm joints animate the one speaker's hand, with finite transitions/static reduced-motion poses and neutral cleanup. Saved work/model execution remains separate from avatar presentation. Video still uses the scoped same-origin camera panel and its existing permissions.
+
 ## Preview.10 CEO-led turns and embedded board
 
 The additive office_meeting_turns table links each response message to the exact saved CEO question and employee. Meeting call/start only record invitations and state; older clients cannot request automatic kickoff inference. Existing completed outputs remain intact. Legacy unstarted pre-question kickoff slots are withdrawn separately from explicit discussion. Inference selects the actual question and that employee's bounded prior turns, removes unrelated docket data, retains relevant source tools and rejects unexpected tools on simple questions. Response metadata distinguishes linked questions and legacy unsolicited kickoff history.

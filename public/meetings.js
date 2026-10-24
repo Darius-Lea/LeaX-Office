@@ -10,7 +10,7 @@ const requestId=()=>crypto.randomUUID();
 export function createMeetingWorkspace({dialog,api,getOfficeState,onMusic,onAISetup,onFeedback,onPartners}){
  let scene=null,current=null,visible=false,poll=null,loading=false,disposed=false,voiceSource=false,listening=false;
  let selectedMeetingId=null,selectedEmployeeId=null,renderedMeetingId=null,speakingAgent=null,boardTab='discussion';
- let speechQueue=[],speechGeneration=0,replyGeneration=0;
+ let speechQueue=[],speechGeneration=0,replyGeneration=0,speechBusy=false;
  const completedSeen=new Set(),requestedReplies=new Set();
  const shell=el('div');shell.className='meeting-workspace meeting-led';
  const stage=el('div');stage.id='meeting-stage';stage.setAttribute('aria-label','Your first-person meeting room');
@@ -96,7 +96,7 @@ export function createMeetingWorkspace({dialog,api,getOfficeState,onMusic,onAISe
  function closeBoard(){video.hide();if(board.open)board.close();placeComposer();renderScene();}
  function messageCard(item){const card=el('article');card.dataset.role=item.role;card.dataset.message=item.id;const name=item.role==='ceo'?'You':people().find(person=>person.id===item.participantId)?.name||item.participantId||'Colleague';card.append(el('strong',name));
   if(item.text){const body=el('p',item.text);body.className='meeting-reply-text';card.append(body);}else card.append(el('p',item.status==='Setup required'?'Question saved. Local AI needs setup before this colleague can answer.':item.status==='Queued'?(current.clock==='in'?'Preparing to answer your question.':'Question saved. Office is clocked out.'):item.status==='Running'?'Answering your question…':item.status==='Cancelled'?'This earlier automatic reply was stopped.':item.error||'This answer needs attention.'));
-  if(item.role==='employee'&&item.text){card.append(button('Read this answer',()=>{clearSpeech();speechQueue.push(item);drainSpeech();}));if(item.status==='Completed'&&item.runId&&onFeedback)for(const [label,rating]of [['👍 Useful','reward'],['👎 Improve','correct']])card.append(button(label,()=>onFeedback(item.participantId,item.runId,rating)));}
+  if(item.role==='employee'&&item.text){card.append(button('Listen in the room',()=>{clearSpeech();closeBoard();speechQueue.push(item);drainSpeech();}));if(item.status==='Completed'&&item.runId&&onFeedback)for(const [label,rating]of [['👍 Useful','reward'],['👎 Improve','correct']])card.append(button(label,()=>onFeedback(item.participantId,item.runId,rating)));}
   return card;
  }
  function render(detail){
@@ -114,8 +114,8 @@ export function createMeetingWorkspace({dialog,api,getOfficeState,onMusic,onAISe
   for(const item of activeMessages){if(item.role!=='employee'||!item.text||completedSeen.has(item.id))continue;completedSeen.add(item.id);if(!requestedReplies.has(item.id))continue;requestedReplies.delete(item.id);if(visible&&!listening){if(!board.open&&!input.value.trim())showBoard('discussion');if(aloud.checked){speechQueue.push(item);setTimeout(drainSpeech,0);}}}
   video.update(current);updateFloor();updateSendLabel();renderScene();
  }
- function clearSpeech(){speechGeneration++;speechQueue=[];stopReading();speakingAgent=null;updateFloor();}
- function drainSpeech(){if(!visible||listening||speakingAgent||!speechQueue.length)return;const item=speechQueue.shift(),token=speechGeneration;speakingAgent=item.participantId;updateFloor();renderScene();void readToMe(item.text,{context:'meeting',voiceURI:voicePicker.value,rate:Number(speed.value),onStatus:value=>{if(token!==speechGeneration)return;voiceStatus.textContent=value.message;if(['stopped','complete','error','unsupported','unavailable'].includes(value.status)){speakingAgent=null;updateFloor();renderScene();if(value.status==='complete')setTimeout(drainSpeech,0);else speechQueue=[];}}});}
+ function clearSpeech(){speechGeneration++;speechQueue=[];stopReading();speakingAgent=null;speechBusy=false;updateFloor();renderScene();}
+ function drainSpeech(){if(!visible||listening||speechBusy||!speechQueue.length)return;const item=speechQueue.shift(),token=speechGeneration;speechBusy=true;void readToMe(item.text,{context:'meeting',voiceURI:voicePicker.value,rate:Number(speed.value),onStatus:value=>{if(token!==speechGeneration)return;voiceStatus.textContent=value.message;if(value.status==='speaking'){speakingAgent=item.participantId;updateFloor();renderScene();}if(['stopped','complete','error','unsupported','unavailable'].includes(value.status)){speakingAgent=null;speechBusy=false;updateFloor();renderScene();if(value.status==='complete')setTimeout(drainSpeech,0);else speechQueue=[];}}});}
  async function createAndStart(){
   start.disabled=true;boardStart.disabled=true;feedback.textContent='Preparing your meeting…';try{const all=getOfficeState()?.employees||[],selected=all.length<=12?all.map(item=>item.id):[...inviteList.querySelectorAll('input:checked')].map(item=>item.value);if(current?.status!=='Scheduled'&&(!selected.length||selected.length>12)){showBoard('people');choices.open=true;throw Error('Choose between 1 and 12 colleagues.');}const created=current?.status==='Scheduled'?current:await api('meetings/create',{title:'CEO-led meeting',agenda:[],employeeIds:selected,clientRequestId:requestId()});const called=await api('meetings/call',{id:created.id,expectedRevision:created.revision,queueResponses:false,clientRequestId:requestId()});const started=await api('meetings/start',{id:called.id,expectedRevision:called.revision,queueResponses:false,clientRequestId:requestId()});selectedMeetingId=null;render(started);feedback.textContent='Your meeting is ready. Everyone waits for your direction.';showBoard('discussion');}catch(error){feedback.textContent=error.message;boardStatus.textContent=error.message;start.disabled=false;boardStart.disabled=false;}
  }

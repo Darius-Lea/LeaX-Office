@@ -1,5 +1,13 @@
 # AI Headquarters
 
+## Employee faces and speaking gestures — preview.11
+
+Employee conversations and saved AI answers now show a local, transparent-background portrait beside the window. The stable ID determines the same skin/hair/suit/glasses colors used by the meeting avatar. Switch colleagues to switch portraits; hide the face or restore it without losing the conversation. On small screens it fits beside the heading. Portraits stay hidden inside either meeting-room view.
+
+In a meeting, **Listen in the room** closes the board and reads the selected saved answer. Only an actual speech-start event raises that employee's open hand; preparing/queued answers and merely selecting a person do not. Stop, completion, failure, microphone interruption, leaving or ending the room returns the hand to rest. Reduced-motion mode uses a static speaking pose. These are procedural employee graphics; no camera footage or external image service is used.
+
+**Video call stays inside the app.** Real human participants use the selected meeting's embedded first-party camera panel, with device consent. Both people need the same reachable company installation and compatible networking. A completed remote call remains unvalidated here; no TURN relay or automatic public access to a downloaded local office is configured.
+
 ## Your meeting, your direction — preview.10
 
 Open **Meet → Start meeting**. The meeting board opens over the room and the invited employees wait for you. Click a colleague, choose their name, or type **Einstein, what should we do about this lead?** Only that employee receives the question. **Everyone, ...** saves your statement without requesting a reply. A name alone selects the colleague; it does not generate a briefing. **My turn · stop voice** returns the floor to you. Click the wall display, desk tablet or **Open meeting board** to bring the board back.
@@ -55,7 +63,7 @@ Research and assignment archives now show sixty items per page with search, whil
 
 ## Start without coding on Windows
 
-Latest preview.10 installer: **[Download Windows setup](https://github.com/Darius-Lea/LeaX-Office/raw/refs/heads/codex/desktop-reliability-and-autonomous-office/downloads/AI-Headquarters-Setup.exe)**. Open the downloaded executable to update the local app; the data folder is retained. This is the review/download branch, separate from the live Render deployment.
+Latest preview.11 installer: **[Download Windows setup](https://github.com/Darius-Lea/LeaX-Office/raw/refs/heads/codex/desktop-reliability-and-autonomous-office/downloads/AI-Headquarters-Setup.exe)**. Open the downloaded executable to update the local app; the data folder is retained. This is the review/download branch, separate from the live Render deployment.
 Open **[/download](/download)** on your app site (for the existing host: https://leax-office.onrender.com/download). Click **Download for Windows**, then open **AI-Headquarters-Setup.exe** from the browser’s downloads. Setup starts automatically. No ZIP or project folders are involved. The download page shows transfer progress and checks the complete setup file before saving. Setup installs verified portable Node and opens the local office first, then automatically downloads/configures private local AI and verifies a real response. A failed or cancelled AI download keeps the opened office available. Signed installed Edge/Chrome can open it in a separate app-style window; the default browser is the fallback. No separate Ollama install, model selection, terminal, npm, paid AI key or administrator install is required. Setup offers progress, cancel and retry. Windows itself may display an unknown-publisher warning because the app is unsigned. Actual Windows installation remains unvalidated; this is **0.2.0 preview**, not a certified commercial release.
 
 Data stays in `%LOCALAPPDATA%\AIHeadquarters\data`, separate from installed versions. Download your private database backup from the existing Render office and use **Import saved office from Render / backup** in setup to retain your founder login, tasks and notes. Import validates and stages the selected database and preserves existing local files/recovery copies. It never synchronizes silently. Read [LOCAL_INSTALL.md](LOCAL_INSTALL.md) for transfer, updates and limits.

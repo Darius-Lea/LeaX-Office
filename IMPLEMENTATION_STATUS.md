@@ -1,6 +1,14 @@
-# Current implementation status — 2026-10-23
+# Current implementation status — 2026-10-24
 
-## Current milestone — 0.2.0-preview.10
+## Current milestone — 0.2.0-preview.11
+
+Added transparent local SVG employee portraits beside outside-room conversations and saved AI answers, stable ID appearance, role/name/status, hide/restore, mobile layout and disposal. Both meeting views suppress the overlay. Portrait mouth motion is caller-driven by actual speech playback; queued/model-running/preparing states do not imply speaking.
+
+Meeting avatars now raise a single articulated open hand while their actual reply is spoken, then settle to the resting pose. Listen in the room exposes the avatar while reading the selected saved answer. The speech controller separates voice preparation from playback and clears the gesture on terminal/stop/microphone/leave events. Reduced motion uses static poses, hidden/ended/disabled rooms clear them, and unchanged polls allocate no new measured GPU resources. No data schema, founder account, source/model permissions or video destination changed.
+
+Validation: 176 Node tests and native Go tests/Windows-target vet pass. Source/final packaged portrait, speech-gesture, mobile and embedded-video signaling checks pass, as do rendered resting-pose and 36-file installer integrity checks; exact scope is recorded in TEST_RESULTS.md. Video remains inside the first-party app; connected cross-device media, actual Windows execution/signing, live AI/source quality and natural audio remain unvalidated.
+
+## Previous milestone — 0.2.0-preview.10
 
 Changed meetings to CEO-led turn taking: call/start never queue automatic speeches, including old clients requesting kickoff replies. Explicit questions address one invited employee; each response links to the exact CEO question. Statements and agenda items produce no reply. Simple questions offer no research tools; relevant lead/current-notice/status questions retain actual permitted tools. Same-colleague context and concise question-first instructions reduce unrelated answers. One repair/hold remains, with no invented inference.
 
