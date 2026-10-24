@@ -280,7 +280,7 @@ export function createOffice3D(host,{onEmployee,onOwner,onMeetingMode=()=>{}}){
  function updateIntro(dt){if(!introActive||cameraMode!=='orbit')return false;introT=Math.min(1,introT+dt/4.4);const e=1-Math.pow(1-introT,3);yaw=.57-(1-e)*1.25;elevation=.73-(1-e)*.45;distance=35.5*(1-(1-e)*.42);if(introT>=1)introActive=false;return true;}
  // Bitcoin miner showpiece. DESIGN ONLY: it is not connected to anything, stays idle and shows no numbers.
  // Wire it up later with the returned setMinerState({printing,progress,connected}); progress runs 0 to 1 and grows the coin.
- const miner=new THREE.Group();miner.position.set(-9.35,0,1.2);miner.rotation.y=Math.PI/2;miner.scale.setScalar(1.3);scene.add(miner);
+ const miner=new THREE.Group();miner.position.set(-5.4,0,8);miner.rotation.y=.3;miner.scale.setScalar(1.3);scene.add(miner);
  const graphite={metalness:.75,roughness:.32},brushed={metalness:.95,roughness:.26};
  const mAdd=item=>{miner.add(item);return item;};
  contactShadow(miner,0,0,3.9,2.7,.09);
@@ -321,7 +321,7 @@ export function createOffice3D(host,{onEmployee,onOwner,onMeetingMode=()=>{}}){
  const glass=new THREE.Mesh(boxGeo,material('#bfe4ff',{physical:true,transparent:true,opacity:.12,roughness:.03,metalness:0,clearcoat:1,depthWrite:false}));glass.position.set(0,2.5,.8);glass.scale.set(2.04,2.1,.02);glass.castShadow=false;mAdd(glass);
  {const warmGlow=glowMaterial(glowTexture,'#ffb15a',.4);const floorGlow=new THREE.Mesh(planeGeo,warmGlow);floorGlow.rotation.x=-Math.PI/2;floorGlow.position.set(0,.1,.2);floorGlow.scale.set(6.6,4.4,1);miner.add(floorGlow);const chamberGlow=new THREE.Mesh(planeGeo,glowMaterial(glowTexture,'#ff9a3a',.3));chamberGlow.position.set(0,2.5,-.64);chamberGlow.scale.set(3.2,3.2,1);miner.add(chamberGlow);}
  let minerLight=null;if(tier!=='low'){minerLight=new THREE.PointLight('#ffb15a',3,8,2);minerLight.position.set(0,2.6,.3);miner.add(minerLight);}
- let minerSign=label('BITCOIN MINER · NOT CONNECTED','#ffb347',4.4,.48);minerSign.position.set(-9.35,5.6,1.2);scene.add(minerSign);
+ let minerSign=label('BITCOIN MINER · NOT CONNECTED','#ffb347',4.4,.48);minerSign.position.set(-5.4,5.6,8);scene.add(minerSign);
  const minerState={printing:false,progress:1,connected:false};
  function applyMiner(time=0){const live=minerState.printing&&!reduced.matches,p=THREE.MathUtils.clamp(minerState.progress,0,1),h=.16*Math.max(p,.02);
   coin.scale.y=h;coin.position.y=h/2;coinGroup.rotation.y=live?time*.0012:0;
@@ -330,12 +330,12 @@ export function createOffice3D(host,{onEmployee,onOwner,onMeetingMode=()=>{}}){
   if(minerLight)minerLight.intensity=minerState.printing?7:3;for(const f of fans)f.rotation.z=live?time*.012:0;}
  applyMiner(0);
  function setMinerState(next={}){if(disposed)return;const was=minerState.connected;for(const key of ['printing','progress','connected'])if(key in next)minerState[key]=key==='progress'?Number(next[key])||0:!!next[key];
-  if(was!==minerState.connected){scene.remove(minerSign);disposeLabel(minerSign);minerSign=label(minerState.connected?'BITCOIN MINER':'BITCOIN MINER · NOT CONNECTED','#ffb347',minerState.connected?3:4.4,.48);minerSign.position.set(-9.35,5.6,1.2);scene.add(minerSign);}
+  if(was!==minerState.connected){scene.remove(minerSign);disposeLabel(minerSign);minerSign=label(minerState.connected?'BITCOIN MINER':'BITCOIN MINER · NOT CONNECTED','#ffb347',minerState.connected?3:4.4,.48);minerSign.position.set(-5.4,5.6,8);scene.add(minerSign);}
   applyMiner(performance.now());markDirty();}
  // Click the miner to glide the camera over to it; click it again (or use reset) to glide back.
- const homePose={yaw:.57,elevation:.73,distance:35.5,x:0,y:.35,z:.1},minerPose={yaw:1.2,elevation:.3,distance:12,x:-9.35,y:2.1,z:1.2};
+ const homePose={yaw:.57,elevation:.73,distance:35.5,x:0,y:.35,z:.1},minerPose={yaw:.3,elevation:.3,distance:12,x:-5.4,y:2.1,z:8};
  let focus=null,minerFocused=false;
- const minerHit=box('#ffffff',-9.35,2.2,1.2,3,4.4,3.4,{transparent:true,opacity:0});minerHit.userData.action='miner';minerHit.castShadow=false;scene.add(minerHit);interactives.push(minerHit);
+ const minerHit=box('#ffffff',-5.4,2.5,8,4,4.9,3,{transparent:true,opacity:0});minerHit.userData.action='miner';minerHit.castShadow=false;scene.add(minerHit);interactives.push(minerHit);
  function flyTo(pose){introActive=false;focus={t:0,from:{yaw,elevation,distance,x:target.x,y:target.y,z:target.z},to:pose};markDirty();}
  function toggleMinerFocus(){minerFocused=!minerFocused;flyTo(minerFocused?minerPose:homePose);}
  function updateFocus(dt){if(!focus)return false;if(reduced.matches)focus.t=1;else focus.t=Math.min(1,focus.t+dt/1.4);const e=focus.t*focus.t*(3-2*focus.t),a=focus.from,b=focus.to;yaw=a.yaw+(b.yaw-a.yaw)*e;elevation=a.elevation+(b.elevation-a.elevation)*e;distance=a.distance+(b.distance-a.distance)*e;target.set(a.x+(b.x-a.x)*e,a.y+(b.y-a.y)*e,a.z+(b.z-a.z)*e);if(focus.t>=1)focus=null;return true;}
