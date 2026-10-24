@@ -1,5 +1,11 @@
 # Install AI Headquarters on Windows
 
+## Choose your meeting team — preview.12
+
+Open **Meet → People → Choose the team for your next meeting** before starting. Check the AI colleagues you want, then choose **Start meeting with selected team**. Leave all unchecked for a meeting with people only. Your selections survive roster refreshes; an already scheduled meeting keeps its saved roster. Use **Partner offices & invitations** to create private colleague accounts and share the active meeting after they accept.
+
+Meetings support 12 invited AI/human colleagues; video supports four real people including you. AI replies need local AI and clock-in. Real remote attendees need the same reachable HTTPS company installation; your private local office does not expose itself to the internet. Video stays inside the app, but completed remote calls remain unvalidated. Use the direct latest setup below when a hosted site's download page has not been redeployed.
+
 ## Faces and meeting gestures — preview.11
 
 Update using the latest setup below and open your local office. Outside meetings, talk to an employee to see their transparent-background portrait beside the conversation. Use the portrait's close button to hide it and **Show employee face** to restore it. Conversation history and unfinished text remain saved as before.

@@ -1,4 +1,6 @@
-# Release status: 0.2.0-preview.11
+# Release status: 0.2.0-preview.12
+
+Preview.12 fixes choosing a meeting subset, retains those selections during roster refreshes, permits people-only meetings and clarifies the existing invitation/video limits. It does not connect additional financial/security tools based on job title or establish remote video reliability. The download branch and hosted main deployment remain separate; hosted download pages can serve older installers until redeployed with preserved business data.
 
 Preview.11 adds local transparent employee portraits outside meetings and speech-driven raised hands inside meetings. These graphics do not establish AI inference or a connected call. The human camera panel stays inside the app; completed remote video, Windows-device execution/signing and live model/source quality still need validation.
 

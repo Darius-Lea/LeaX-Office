@@ -1,6 +1,10 @@
 # Current implementation status — 2026-10-24
 
-## Current milestone — 0.2.0-preview.11
+## Current milestone — 0.2.0-preview.12
+
+Fixed meeting selection ignoring checked employees when the roster had 12 or fewer entries. All roster sizes now honor checks, preserve choices through employee rename/role/roster refreshes and allow zero AI participants for people-only meetings. Scheduled meetings keep their recorded roster. Replaced a stale legacy-room account/video disclaimer and exposed the existing four-human video limit. The existing combined 12-invitee meeting limit and account/privacy/network permissions remain unchanged. Latest download links follow the release branch; the web deployment/main still lag and no live redeploy or user-data access was performed. All 176 Node tests, source/final packaged meeting-selection and human-account privacy checks, video signaling/cleanup and installer integrity checks pass; exact scope is recorded in TEST_RESULTS.md.
+
+## Previous milestone — 0.2.0-preview.11
 
 Added transparent local SVG employee portraits beside outside-room conversations and saved AI answers, stable ID appearance, role/name/status, hide/restore, mobile layout and disposal. Both meeting views suppress the overlay. Portrait mouth motion is caller-driven by actual speech playback; queued/model-running/preparing states do not imply speaking.
 

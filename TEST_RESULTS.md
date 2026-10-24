@@ -1,5 +1,15 @@
 # Actual validation
 
+## Latest: 2026-10-24 — 0.2.0-preview.12
+
+`npm test`: **176 passed, 0 failed/skipped** on Node 24.19 Linux. No backend/native code changed. Source and final packaged isolated-server Chromium checks pass seven default AI invitees without unsolicited inference, exact selected renamed CFO/CISO invitees, checkbox retention through polling/renames, zero-AI human-only meeting creation, real founder/partner invitation acceptance and explicit sharing, authenticated human join/message persistence, private-business API denial, scheduled roster/agenda retention and 390px roster selection with zero page JavaScript errors. Test identities are isolated fixtures, not user accounts or evidence of live model quality. The new People start button uses the existing CEO-led meeting lifecycle; actual clicks start subset/zero-AI/mobile meetings directly from People, with its controls inside the viewport after normal scrolling.
+
+Packaged two-browser video consent/signaling/teardown regression passes with the same previously recorded managed-network limit: zero ICE candidates and no connected remote media. The panel stays inside the app. The existing four-human camera limit includes the CEO; meeting invitations retain the combined limit of 12 AI/human colleagues with the CEO separate. Job titles do not create new accounting, banking or security execution tools.
+
+Read-only link audit: GitHub main still reports preview.6; the download branch contained preview.11 before this increment. Its shared executable URL returned HTTP 200 and resolved to the expected raw GitHub binary, while main has a different installer checksum. Each hosted /download serves that deployment's bundled installer, so main/Render links cannot be called current. Live Render reads were denied by the workspace proxy (CONNECT 403); no live deployment or user database was accessed. The README/local guide now distinguish the latest direct link from deployment-specific download pages.
+
+The Linux-cross-built unsigned preview.12 Windows x64 GUI setup is **11,537,408 bytes**, SHA-256 **767e0cbf849ece508b5cdc83364ad1b7dd8f6b72c6797cfc7ea15c7d16f3ec96**. All **36 production file hashes**, package/manifest versions, exact embedded payload, x64 GUI PE header, sidecar and source/test/data/private-key/map exclusions verify. Actual Windows execution/signing, live model/source quality and connected remote calls remain unvalidated. A later CI rebuild may have a different executable hash; use its accompanying checksum. Existing saved business data remains outside versioned application files.
+
 ## Latest: 2026-10-24 — 0.2.0-preview.11
 
 `npm test`: **176 passed, 0 failed/skipped** on Node 24.19 Linux. Native Go tests and Windows x64-target vet pass. The backend change only adds the portrait module to the public static-file allowlist; existing account, data and tool permissions remain unchanged.
