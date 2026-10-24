@@ -155,3 +155,22 @@ body[data-camera='meeting'] #office-section::after{content:"";position:absolute;
 .meeting-board[data-tab=discussion] .meeting-board-content{display:flex;flex-direction:column;overflow:hidden}.meeting-board[data-tab=discussion] section[data-meeting-section=discussion]{display:flex;flex:1;min-height:0;flex-direction:column;gap:8px}.meeting-board[data-tab=discussion] #meeting-status{flex:none;margin:0;font-size:12px}.meeting-discussion-actions{display:flex;flex-wrap:wrap;gap:7px;flex:none}.meeting-discussion-actions button{padding:7px 10px;font-size:11px}.meeting-board[data-tab=discussion] .meeting-empty{flex:1;min-height:50px;overflow:auto;margin:0;padding:14px}.meeting-board[data-tab=discussion] #meeting-messages{flex:1;min-height:50px;max-height:none;margin:0;overflow:auto}.meeting-discussion-composer{flex:none;border-top:1px solid #c8d8cf;padding-top:10px}.meeting-discussion-composer .meeting-feedback{max-height:46px;overflow:auto}.meeting-discussion-composer textarea{max-height:120px}.meeting-earlier{flex:none;max-height:100px;overflow:auto;margin-top:0!important}.meeting-board[data-tab=discussion] .meeting-earlier[hidden]{display:none}
 @media(max-width:760px){.meeting-discussion-composer #meeting-message-form{gap:8px}.meeting-discussion-composer textarea{min-height:58px;max-height:100px}.meeting-discussion-composer .meeting-feedback{font-size:11px;line-height:1.4;max-height:32px}.meeting-board[data-tab=discussion] #meeting-status{font-size:11px}.meeting-discussion-actions button{font-size:10px;padding:6px 8px}}
 .meeting-board-content>section{margin:0;padding:0;border:0;border-radius:0;background:transparent}.meeting-board-content .meeting-video-workspace{margin:0;padding:0;border:0;border-radius:0;background:transparent}
+/* Review fixes: no light strip beside the panel, dark status card, empty message pill hidden */
+html,body{background:#0b1620}
+#office-section{background:#0b1620}
+.shift-chip{background:var(--hq-glass);border:1px solid var(--hq-hair);box-shadow:0 14px 40px #02080c70,inset 0 1px 0 #ffffff12;color:#eaf6f1}
+.shift-chip h2,.shift-chip strong{color:#eaf6f1}
+.shift-chip p,.shift-chip span{color:#a9c4c4}
+.office-supervision{background:var(--hq-glass);border:1px solid var(--hq-hair);color:#cfe3de}
+.office-supervision p,.office-supervision summary{color:#a9c4c4}
+#message{min-width:0;transition:opacity .2s}
+/* Lens look (visual only): soft edge defocus and a gentle teal/amber grade over the 3D office. Pointer events pass through. */
+#office-section::before{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;backdrop-filter:blur(2.5px);-webkit-backdrop-filter:blur(2.5px);-webkit-mask-image:radial-gradient(ellipse at 50% 48%,transparent 52%,#000 100%);mask-image:radial-gradient(ellipse at 50% 48%,transparent 52%,#000 100%)}
+#office-section .office-webgl{filter:contrast(1.06) saturate(1.05)}
+@media(max-width:700px),(prefers-reduced-transparency:reduce){#office-section::before{display:none}}
+/* Keep the guidance cards from hiding the office: tighter size, and they fade back while the pointer is over the 3D view */
+.office-hud{width:250px;transition:opacity .3s ease}
+.office-brief{padding:13px 14px}
+.office-brief h2{font-size:16px;line-height:1.25}
+.office-brief p{font-size:12px;line-height:1.5}
+@media(hover:hover){#office-section:hover .office-hud:not(:hover):not(:focus-within){opacity:.5}}
