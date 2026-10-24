@@ -6,6 +6,8 @@ Added transparent local SVG employee portraits beside outside-room conversations
 
 Meeting avatars now raise a single articulated open hand while their actual reply is spoken, then settle to the resting pose. Listen in the room exposes the avatar while reading the selected saved answer. The speech controller separates voice preparation from playback and clears the gesture on terminal/stop/microphone/leave events. Reduced motion uses static poses, hidden/ended/disabled rooms clear them, and unchanged polls allocate no new measured GPU resources. No data schema, founder account, source/model permissions or video destination changed.
 
+Preserved the concurrent cinematic main-office redesign from the download branch, including its materials, lighting, people details and explicitly disconnected decorative miner. The combined preview.11 installer includes both changes; the decorative scene does not create business work or Bitcoin earnings.
+
 Validation: 176 Node tests and native Go tests/Windows-target vet pass. Source/final packaged portrait, speech-gesture, mobile and embedded-video signaling checks pass, as do rendered resting-pose and 36-file installer integrity checks; exact scope is recorded in TEST_RESULTS.md. Video remains inside the first-party app; connected cross-device media, actual Windows execution/signing, live AI/source quality and natural audio remain unvalidated.
 
 ## Previous milestone — 0.2.0-preview.10
