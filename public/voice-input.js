@@ -1,5 +1,6 @@
 // Browser recognition is optional and may send microphone audio to its vendor.
 // Transcripts are returned to an editable draft; this module never posts them.
+import {stopReading} from './speech.js';
 const PRIVACY_NOTICE='Voice input uses your browser’s speech recognition. Your browser may send microphone audio to its speech service, and it may need an internet connection. Start only if you agree. Recording stops after this turn; review and edit the transcript before posting. You can always type instead.';
 const MAX_TRANSCRIPT=8000,MAX_SESSION_MS=45000;
 function recognitionClass(){return globalThis.SpeechRecognition||globalThis.webkitSpeechRecognition;}
@@ -21,6 +22,9 @@ export function createVoiceInput({onTranscript,onStatus,lang='en-US'}={}){
   if(active)return {started:false,status:'busy',message:'Stop the current microphone turn first.'};
   const Recognition=recognitionClass();if(typeof Recognition!=='function'){const message=getVoiceInputOptions().message;notify('unsupported',message);return {started:false,status:'unsupported',message};}
   if(options.consent!==true){notify('consent-required',PRIVACY_NOTICE);return {started:false,status:'consent-required',message:PRIVACY_NOTICE};}
+  // A meeting reply must yield the floor before listening, otherwise recognition
+  // can capture the app's own synthetic voice as the owner's next direction.
+  stopReading();
   const session={token:++generation,recognition:null,stopping:false,failed:false,limitTimer:null,stopTimer:null};
   try{
    const recognition=new Recognition();session.recognition=recognition;active=session;

@@ -1,5 +1,11 @@
 # Integrations
 
+## Preview.10 meeting integration changes
+
+Camera/video uses the existing first-party partner WebRTC page embedded for the selected shared meeting. No external FaceTime/Google Meet link or new tab is part of the normal meeting flow. It still needs a reachable same-company HTTPS app, device consent and compatible networking; no TURN relay or localhost exposure is provisioned.
+
+Browser speech now supports actual asynchronously supplied device voice choices, sample and pace, and optional browser-supplied online English voices after explicit text-sharing consent. No proprietary voice SDK, inference service, model or dependency was added; the browser controls voice availability. Online consent revocation stops speech and resets remote selection.
+
 ## Preview.9 additions
 
 - Browser Web Speech: optional per-turn microphone consent; vendor processing is browser-dependent. Installed local English voices for replies; no custom neural voice provider.

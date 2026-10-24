@@ -2,6 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createVoiceInput,getVoiceInputOptions} from '../public/voice-input.js';
 import {createOfficeMusicPlayer,parseYouTubeUrl} from '../public/office-music.js';
+import {readToMe,stopReading} from '../public/speech.js';
 
 test('voice input requires consent, returns only a reviewable draft, stops each turn and permits explicit retry',()=>{
  const old=Object.getOwnPropertyDescriptor(globalThis,'SpeechRecognition'),oldWebkit=Object.getOwnPropertyDescriptor(globalThis,'webkitSpeechRecognition');
@@ -19,6 +20,19 @@ test('voice input requires consent, returns only a reviewable draft, stops each 
   input.start({consent:true});assert.equal(recognizers.length,3);input.dispose();assert.equal(recognizers[2].aborts,1);assert.equal(input.start({consent:true}).status,'disposed');
   Object.defineProperty(globalThis,'SpeechRecognition',{configurable:true,value:undefined});assert.equal(getVoiceInputOptions().supported,false);const unavailable=createVoiceInput({onStatus:s=>statuses.push(s)});assert.equal(unavailable.start({consent:true}).status,'unsupported');assert.match(statuses.at(-1).message,/Type your message/);unavailable.dispose();
  }finally{input.dispose();if(old)Object.defineProperty(globalThis,'SpeechRecognition',old);else delete globalThis.SpeechRecognition;if(oldWebkit)Object.defineProperty(globalThis,'webkitSpeechRecognition',oldWebkit);else delete globalThis.webkitSpeechRecognition;}
+});
+
+test('an explicitly consented microphone turn stops the current reply before recognition starts',async()=>{
+ const oldRecognition=Object.getOwnPropertyDescriptor(globalThis,'SpeechRecognition'),oldWebkit=Object.getOwnPropertyDescriptor(globalThis,'webkitSpeechRecognition'),oldSynth=globalThis.speechSynthesis,oldUtterance=globalThis.SpeechSynthesisUtterance;
+ const events:string[]=[],statuses:any[]=[],spoken:any[]=[];
+ class Recognition{onstart:any;onend:any;start(){events.push('recognition-start');this.onstart?.()}abort(){}stop(){this.onend?.()}}
+ Object.defineProperty(globalThis,'SpeechRecognition',{configurable:true,value:Recognition});Object.defineProperty(globalThis,'webkitSpeechRecognition',{configurable:true,value:undefined});
+ globalThis.SpeechSynthesisUtterance=class{text:string;constructor(text:string){this.text=text}} as any;globalThis.speechSynthesis={getVoices:()=>[{voiceURI:'device-en',name:'Device',lang:'en-US',localService:true}],cancel(){events.push('cancel-synthesis')},speak(value){spoken.push(value)}} as any;
+ const input=createVoiceInput();
+ try{
+  await readToMe('A real response waiting for speech.',{onStatus:value=>statuses.push(value)});const before=events.length;assert.equal(input.start().status,'consent-required');assert.equal(events.length,before,'A missing consent must not start or interrupt anything');
+  assert.equal(input.start({consent:true}).started,true);assert.deepEqual(events.slice(-2),['cancel-synthesis','recognition-start']);assert.equal(statuses.at(-1).status,'stopped');const count=spoken.length;spoken[0].onend?.();await Promise.resolve();assert.equal(spoken.length,count,'The interrupted reply cannot resume into the microphone');
+ }finally{input.dispose();stopReading();globalThis.speechSynthesis=oldSynth;globalThis.SpeechSynthesisUtterance=oldUtterance;if(oldRecognition)Object.defineProperty(globalThis,'SpeechRecognition',oldRecognition);else delete globalThis.SpeechRecognition;if(oldWebkit)Object.defineProperty(globalThis,'webkitSpeechRecognition',oldWebkit);else delete globalThis.webkitSpeechRecognition;}
 });
 
 test('YouTube parsing accepts exact official video links and rejects ambiguous or hostile sources',()=>{

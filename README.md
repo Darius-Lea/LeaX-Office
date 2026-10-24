@@ -1,5 +1,17 @@
 # AI Headquarters
 
+## Your meeting, your direction — preview.10
+
+Open **Meet → Start meeting**. The meeting board opens over the room and the invited employees wait for you. Click a colleague, choose their name, or type **Einstein, what should we do about this lead?** Only that employee receives the question. **Everyone, ...** saves your statement without requesting a reply. A name alone selects the colleague; it does not generate a briefing. **My turn · stop voice** returns the floor to you. Click the wall display, desk tablet or **Open meeting board** to bring the board back.
+
+The board has separate Discussion, My agenda, People, Video call, Voice and Saved meetings tabs. Your topics do not trigger speeches. Historical automatic briefings are retained in a collapsed section; unstarted legacy kickoff replies are withdrawn. Each new reply is linked to your exact addressed question and that colleague's bounded conversation, with relevant permitted evidence only. Local model quality still varies.
+
+**Video call** stays inside the app with a first-party camera panel. It uses your current company session and selected meeting, with camera/microphone off until consent. Closing or hiding the panel stops device tracks. Invited humans need the same reachable HTTPS company installation and a compatible network; a downloaded localhost office is not automatically reachable from another computer. There is no TURN relay and connected remote media remains unvalidated here.
+
+Under **Voice**, listen to a sample, select an available voice and pace, then optionally enable reading answers from employees you call on. Delayed device voices appear without reloading. Browser-provided online English voices require a separate opt-in because their provider receives text you read. Turning that off stops online speech; no voice service, celebrity imitation or human-quality guarantee is bundled.
+
+There is **one main 3D office**. Invited partners have private meeting workspaces, not separate furnished 3D offices or independent company workspaces. Founder records and keys remain private. See [LOCAL_INSTALL.md](LOCAL_INSTALL.md) for the updated download and [TEST_RESULTS.md](TEST_RESULTS.md) for actual checks.
+
 ## Working meetings and grounded help — preview.9
 
 Open **Meet** for the first-person boardroom: call your saved team, choose a colleague, ask a typed question or review a microphone transcript, and return without losing the meeting. Replies use the real local-model queue and show setup/clock/error states. Read-aloud uses installed English voices. The room, hands, tablet and faceless metallic assistant are procedural graphics; no physical conference hardware is controlled.
@@ -43,7 +55,7 @@ Research and assignment archives now show sixty items per page with search, whil
 
 ## Start without coding on Windows
 
-Latest preview.9 installer: **[Download Windows setup](https://github.com/Darius-Lea/LeaX-Office/raw/refs/heads/codex/desktop-reliability-and-autonomous-office/downloads/AI-Headquarters-Setup.exe)**. Open the downloaded executable to update the local app; the data folder is retained. This is the review/download branch, separate from the live Render deployment.
+Latest preview.10 installer: **[Download Windows setup](https://github.com/Darius-Lea/LeaX-Office/raw/refs/heads/codex/desktop-reliability-and-autonomous-office/downloads/AI-Headquarters-Setup.exe)**. Open the downloaded executable to update the local app; the data folder is retained. This is the review/download branch, separate from the live Render deployment.
 Open **[/download](/download)** on your app site (for the existing host: https://leax-office.onrender.com/download). Click **Download for Windows**, then open **AI-Headquarters-Setup.exe** from the browser’s downloads. Setup starts automatically. No ZIP or project folders are involved. The download page shows transfer progress and checks the complete setup file before saving. Setup installs verified portable Node and opens the local office first, then automatically downloads/configures private local AI and verifies a real response. A failed or cancelled AI download keeps the opened office available. Signed installed Edge/Chrome can open it in a separate app-style window; the default browser is the fallback. No separate Ollama install, model selection, terminal, npm, paid AI key or administrator install is required. Setup offers progress, cancel and retry. Windows itself may display an unknown-publisher warning because the app is unsigned. Actual Windows installation remains unvalidated; this is **0.2.0 preview**, not a certified commercial release.
 
 Data stays in `%LOCALAPPDATA%\AIHeadquarters\data`, separate from installed versions. Download your private database backup from the existing Render office and use **Import saved office from Render / backup** in setup to retain your founder login, tasks and notes. Import validates and stages the selected database and preserves existing local files/recovery copies. It never synchronizes silently. Read [LOCAL_INSTALL.md](LOCAL_INSTALL.md) for transfer, updates and limits.

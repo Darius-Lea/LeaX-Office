@@ -2,7 +2,7 @@ import * as THREE from '/vendor/three.module.js';
 
 // Procedural meeting presentation. Invitations move avatars, never work records,
 // people, device hardware or the underlying employee execution queues.
-export function createMeeting3D(host, {onEmployee, onTablet, onExit, onArrival} = {}) {
+export function createMeeting3D(host, {onEmployee, onTablet, onBoard, onExit, onArrival} = {}) {
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   const lowPower = (navigator.deviceMemory || 8) <= 4 || (navigator.hardwareConcurrency || 4) <= 2;
   const renderer = new THREE.WebGLRenderer({antialias: !lowPower, alpha: false, powerPreference: 'low-power'});
@@ -17,7 +17,7 @@ export function createMeeting3D(host, {onEmployee, onTablet, onExit, onArrival} 
   canvas.tabIndex = 0;
   canvas.style.cssText = 'display:block;width:100%;height:100%;touch-action:none;cursor:grab;outline-offset:-4px';
   canvas.setAttribute('role', 'application');
-  canvas.setAttribute('aria-label', 'CEO meeting room. Drag or swipe to look around. Arrow keys look; Home centers. Tab focuses room controls; Enter opens the selected employee or tablet. Escape leaves the room. Employee arrivals are an invitation animation, separate from their actual work.');
+  canvas.setAttribute('aria-label', 'CEO meeting room. You lead the meeting. Click the wall board or tablet for your meeting board. Drag or swipe to look around. Arrow keys look; Home centers. Tab focuses room controls; Enter opens the selected control. Escape leaves the room. Employee arrivals are an invitation animation, separate from their actual work.');
   host.append(canvas);
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('#c6d5dc');
@@ -28,7 +28,7 @@ export function createMeeting3D(host, {onEmployee, onTablet, onExit, onArrival} 
   let yaw = 0, pitch = -.065, enabled = true, disposed = false, paused = false, contextLost = false, inViewport = true;
   let dirty = true, frame = 0, lastFrame = 0, elapsed = 0, inviteKey = '', activeMeeting = false;
   let shadowsDirty = true, lastShadow = 0;
-  let voiceAgent = null, voiceSpeaking = false, focusIndex = -1, rosterSignature = '', labelSignature = '', visualSignature = '';
+  let voiceAgent = null, voiceSpeaking = false, focusIndex = -1, rosterSignature = '', labelSignature = '', visualSignature = '', chairSignature = '';
   const geometry = new Set(), materials = new Set(), textures = new Set(), extras = new Set();
   const interactives = [], actors = new Map(), events = [], pointers = new Map();
   const room = new THREE.Group(); scene.add(room);
@@ -193,6 +193,7 @@ export function createMeeting3D(host, {onEmployee, onTablet, onExit, onArrival} 
   const displayTexture = texture(1024, 512, () => {});
   const displayMaterial = basic({map: displayTexture, toneMapped: false});
   const display = shape(room, planeGeo, displayMaterial, 0, 2.42, -9.3, 5.84, 2.57, 1, false);
+  display.userData.action = 'board'; interactives.push(display);
   round(room, dark, 0, .99, -9.14, 2.47, .225, .19);
   const grilleMap = texture(512, 64, (c, w, h) => { c.fillStyle = '#293237'; c.fillRect(0, 0, w, h); c.fillStyle = '#0d1417'; for (let y = 3; y < h; y += 5) for (let x = 3; x < w; x += 5) { c.beginPath(); c.arc(x + (y % 2) * 2, y, .9, 0, Math.PI * 2); c.fill(); } });
   const grille = mat('#c0c6c6', {map: grilleMap, roughness: .89});
@@ -335,28 +336,47 @@ export function createMeeting3D(host, {onEmployee, onTablet, onExit, onArrival} 
   }
 
   function paintScreen(state) {
-    const meeting = state.meeting || {}, employees = [...actors.values()], seated = employees.filter(a => a.phase === 'Seated').length;
-    const next = JSON.stringify([state.company?.name, meeting.id, meeting.status, meeting.title, seated, employees.length, voiceAgent, voiceSpeaking, paused]);
+    const meeting = state.meeting || {}, chair = chairPresentation(state), selectedName = actors.get(chair.selectedEmployeeId)?.employee.name;
+    const next = JSON.stringify([state.company?.name, meeting.id, meeting.status, meeting.title, chair, voiceAgent, voiceSpeaking, paused]);
     if (next === labelSignature) return; labelSignature = next;
     const c = displayTexture.image.getContext('2d'), w = displayTexture.image.width, h = displayTexture.image.height;
     const bg = c.createLinearGradient(0, 0, w, h); bg.addColorStop(0, '#102b3a'); bg.addColorStop(1, '#071722'); c.fillStyle = bg; c.fillRect(0, 0, w, h);
-    c.fillStyle = '#65d8d4'; c.fillRect(64, 62, 46, 4); c.font = '600 19px system-ui'; c.fillText('CEO MEETING ROOM', 64, 106);
-    c.fillStyle = '#eff4ef'; c.font = '600 44px system-ui'; fitText(c, String(state.company?.name || 'AI Headquarters'), 64, 178, w - 128, 44);
-    c.font = '30px system-ui'; c.fillStyle = '#c2d5da'; fitText(c, String(meeting.title || 'A useful conversation. A clear next step.'), 64, 238, w - 128, 30);
-    c.fillStyle = activeMeeting ? '#70dfc2' : '#b9c7cf'; c.font = '24px system-ui'; c.fillText(activeMeeting ? `${seated} / ${employees.length} avatars seated${paused ? ' · Motion paused' : ''}` : 'Ready when you are', 64, 316);
-    if (voiceSpeaking && voiceAgent) { c.fillStyle = '#f0e2bd'; c.fillText('Speaking: ' + (actors.get(voiceAgent)?.employee.name || voiceAgent), 64, 365); }
-    c.fillStyle = '#8fa8b5'; c.font = '18px system-ui'; c.fillText('Local meeting presentation · Employee work continues separately', 64, 443); displayTexture.needsUpdate = true;
+    c.fillStyle = '#65d8d4'; c.fillRect(54, 43, 34, 4); c.font = '600 19px system-ui'; c.fillText('MEETING BOARD · YOU LEAD', 54, 84);
+    c.fillStyle = '#b8cdd0'; c.font = '20px system-ui'; fitText(c, String(state.company?.name || 'Your company'), 54, 121, w - 108, 20);
+    c.fillStyle = '#eff4ef'; c.font = '600 42px system-ui'; wrapText(c, chair.topic, 54, 186, w - 108, 49, 2);
+    c.fillStyle = '#70dfc2'; c.font = '600 25px system-ui'; fitText(c, chair.status, 54, 292, w - 108, 25);
+    c.fillStyle = '#c2d5da'; c.font = '23px system-ui'; fitText(c, voiceSpeaking && voiceAgent ? 'Reply playing: ' + (actors.get(voiceAgent)?.employee.name || voiceAgent) : selectedName ? 'Selected: ' + selectedName : 'Colleagues wait until you call on them.', 54, 330, w - 108, 23);
+    c.fillStyle = '#9ebbc2'; c.font = '20px system-ui'; fitText(c, chair.answer ? 'Saved reply: ' + chair.answer : chair.question ? 'Your question: ' + chair.question : 'Choose a colleague or address them by name.', 54, 372, w - 108, 20);
+    c.fillStyle = '#226e78'; c.beginPath(); c.roundRect(54, 410, w - 108, 62, 10); c.fill(); c.fillStyle = '#efffff'; c.font = '600 25px system-ui'; c.fillText(chair.boardOpen ? 'MEETING BOARD IS OPEN' : 'OPEN MEETING BOARD  →', 80, 451); displayTexture.needsUpdate = true;
     const t = tabletTexture.image.getContext('2d'), tw = tabletTexture.image.width, th = tabletTexture.image.height;
-    t.fillStyle = '#112a36'; t.fillRect(0, 0, tw, th); t.fillStyle = '#b8e3e0'; t.font = '600 24px system-ui'; t.fillText('MEETING CONTROLS', 29, 52);
-    t.fillStyle = '#ecf4ef'; t.font = '31px system-ui'; t.fillText(activeMeeting ? 'Team invited' : 'Invite your team', 29, 111); t.font = '22px system-ui'; t.fillStyle = '#b1c9d2'; t.fillText(activeMeeting ? seated + ' avatars seated' : 'Choose a topic to begin', 29, 158);
-    t.fillStyle = '#226e78'; t.beginPath(); t.roundRect(29, 202, tw - 58, 76, 12); t.fill(); t.fillStyle = '#ffffff'; t.font = '600 25px system-ui'; t.fillText('Open meeting tablet', 63, 251); tabletTexture.needsUpdate = true;
+    t.fillStyle = '#112a36'; t.fillRect(0, 0, tw, th); t.fillStyle = '#b8e3e0'; t.font = '600 24px system-ui'; t.fillText('YOUR MEETING', 29, 52);
+    t.fillStyle = '#ecf4ef'; t.font = '600 28px system-ui'; wrapText(t, chair.topic, 29, 107, tw - 58, 34, 2);
+    t.font = '21px system-ui'; t.fillStyle = '#b1c9d2'; fitText(t, chair.status, 29, 184, tw - 58, 21);
+    t.fillStyle = '#226e78'; t.beginPath(); t.roundRect(29, 218, tw - 58, 68, 12); t.fill(); t.fillStyle = '#ffffff'; t.font = '600 25px system-ui'; fitText(t, chair.boardOpen ? 'Meeting board open' : 'Open meeting board', 51, 261, tw - 102, 25); tabletTexture.needsUpdate = true;
+  }
+  function chairPresentation(state) {
+    const chair = state.chair || {}, meeting = state.meeting || {}, clean = (value, max) => String(value || '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, max);
+    return {selectedEmployeeId: typeof chair.selectedEmployeeId === 'string' && actors.has(chair.selectedEmployeeId) ? chair.selectedEmployeeId : null, topic: clean(chair.topic || meeting.agenda?.[0] || meeting.title || 'What would you like to discuss?', 220), status: clean(chair.status || (activeMeeting ? 'You have the floor' : meeting.status === 'Ended' ? 'Meeting ended · saved for review' : 'Start when you are ready'), 140), boardOpen: chair.boardOpen === true, question: clean(chair.question, 180), answer: clean(chair.answer, 180)};
+  }
+  function wrapText(c, value, x, y, width, lineHeight, maxLines) {
+    const words = String(value).split(/\s+/); let line = '', row = 0;
+    for (const word of words) {
+      const next = line ? line + ' ' + word : word;
+      if (line && c.measureText(next).width > width) { c.fillText(line, x, y + row * lineHeight, width); line = word; row++; if (row >= maxLines) return; } else line = next;
+    }
+    if (line && row < maxLines) c.fillText(line, x, y + row * lineHeight, width);
   }
   function fitText(c, value, x, y, width, size) { while (size > 15 && c.measureText(value).width > width) { size--; c.font = `600 ${size}px system-ui`; } c.fillText(value, x, y, width); }
   let currentState = {};
   function actorLabel(actor) {
     const old = actor.label;
-    if (old) { old.removeFromParent(); old.material.map.dispose(); textures.delete(old.material.map); old.material.dispose(); materials.delete(old.material); }
-    const map = texture(384, 80, (c, w, h) => { c.fillStyle = '#10232be8'; c.beginPath(); c.roundRect(0, 0, w, h, 15); c.fill(); c.textAlign = 'center'; c.fillStyle = '#edf4ee'; c.font = '600 27px system-ui'; fitText(c, String(actor.employee.name), w / 2, 34, w - 20, 27); c.fillStyle = '#a6c6ca'; c.font = '17px system-ui'; c.fillText(actor.phase + ' · avatar', w / 2, 62); });
+    const selected = currentState.chair?.selectedEmployeeId === actor.employee.id;
+    const map = old?.material.map || texture(384, 80, () => {}), c = map.image.getContext('2d'), w = map.image.width, h = map.image.height;
+    c.clearRect(0, 0, w, h); c.fillStyle = selected ? '#153e45f2' : '#10232be8'; c.beginPath(); c.roundRect(0, 0, w, h, 15); c.fill();
+    if (selected) { c.strokeStyle = '#83e3d4'; c.lineWidth = 4; c.stroke(); }
+    c.textAlign = 'center'; c.fillStyle = '#edf4ee'; c.font = '600 27px system-ui'; fitText(c, String(actor.employee.name), w / 2, 34, w - 20, 27); c.fillStyle = selected ? '#b8f2e8' : '#a6c6ca'; c.font = '16px system-ui';
+    c.fillText(actor.phase === 'Seated' ? voiceSpeaking && voiceAgent === actor.employee.id ? 'Saved reply playing' : selected ? 'Selected by CEO' : 'Ready · waiting for CEO' : actor.phase + ' · avatar', w / 2, 62, w - 16); map.needsUpdate = true;
+    if (old) return;
     const material = new THREE.SpriteMaterial({map, transparent: true, depthWrite: false, toneMapped: false}); materials.add(material);
     const label = new THREE.Sprite(material); label.position.set(0, 1.93, 0); label.scale.set(1.03, .215, 1); actor.group.add(label); actor.label = label;
   }
@@ -406,8 +426,10 @@ export function createMeeting3D(host, {onEmployee, onTablet, onExit, onArrival} 
     if (newInvite) for (const actor of actors.values()) beginArrival(actor, actor.index);
     if (!activeMeeting) for (const actor of actors.values()) { actor.group.visible = false; setPhase(actor, 'Invited'); }
     inviteKey = nextKey;
+    const nextChair = JSON.stringify([chairPresentation(state), voiceAgent, voiceSpeaking]);
+    if (nextChair !== chairSignature) { chairSignature = nextChair; for (const actor of actors.values()) actorLabel(actor); }
     paintScreen(state); refreshTargets();
-    const visual = JSON.stringify([nextRoster, nextKey, meeting.status, meeting.title, state.company?.name, paused, voiceAgent, voiceSpeaking, assistantId]);
+    const visual = JSON.stringify([nextRoster, nextKey, meeting.status, meeting.title, state.company?.name, paused, voiceAgent, voiceSpeaking, assistantId, chairSignature]);
     if (visual !== visualSignature) { visualSignature = visual; markDirty(); }
   }
   function removeActor(id, actor) {
@@ -419,7 +441,7 @@ export function createMeeting3D(host, {onEmployee, onTablet, onExit, onArrival} 
   const ray = new THREE.Raycaster(), pointer = new THREE.Vector2();
   let targets = [], focusedAction = null, downPosition = null, dragged = false, pointerInside = false;
   function refreshTargets() {
-    targets = ['tablet', ...[...actors.values()].filter(a => a.group.visible).map(a => a.employee.id), ...(assistantId ? ['assistant'] : [])];
+    targets = ['tablet', ...[...actors.values()].filter(a => a.group.visible).map(a => a.employee.id), ...(assistantId ? ['assistant'] : []), 'board'];
     if (focusedAction && !targets.includes(focusedAction)) { focusedAction = null; focusIndex = -1; }
     if (focusedAction) focusIndex = targets.indexOf(focusedAction);
   }
@@ -429,13 +451,13 @@ export function createMeeting3D(host, {onEmployee, onTablet, onExit, onArrival} 
     pointer.set((x - rect.left) / rect.width * 2 - 1, -(y - rect.top) / rect.height * 2 + 1); ray.setFromCamera(pointer, camera);
     return ray.intersectObjects(interactives.filter(interactiveVisible), false)[0]?.object || null;
   }
-  function activate(action) { if (action === 'tablet') onTablet?.(); else if (action === 'assistant') { if (assistantId) onEmployee?.(assistantId); } else if (action) onEmployee?.(action); }
+  function activate(action) { if (action === 'tablet' || action === 'board') (onBoard || onTablet)?.(); else if (action === 'assistant') { if (assistantId) onEmployee?.(assistantId); } else if (action) onEmployee?.(action); }
   function lookAtAction(action) {
     const item = interactives.find(i => i.userData.action === action); if (!item) return;
     const world = item.getWorldPosition(new THREE.Vector3()).sub(camera.position);
     yaw = THREE.MathUtils.clamp(Math.atan2(-world.x, -world.z), -1.42, 1.42);
     pitch = THREE.MathUtils.clamp(Math.atan2(world.y, Math.hypot(world.x, world.z)), -.7, .44);
-    canvas.setAttribute('aria-label', action === 'tablet' ? 'Meeting tablet selected. Press Enter to open. Arrow keys look. Tab selects an employee. Escape leaves.' : `${actors.get(action)?.employee.name || 'Assistant'} selected. Press Enter to talk. Arrow keys look. Tab selects another control. Escape leaves.`); markDirty();
+    canvas.setAttribute('aria-label', action === 'tablet' || action === 'board' ? 'Meeting board selected. Press Enter to open. Arrow keys look. Tab selects a colleague. Escape leaves.' : `${actors.get(action)?.employee.name || 'Assistant'} selected. Press Enter to call on this colleague. Arrow keys look. Tab selects another control. Escape leaves.`); markDirty();
   }
   function listen(target, event, fn, options) { target.addEventListener(event, fn, options); events.push(() => target.removeEventListener(event, fn, options)); }
   listen(canvas, 'pointerdown', e => {
@@ -444,7 +466,7 @@ export function createMeeting3D(host, {onEmployee, onTablet, onExit, onArrival} 
   });
   listen(canvas, 'pointermove', e => {
     const previous = pointers.get(e.pointerId);
-    if (!previous) { const hit = hitAt(e.clientX, e.clientY); canvas.style.cursor = hit ? 'pointer' : 'grab'; canvas.title = hit?.userData.action === 'tablet' ? 'Open meeting controls' : hit?.userData.action === 'assistant' ? 'Talk to your assistant' : actors.get(hit?.userData.action)?.employee.name || 'Drag to look around'; return; }
+    if (!previous) { const hit = hitAt(e.clientX, e.clientY); canvas.style.cursor = hit ? 'pointer' : 'grab'; canvas.title = ['tablet', 'board'].includes(hit?.userData.action) ? 'Open your meeting board' : hit?.userData.action === 'assistant' ? 'Call on your assistant' : actors.has(hit?.userData.action) ? 'Call on ' + actors.get(hit.userData.action).employee.name : 'Drag to look around'; return; }
     if (downPosition && Math.hypot(e.clientX - downPosition.x, e.clientY - downPosition.y) > 5) dragged = true;
     const dx = e.clientX - previous.x, dy = e.clientY - previous.y; pointers.set(e.pointerId, {x: e.clientX, y: e.clientY});
     yaw = THREE.MathUtils.clamp(yaw - dx * .0031, -1.42, 1.42); pitch = THREE.MathUtils.clamp(pitch - dy * .0028, -.7, .44); markDirty();
@@ -465,7 +487,8 @@ export function createMeeting3D(host, {onEmployee, onTablet, onExit, onArrival} 
       const next = focusIndex + (e.shiftKey ? -1 : 1);
       if (next < 0 || next >= targets.length) { focusIndex = -1; focusedAction = null; return; }
       focusIndex = next; focusedAction = targets[focusIndex]; lookAtAction(focusedAction);
-    } else if (e.key === 'Enter' || e.key === ' ') activate(focusedAction || 'tablet');
+    } else if (e.key === 'b' || e.key === 'B') activate('board');
+    else if (e.key === 'Enter' || e.key === ' ') activate(focusedAction || 'tablet');
     else if (e.key === 'Escape') onExit?.(); else return;
     e.preventDefault(); yaw = THREE.MathUtils.clamp(yaw, -1.42, 1.42); pitch = THREE.MathUtils.clamp(pitch, -.7, .44); markDirty();
   });

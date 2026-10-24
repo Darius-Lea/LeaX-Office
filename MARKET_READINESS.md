@@ -1,4 +1,6 @@
-# Release status: 0.2.0-preview.9
+# Release status: 0.2.0-preview.10
+
+Preview.10 makes meetings CEO-led, exposes the real popup board, routes questions to one chosen employee, and keeps human video inside the app. Voice samples/pace and optional consented browser online voices improve control without claiming natural audio on every device. Scoped partner pages are meeting workspaces; one main furnished 3D office remains. Actual Windows execution, live-model/source quality and connected remote video remain release gates. The product remains an unsigned preview.
 
 Preview.9 adds first-person saved working meetings, explicit partner invitations, grounded lead/model evidence, reviewed AI profile help, actual silent video export, teaching examples, consent-gated music, read-only Bitcoin receipts and manually reviewed public support requests. These are implemented preview features with test coverage. Remote signaling is verified; connected media is not. No physical conference equipment, human-like custom voice, cinematic video synthesis, actual mining, verified payment or automatic public booking is connected. The clean Windows/device/signing/live-model/live-source/security gates below still apply. Do not advertise guaranteed income, whole-WWW coverage, a trained-every-second LLM or a certified commercial release.
 

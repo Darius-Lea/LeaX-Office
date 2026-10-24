@@ -1,5 +1,12 @@
 # Known issues and blockers
 
+## Preview.10 meeting limits
+
+- Meetings now wait for the CEO: one explicit recipient per question, no automatic start speeches. Earlier automatic outputs remain archived. The model can still misunderstand; protocol/grounding tests do not establish live-model answer quality.
+- Video remains inside the first-party board. Actual signaling and consent/teardown are tested, but managed Chromium UDP policy prevents connected media here. No TURN relay or automatic public access to a downloaded localhost office exists.
+- Voice samples and pace use actual browser inventory. Local voices are default; optional online voices share reply text only after explicit opt-in. Availability/quality vary and no new voice engine is installed.
+- Only one furnished 3D office exists. Invited humans get scoped meeting workspaces, not independent 3D offices or arbitrary company access.
+
 ## Preview.9 boundaries
 
 - First-person meetings and invite-only partner accounts now work with durable messages and real model slots. Actual two-browser signaling/remote-track creation succeeds; this workspace's managed Chromium `WebRtcIPHandling=disable_non_proxied_udp` gathers no ICE candidates. No connected-video success is claimed. There is no TURN relay or automatic network exposure for local offices.

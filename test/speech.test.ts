@@ -32,3 +32,67 @@ test('voice preferences use the actual installed regional inventory and preserve
   setSpeechPreferences({lang:'en-GB',rate:.96});assert.equal(getSpeechOptions().voices.some(v=>v.lang==='en-GB'),false);assert.equal(getSpeechOptions().selectedVoiceURI,'us-natural');
  }finally{stopReading();setSpeechPreferences({voiceURI:null,lang:'en-US',rate:.96});globalThis.speechSynthesis=oldSynth;globalThis.SpeechSynthesisUtterance=oldUtterance;if(storage)Object.defineProperty(globalThis,'localStorage',storage);else delete globalThis.localStorage;}
 });
+
+test('delayed device voices update an open selector without playback or remote voices and unsubscribe cleanly',async()=>{
+ const oldSynth=globalThis.speechSynthesis,oldUtterance=globalThis.SpeechSynthesisUtterance;
+ let voices:any[]=[],speakCount=0,cancelCount=0;const listeners=new Set<()=>void>(),states:any[]=[];
+ globalThis.SpeechSynthesisUtterance=class{text:string;constructor(text:string){this.text=text}} as any;
+ globalThis.speechSynthesis={getVoices:()=>voices,cancel(){cancelCount++},speak(){speakCount++},addEventListener(name,fn){assert.equal(name,'voiceschanged');listeners.add(fn)},removeEventListener(name,fn){listeners.delete(fn)}} as any;
+ const {subscribeSpeechOptions,setSpeechPreferences,getSpeechOptions}=await import('../public/speech.js');let unsubscribe=()=>{};
+ try{
+  setSpeechPreferences({voiceURI:null,lang:'en-US',rate:.96});unsubscribe=subscribeSpeechOptions(value=>states.push(value));assert.equal(states.length,1);assert.equal(states[0].available,false);assert.match(states[0].message,/updates when it becomes ready/);
+  voices=[{voiceURI:'device-plain',name:'Installed standard',lang:'en-US',localService:true,default:true},{voiceURI:'device-natural',name:'Installed Natural',lang:'en-US',localService:true},{voiceURI:'online-natural',name:'Online Natural',lang:'en-US',localService:false}];
+  for(const fn of [...listeners])fn();assert.equal(states.length,2);const options=states[1];assert.equal(options.available,true);assert.equal(options.voices.length,2);assert.equal(options.selectedVoiceURI,'device-natural');assert.equal(options.voices[0].voiceURI,'device-natural');assert.equal(options.voices[0].recommended,true);assert.equal(options.voices[0].enhanced,true);assert.match(options.voices[0].label,/English.*Enhanced device voice/);assert.equal(speakCount,0);assert.equal(cancelCount,0);
+  for(const fn of [...listeners])fn();assert.equal(states.length,2,'Unchanged inventory should not reset an active selection');
+  setSpeechPreferences({voiceURI:'device-plain',rate:.9});assert.equal(getSpeechOptions().selectedVoiceURI,'device-plain');assert.equal(getSpeechOptions().recommendedVoiceURI,'device-natural');assert.equal(states.length,3);assert.equal(states.at(-1).selectedVoiceURI,'device-plain');assert.equal(states.at(-1).rate,.9,'An open picker receives explicit preference changes');
+  unsubscribe();unsubscribe();assert.equal(listeners.size,0);voices=[];setSpeechPreferences({rate:.96});assert.equal(states.length,3,'A removed picker receives neither inventory nor preference updates');
+ }finally{unsubscribe();setSpeechPreferences({voiceURI:null,lang:'en-US',rate:.96});globalThis.speechSynthesis=oldSynth;globalThis.SpeechSynthesisUtterance=oldUtterance;}
+});
+
+test('online English voices require explicit consent, update the picker without playing and cannot be selected around the privacy gate',async()=>{
+ const oldSynth=globalThis.speechSynthesis,oldUtterance=globalThis.SpeechSynthesisUtterance,storage=Object.getOwnPropertyDescriptor(globalThis,'localStorage');
+ const saved=new Map<string,string>(),spoken:any[]=[],states:any[]=[];const listeners=new Set<()=>void>();
+ const voices=[{voiceURI:'online-natural-us',name:'Online Natural',lang:'en-US',localService:false,default:true},{voiceURI:'local-us',name:'Installed standard',lang:'en-US',localService:true},{voiceURI:'online-other-language',name:'Online Natural',lang:'ja-JP',localService:false}];
+ Object.defineProperty(globalThis,'localStorage',{configurable:true,value:{getItem:key=>saved.get(key)||null,setItem:(key,value)=>saved.set(key,value)}});
+ globalThis.SpeechSynthesisUtterance=class{text:string;constructor(text:string){this.text=text}} as any;
+ globalThis.speechSynthesis={getVoices:()=>voices,cancel(){},speak:value=>spoken.push(value),addEventListener(name,fn){listeners.add(fn)},removeEventListener(name,fn){listeners.delete(fn)}} as any;
+ const {getSpeechOptions,getSpeechPreferences,setSpeechPreferences,subscribeSpeechOptions,readToMe,stopReading}=await import('../public/speech.js');let unsubscribe=()=>{};
+ try{
+  setSpeechPreferences({allowOnline:false,voiceURI:null,lang:'en-US',rate:.96});unsubscribe=subscribeSpeechOptions(state=>states.push(state));
+  let options=getSpeechOptions();assert.equal(options.allowOnline,false);assert.equal(options.onlineAvailable,true);assert.equal(options.voices.length,1);assert.equal(options.voices[0].local,true);assert.match(options.onlinePrivacyNotice,/provider receives the reply text/);assert.equal(spoken.length,0);
+  setSpeechPreferences({voiceURI:'online-natural-us'});assert.equal(getSpeechPreferences().voiceURI,null);
+  await readToMe('Only the enabled device voice may read this.',{voiceURI:'online-natural-us'});assert.equal(spoken.at(-1).voice.voiceURI,'local-us');stopReading();
+  const before=spoken.length;setSpeechPreferences({allowOnline:true});options=getSpeechOptions();assert.equal(options.allowOnline,true);assert.equal(options.voices.length,2);assert.equal(options.recommendedVoiceURI,'online-natural-us');assert.equal(options.voices.some(voice=>voice.voiceURI==='online-other-language'),false);assert.match(options.voices.find(voice=>voice.online).label,/Online voice.*shares reply text/);assert.equal(spoken.length,before,'Allowing an inventory never starts audio');assert.equal(states.at(-1).allowOnline,true);assert.equal(JSON.parse([...saved.values()].at(-1)!).allowOnline,true);
+  setSpeechPreferences({voiceURI:'local-us',rate:.9});assert.equal(getSpeechOptions().selectedVoiceURI,'local-us','An explicit device-voice selection remains preferred over a natural online voice');assert.equal(getSpeechPreferences().rate,.9);
+  await readToMe('A consented online sample.',{voiceURI:'online-natural-us'});assert.equal(spoken.at(-1).voice.voiceURI,'online-natural-us');assert.equal(spoken.at(-1).rate,.9);stopReading();
+  unsubscribe();unsubscribe();assert.equal(listeners.size,0);
+ }finally{unsubscribe();stopReading();setSpeechPreferences({allowOnline:false,voiceURI:null,lang:'en-US',rate:.96});globalThis.speechSynthesis=oldSynth;globalThis.SpeechSynthesisUtterance=oldUtterance;if(storage)Object.defineProperty(globalThis,'localStorage',storage);else delete globalThis.localStorage;}
+});
+
+test('revoking online voice consent stops the current utterance, prevents later chunks and retains device-voice choices',async()=>{
+ const oldSynth=globalThis.speechSynthesis,oldUtterance=globalThis.SpeechSynthesisUtterance,spoken:any[]=[],statuses:any[]=[];let cancellations=0;
+ const voices=[{voiceURI:'revoke-online',name:'Online Natural',lang:'en-US',localService:false},{voiceURI:'revoke-local',name:'Device Enhanced',lang:'en-US',localService:true}];
+ globalThis.SpeechSynthesisUtterance=class{text:string;constructor(text:string){this.text=text}} as any;
+ globalThis.speechSynthesis={getVoices:()=>voices,cancel(){cancellations++},speak:value=>spoken.push(value)} as any;
+ const {setSpeechPreferences,getSpeechPreferences,getSpeechOptions,readToMe,stopReading}=await import('../public/speech.js');
+ try{
+  setSpeechPreferences({allowOnline:true,voiceURI:'revoke-online',lang:'en-US',rate:.92});
+  await readToMe(('Only the person you call on should answer your question. ').repeat(12),{onStatus:status=>statuses.push(status)});assert.equal(spoken.length,1);assert.equal(spoken[0].voice.voiceURI,'revoke-online');spoken[0].onstart?.();assert.match(statuses.at(-1).message,/provider receives this text/);
+  const before=cancellations;setSpeechPreferences({allowOnline:false});assert.ok(cancellations>before);assert.equal(statuses.at(-1).status,'stopped');assert.equal(getSpeechPreferences().voiceURI,null);assert.equal(getSpeechPreferences().rate,.92);assert.equal(getSpeechOptions().selectedVoiceURI,'revoke-local');assert.equal(getSpeechOptions().voices.some(voice=>voice.online),false);
+  spoken[0].onend?.();await Promise.resolve();assert.equal(spoken.length,1,'A stale online utterance cannot enqueue its next chunk');
+  await readToMe('The remaining answer can use a device voice.',{voiceURI:'revoke-online'});assert.equal(spoken.length,2);assert.equal(spoken[1].voice.voiceURI,'revoke-local');assert.equal(spoken[1].rate,.92);stopReading();
+  setSpeechPreferences({voiceURI:'revoke-local'});setSpeechPreferences({allowOnline:false});assert.equal(getSpeechPreferences().voiceURI,'revoke-local','Revocation preserves an explicitly selected eligible device voice');
+ }finally{stopReading();setSpeechPreferences({allowOnline:false,voiceURI:null,lang:'en-US',rate:.96});globalThis.speechSynthesis=oldSynth;globalThis.SpeechSynthesisUtterance=oldUtterance;}
+});
+
+test('voice sample uses the selected device voice and meeting speech omits only transport wrappers while retaining facts',async()=>{
+ const oldSynth=globalThis.speechSynthesis,oldUtterance=globalThis.SpeechSynthesisUtterance,spoken:any[]=[],statuses:any[]=[];
+ const voices=[{voiceURI:'sample-local',name:'Device Natural',lang:'en-US',localService:true}];
+ globalThis.SpeechSynthesisUtterance=class{text:string;constructor(text:string){this.text=text}} as any;globalThis.speechSynthesis={getVoices:()=>voices,cancel(){},speak:u=>spoken.push(u)} as any;
+ const {previewVoice,readToMe,stopReading,getSpeechPreferences,setSpeechPreferences}=await import('../public/speech.js');
+ try{
+  const sample=await previewVoice({voiceURI:'sample-local',rate:.9,onStatus:value=>statuses.push(value)});assert.equal(sample.started,true);assert.equal(spoken[0].voice.voiceURI,'sample-local');assert.equal(spoken[0].rate,.9);assert.match(spoken[0].text,/You lead this meeting/);assert.equal(getSpeechPreferences().voiceURI,'sample-local');assert.equal(getSpeechPreferences().rate,.9);spoken[0].onstart?.();spoken[0].onend?.();await Promise.resolve();assert.equal(statuses.at(-1).status,'complete');
+  await readToMe('Local model: qwen3:0.6b\nAssignment: Summarize everything\nAI-generated advisory — verify before action\n\nNo published phone was found. No emails were sent.\nNo tools executed. This output is model advice only, not completed research or external work.',{context:'meeting'});assert.match(spoken.at(-1).text,/No published phone was found\. No emails were sent\./);assert.doesNotMatch(spoken.at(-1).text,/Local model|Assignment|verify before action|No tools executed/);
+  stopReading();await readToMe('Local model: qwen3:0.6b\nNo emails were sent.');assert.match(spoken.at(-1).text,/Local model/,'Other note readers retain their normal content');
+ }finally{stopReading();setSpeechPreferences({voiceURI:null,lang:'en-US',rate:.96});globalThis.speechSynthesis=oldSynth;globalThis.SpeechSynthesisUtterance=oldUtterance;}
+});

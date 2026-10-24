@@ -1,5 +1,13 @@
 # Architecture
 
+## Preview.10 CEO-led turns and embedded board
+
+The additive office_meeting_turns table links each response message to the exact saved CEO question and employee. Meeting call/start only record invitations and state; older clients cannot request automatic kickoff inference. Existing completed outputs remain intact. Legacy unstarted pre-question kickoff slots are withdrawn separately from explicit discussion. Inference selects the actual question and that employee's bounded prior turns, removes unrelated docket data, retains relevant source tools and rejects unexpected tools on simple questions. Response metadata distinguishes linked questions and legacy unsolicited kickoff history.
+
+A single movable composer retains unfinished input between room and popup board. The CEO's board separates discussion/agenda/people/video/voice/history; scene hits open the same board or select a colleague. The discussion log scrolls independently above visible reply controls. Human video reuses the scoped partner UI in a sandboxed same-origin frame bound to the actual meeting and current session. It does not navigate to an external provider. Device startup and parent/child messages have consent/origin/source/generation guards; removing the panel stops media. Same-origin framing is allowed while third-party framing remains prohibited.
+
+Speech inventory subscriptions update delayed voices and preferences without playback. Device voices are default. Optional browser online English voices require persisted explicit text-sharing consent; revocation stops current online playback and blocks later chunks. No provider SDK, TTS model or online endpoint is bundled.
+
 ## Preview.9 office extensions
 
 Meeting, participant, message, response-request and idempotent mutation tables preserve workflow independently of 3D avatars. Local response slots map to actual ai_runs; clerk summaries are separately labeled. Employee conversations and meetings share the bounded serialized local-model executor, clock gates and actual tool receipts. Grounded lead/status preflight happens before inference; one repair precedes a blocked output. Small models receive compact selected evidence instead of unrelated office state.

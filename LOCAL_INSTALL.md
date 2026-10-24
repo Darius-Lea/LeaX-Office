@@ -1,5 +1,17 @@
 # Install AI Headquarters on Windows
 
+## Meeting update — preview.10
+
+Open the latest Windows setup below to update your existing local office. Your founder account, saved work and office design stay in the retained data folder.
+
+1. Open **Meet** and choose **Start meeting** on the board. Employees wait for your direction.
+2. Click a colleague under **People**, or begin with their name: **Einstein, what is the next step?** Only that person is asked. Use **Everyone, ...** for a statement with no reply.
+3. **My turn · stop voice** returns control to you. **My agenda** saves your topics; **Saved meetings** reopens earlier discussion. The wall display and desk tablet also open the board.
+4. In **Voice**, play a sample and choose a comfortable pace. Device voices remain the default. If your browser offers online voices, a separate checkbox permits sharing reply text with its provider. No audio plays merely from enabling that option.
+5. **Video call** opens inside the board, without a new browser tab or meeting provider page. Camera/microphone require consent and turn off when the panel closes. Real remote colleagues still need the same reachable online company installation; the local download does not configure public hosting, remote access or a TURN relay.
+
+There is one furnished 3D office. Partner accounts are scoped meeting workspaces; separate furnished partner offices are not implemented. Actual Windows installation and connected remote media still require device/network validation.
+
 ## What changes in preview.9
 
 Close the old office and reopen the latest downloaded setup to update the app. Keep `%LOCALAPPDATA%\AIHeadquarters\data`; updates reuse your founder login, saved business records, office design and new meetings. A Render office and a downloaded office are separate databases unless you explicitly import a backup. The review-branch installer link below is the current package; the existing Render `/download` can remain older until its publication is explicitly performed.
@@ -16,7 +28,7 @@ For remote partners, use **Partner offices & meetings** on one reachable HTTPS i
 
 Bitcoin monitoring is optional, read-only public-address lookup. No CPU/GPU miner or mining income is implemented. Public paid-meeting requests need an owner-supplied official payment URL; check payments at that provider. Do not advertise a connected bank, automatic appointments or malware scanning.
 
-Latest **preview.9** update: [Download Windows setup](https://github.com/Darius-Lea/LeaX-Office/raw/refs/heads/codex/desktop-reliability-and-autonomous-office/downloads/AI-Headquarters-Setup.exe). Open the downloaded executable to update while retaining your data folder. **Internet & tools** shows real source access and schedules; **My computer → Assistant** opens saved employee conversations. Model preparation must finish successfully for actual AI replies. Email preparation explains the purpose and opens your own mail service for final send; it does not connect to your inbox. Optional private learning archives are separate from full office backups.
+Latest **preview.10** update: [Download Windows setup](https://github.com/Darius-Lea/LeaX-Office/raw/refs/heads/codex/desktop-reliability-and-autonomous-office/downloads/AI-Headquarters-Setup.exe). Open the downloaded executable to update while retaining your data folder. **Internet & tools** shows real source access and schedules; **My computer → Assistant** opens saved employee conversations. Model preparation must finish successfully for actual AI replies. Email preparation explains the purpose and opens your own mail service for final send; it does not connect to your inbox. Optional private learning archives are separate from full office backups.
 
 Preview.6 keeps your existing office database and adds **Opportunities** in the owner computer. Open a source lead and choose **Track potential partner**, or add a customer you already know. Keep the next action, follow-up date, qualification checks and reported results together. Today opens the specific opportunity that needs attention. Historical awards remain potential-partner research, and reported wins remain separate from received payments.
 

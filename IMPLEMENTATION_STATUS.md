@@ -1,6 +1,16 @@
 # Current implementation status — 2026-10-23
 
-## Current milestone — 0.2.0-preview.9
+## Current milestone — 0.2.0-preview.10
+
+Changed meetings to CEO-led turn taking: call/start never queue automatic speeches, including old clients requesting kickoff replies. Explicit questions address one invited employee; each response links to the exact CEO question. Statements and agenda items produce no reply. Simple questions offer no research tools; relevant lead/current-notice/status questions retain actual permitted tools. Same-colleague context and concise question-first instructions reduce unrelated answers. One repair/hold remains, with no invented inference.
+
+The popup meeting board opens on entry/start and via the clickable wall/tablet. Separate sections contain discussion, owner agenda, people, camera panel, voice choices and saved history. Scene clicks select a speaker inside the meeting. My turn stops voice; automatic reading is opt-in and limited to replies requested in that open session. Old automatic kickoff history is collapsed and unstarted kickoff jobs are withdrawn without removing explicit questions or completed work.
+
+Human video is embedded in the same first-party app/session/meeting; default external-provider/new-tab flows were removed from both meeting entries. Device consent, actual connection states, panel/hide cleanup and scoped partner access remain. There is one furnished 3D office; partner accounts have private meeting workspaces. Device voices refresh asynchronously, include actual voice labels/sample/pace, and can optionally include browser online English voices after text-sharing consent. Revocation stops online speech. This does not install a voice provider or establish human audio quality.
+
+Validation: 176 Node tests pass; source/final packaged CEO-led board, voice-consent, two-browser embedded-video signaling, connected-office, download and WebGL checks pass; native Go tests and Windows-target vet pass. The 35-file production payload/GUI executable integrity verifies. Exact scope is in TEST_RESULTS.md. Actual live model quality, connected remote video, Windows execution/signing and source/device release gates remain.
+
+## Previous milestone — 0.2.0-preview.9
 
 Implemented: durable first-person working meetings; actual model response slots/tool receipts; selected colleague questions, reviewed microphone transcripts, installed-voice choice, serial reply read-aloud and output feedback; private invitation-only partner accounts and explicitly shared human meeting messages; consent-gated WebRTC signaling; reviewed AI profile suggestions with exact-source quotes and stale-edit/overwrite protection; actual 30-second silent video export; consent-gated YouTube music; required lead/status evidence tools before advisory inference; bounded small-model context and one repair before an unreliable answer is blocked; private reviewed teaching examples and licensed-source preview; optional paced Bitcoin public-address receipts; honest illustrative dispatch and offline game; official external payment links with private manually reviewed requests.
 

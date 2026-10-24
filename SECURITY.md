@@ -1,5 +1,11 @@
 # Security boundaries
 
+## Preview.10 board and voice changes
+
+First-party frame embedding is permitted only from the same origin (`frame-ancestors 'self'`); third-party framing remains prohibited. The camera panel uses a sandboxed same-origin iframe/current company session and the existing scoped partner APIs. It does not send the CEO to an outside meeting site. Parent/child commands check exact origin, source window and fixed message types; they cannot start the camera. Explicit browser device consent remains required; closing/hiding/removing the panel stops tracks and invalidates pending media startup.
+
+Browser online English voices are excluded by default. Separate opt-in explains that the browser's provider receives text chosen for reading. Revocation stops current online speech, clears its selection and blocks later chunks; device voices remain available. The app supplies no online voice endpoint, key or automatic playback. Speech transcription is independently consented and stops synthesis before listening. CEO statements/agenda do not authorize tools or request AI replies; addressed turns still obey existing clock/tool/approval boundaries.
+
 ## Preview.9 meeting, media and visitor boundaries
 
 Invitation codes and partner session tokens are hashed; one-use expiring invitations create scoped meeting accounts, never founder access. All mutation routes require an exact trusted Origin; private owner routes require the independent founder cookie. Revocation is checked on each request. Shared meeting views omit owner-only docket/profile/tool/private records. Human chat requires actual meeting invitation and recent joined presence. Camera/microphone/STUN access is a separate explicit consent; no recording is implemented. Signaling is recipient-scoped, bounded and short-lived. Remote peer IP disclosure is explained; no TURN service is bundled.

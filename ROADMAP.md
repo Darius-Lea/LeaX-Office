@@ -1,5 +1,9 @@
 # Next milestones
 
+## After preview.10
+
+Validate CEO-led meetings with the founder's actual local model and real saved questions, measuring relevance, interruptions and voice choice on Windows. Validate a connected call between two invited devices on a reachable HTTPS installation; add TURN only with authorized infrastructure/costs. Keep local-only/offline capability truthful. Additional furnished partner offices or independent companies require explicit workspace/account isolation design and are not represented by current meeting invites.
+
 ## Next after preview.9
 
 The first-person saved meeting workflow, local voice controls, actual motion-graphics export, partner account boundaries and grounded profile/advice paths are now implemented. Validate the final executable on Windows with genuine inference, a real owner-reviewed contact case and keyed current notices. Measure advice usefulness with real source receipts and owner feedback. Validate actual remote calls on two reachable HTTPS devices and document NAT/network limits before claiming production video; add a TURN relay only with explicit infrastructure/cost authorization.

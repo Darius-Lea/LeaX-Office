@@ -7,9 +7,9 @@ function field(form,name,label,value='',options={}){const line=node('label',labe
 function check(form,label){const line=node('label'),input=node('input');input.type='checkbox';line.className='media-consent';line.append(input,document.createTextNode(label));form.append(line);return input;}
 export function installOfficeExtensions({api,getState,refresh,openPopup,closePopup,onEmployee,onAISetup,onFeedback}){
  let profileTimer=null,video=null,tech=null;
- const meeting=createMeetingWorkspace({dialog:$('#meeting-dialog'),api,getOfficeState:getState,onEmployee,onMusic:showMusic,onAISetup,onFeedback});
+ const meeting=createMeetingWorkspace({dialog:$('#meeting-dialog'),api,getOfficeState:getState,onEmployee,onMusic:showMusic,onAISetup,onFeedback,onPartners:showPartners});
  const music=createOfficeMusicPlayer({container:$('#office-music-player'),onStateChange:state=>window.dispatchEvent(new CustomEvent('hq-music-state',{detail:{playing:state.playing}}))});
- $('#meeting-open').onclick=()=>void meeting.show();const previewStart=$('#meeting-room-start');if(previewStart)previewStart.onclick=()=>void meeting.show();$('#office-music-open').onclick=showMusic;
+ $('#meeting-open').onclick=()=>void meeting.show();const insideVideo=$('#meeting-video-inside');if(insideVideo)insideVideo.onclick=()=>void meeting.show().then(()=>meeting.openBoard('video')); const previewStart=$('#meeting-room-start');if(previewStart)previewStart.onclick=()=>void meeting.show();$('#office-music-open').onclick=showMusic;
  $('#music-close').onclick=()=>$('#music-dialog').close();$('#music-form').onsubmit=event=>{event.preventDefault();const form=event.target,result=music.load(form.elements.url.value,{consent:form.elements.consent.checked});$('#music-feedback').textContent=result.message||'';};
  function showMusic(){if(!$('#music-dialog').open)$('#music-dialog').showModal();}
  window.addEventListener('hq-music-open',showMusic);
