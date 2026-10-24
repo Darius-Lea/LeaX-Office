@@ -1,3 +1,11 @@
+# Preview.9 continuation
+
+Proposals, work orders, invoices/partial receipts, meeting records/live browser calls, explicitly confirmed SMTP/IMAP email and paired office synchronization are implemented. Setup and limitations are in CONNECTED_WORKFLOWS.md.
+
+Next acceptance gates: review and publish this branch while protecting the live temporary-host database; validate the owner’s Windows installation/import/DPAPI/shortcut/rollback and actual local inference; connect authorized email/Bridge and SAM access privately; pair actual offices over HTTPS and test target-device media networks. Obtain legitimate publisher signing before claiming a signed release. Multi-tenant identity/isolation, provider OAuth registration/refresh, full mailbox bodies/attachments, bank/accounting integrations and broad verified opportunity coverage remain separate future work. No automatic paid service or outgoing communication is authorized by these gates.
+
+## Retained earlier milestones
+
 # Next milestones
 Preview.6 adds a company/opportunity work record with case-specific Today actions, dated follow-ups, qualification and linked reported outcomes; verified local backups/export cleanup; bounded searchable history; unfinished-draft protection; CRM preservation and exact-model native reuse. Continue from this saved implementation. Final validation is in TEST_RESULTS.md.
 

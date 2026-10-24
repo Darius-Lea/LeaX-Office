@@ -1,3 +1,5 @@
+import {pollSync,isPairedCopy,initializeSync} from './sync.ts';
+import {pollMail} from './mail.ts';
 import './outcomes.ts';
 import {maintainBackups} from './backups.ts';
 import {db,setting,setSetting,audit} from './store.ts';
@@ -24,7 +26,7 @@ export function requestManagerResearch(now=Date.now()){
  return {task:String(assigned.reference),lane:allTermsFor(setting('standing_goal')).indexOf(termsFor(assigned.goal)[0]),queuedAt:Number(assigned.created),nextResearchAt:nextResearchAt(now),plan};
 }
 export async function pulse(fetcher:typeof fetch=fetch){
- if(setting('clock')!=='in')return false;
+ if(isPairedCopy()||setting('clock')!=='in')return false;
  // Continue contact work independently of the award fetch and model queues.
  // Backfill only the latest saved cycle, rather than replaying all old research.
  if(!setting('lead_briefing_bootstrap_v1')){
@@ -59,6 +61,7 @@ export async function pulse(fetcher:typeof fetch=fetch){
  return worked||teamWorked;}finally{busy=false;}
 }
 export function startOffice(){
- const timer=setInterval(()=>{void maintainBackups().catch(()=>console.error('Automatic backup needs attention; inspect Data protection in the office.'));pulse().catch(error=>console.error('Office worker failure:',String(error)));},1000);
+ initializeSync();
+ const timer=setInterval(()=>{void pollSync();void pollMail();void maintainBackups().catch(()=>console.error('Automatic backup needs attention; inspect Data protection in the office.'));pulse().catch(error=>console.error('Office worker failure:',String(error)));},1000);
  timer.unref();return timer;
 }

@@ -1,3 +1,7 @@
+import {joinCall,pollCall,signalCall,leaveCall} from './calls.ts';
+import {initializeSync,syncState,createPairCode,acceptPair,syncAuthorized,exchange,connectSync,runSync,disconnectSync,revokeSyncDevice,resolveSyncConflict} from './sync.ts';
+import {mailState,saveMailConfiguration,disconnectMail,testMailConnection,prepareMailSend,sendApprovedMail,syncMailInbox,suppressMail,markReplySeen,recoverInterruptedMail} from './mail.ts';
+import {businessState,documentDetail,saveDocument,transitionDocument,recordInvoicePayment,documentHTML} from './business-documents.ts';
 import {getOfficeDesign,saveOfficeDesign} from './office-design.ts';
 import {backupState,createManagedBackup} from './backups.ts';
 import {dealState,dealDetail,createDeal,updateDeal,recordDealOutcome} from './deals.ts';
@@ -43,6 +47,7 @@ if(configuredOrigin){
 }
 if(publicBinding&&!publicOrigin)throw Error('Public binding requires PUBLIC_ORIGIN (or RENDER_EXTERNAL_URL) with your HTTPS app origin');
 restoreSavedConnections();
+recoverInterruptedMail();
 const needsSetup=!db.prepare('SELECT id FROM founder').get();
 if(publicBinding&&needsSetup&&(!process.env.HQ_SETUP_CODE||process.env.HQ_SETUP_CODE.length<32))throw Error('First public startup requires a private HQ_SETUP_CODE of at least 32 characters in service environment settings');
 const bootstrap=process.env.HQ_SETUP_CODE || randomBytes(24).toString('hex');
@@ -57,15 +62,17 @@ const server=createServer(async(req,res)=>{
  const send=(status:number,data:any)=>{res.writeHead(status,{'Content-Type':'application/json'});res.end(JSON.stringify(data));};
  try{
  const url=new URL(req.url||'/',`http://127.0.0.1:${port}`);
- if(['GET','HEAD'].includes(req.method||'') && ['/', '/download','/download.css','/download.js','/app.js','/speech.js','/office.js','/office3d.js','/style.css','/report.css','/report.js'].includes(url.pathname)){const file=url.pathname==='/'?'index.html':url.pathname==='/download'?'download.html':url.pathname.slice(1);res.setHeader('Content-Type',file.endsWith('html')?'text/html':file.endsWith('js')?'text/javascript':'text/css');res.end(req.method==='HEAD'?undefined:readFileSync(new URL('../public/'+file,import.meta.url)));return;}
+ if(['GET','HEAD'].includes(req.method||'') && ['/', '/download','/download.css','/download.js','/app.js','/business.js','/mail.js','/sync.js','/calls.js','/speech.js','/office.js','/office3d.js','/style.css','/report.css','/report.js'].includes(url.pathname)){const file=url.pathname==='/'?'index.html':url.pathname==='/download'?'download.html':url.pathname.slice(1);res.setHeader('Content-Type',file.endsWith('html')?'text/html':file.endsWith('js')?'text/javascript':'text/css');res.end(req.method==='HEAD'?undefined:readFileSync(new URL('../public/'+file,import.meta.url)));return;}
  if(req.method==='GET'&&['/vendor/three.module.js','/vendor/three.core.js'].includes(url.pathname)){res.setHeader('Content-Type','text/javascript');res.setHeader('Cache-Control','public, max-age=86400');res.end(vendorFile(url.pathname.split('/').pop()!,'build/'+url.pathname.split('/').pop()));return;}
  if(req.method==='GET'&&['/vendor/FontLoader.js','/vendor/TextGeometry.js','/vendor/office-font.json'].includes(url.pathname)){const paths:Record<string,string>={'/vendor/FontLoader.js':'loaders/FontLoader.js','/vendor/TextGeometry.js':'geometries/TextGeometry.js','/vendor/office-font.json':'../fonts/helvetiker_regular.typeface.json'};const raw=vendorFile(url.pathname.split('/').pop()!,'examples/jsm/'+paths[url.pathname]).toString('utf8');res.setHeader('Content-Type',url.pathname.endsWith('json')?'application/json':'text/javascript');res.end(raw.replace(/from 'three'/g,"from '/vendor/three.module.js'"));return;}
  if(['GET','HEAD'].includes(req.method||'')&&['/download/windows','/download/windows.sha256'].includes(url.pathname)){serveWindowsDownload(req,res,process.env.HQ_INSTALLER_PATH||new URL('../downloads/AI-Headquarters-Setup.exe',import.meta.url),url.pathname.endsWith('.sha256'));return;}
  if(req.method==='GET' && url.pathname==='/api/status'){const ai=managedAISetupState();return send(200,{product:'ai-headquarters',setupRequired:!db.prepare('SELECT id FROM founder').get(),aiReady:ai?.inferenceVerified===true&&!!setting('ollama_model'),...(!publicBinding&&ai?.inferenceVerified===true?{aiModel:setting('ollama_model')||null}:{})});}
  const localPort=(server.address() as any)?.port||port;
  const allowedOrigins=publicBinding?[publicOrigin]:[`http://127.0.0.1:${localPort}`,`http://localhost:${localPort}`,...(publicOrigin?[publicOrigin]:[])];
- if(req.method==='POST' && !allowedOrigins.includes(req.headers.origin))return send(403,{error:'Invalid origin'});
- let body:any={};if(req.method==='POST'){let raw='';for await(const part of req){raw+=part;if(raw.length>(url.pathname==='/api/business/profile'?32768:16384))return send(413,{error:'Request too large'});}body=JSON.parse(raw||'{}');}
+ if(req.method==='POST' && !allowedOrigins.includes(req.headers.origin)&&!(!req.headers.origin&&['/api/sync/pair','/api/sync/exchange'].includes(url.pathname)))return send(403,{error:'Invalid origin'});
+ let body:any={};if(req.method==='POST'){let raw='';for await(const part of req){raw+=part;if(raw.length>(url.pathname==='/api/sync/exchange'?3000000:url.pathname==='/api/mail/configure'?65536:url.pathname==='/api/business/profile'?32768:16384))return send(413,{error:'Request too large'});}body=JSON.parse(raw||'{}');}
+ if(req.method==='POST'&&url.pathname==='/api/sync/pair')return send(200,acceptPair(body));
+ if(req.method==='POST'&&url.pathname==='/api/sync/exchange'){if(!syncAuthorized(req.headers.authorization))return send(401,{error:'Device pairing required'});return send(200,exchange(body));}
  if(['/api/setup','/api/login'].includes(url.pathname)&&req.method==='POST'){
  const key=req.socket.remoteAddress||'local';const a=attempts.get(key);if(a && Date.now()-a.time<60000 && a.count>=10)return send(429,{error:'Try again in one minute'});attempts.set(key,{count:a&&Date.now()-a.time<60000?a.count+1:1,time:a?.time&&Date.now()-a.time<60000?a.time:Date.now()});
  if(typeof body.password!=='string' || body.password.length>1024)return send(400,{error:'Invalid password'});
@@ -76,7 +83,31 @@ const server=createServer(async(req,res)=>{
  if(req.method==='GET'&&url.pathname.startsWith('/api/reports/')){const html=assignmentReport(decodeURIComponent(url.pathname.slice('/api/reports/'.length)),url.searchParams.get('download')==='1');res.setHeader('Content-Type','text/html; charset=utf-8');if(url.searchParams.get('download')==='1')res.setHeader('Content-Disposition','attachment; filename="Assignment-packet.html"');res.end(html);return;}
  if(req.method==='GET'&&url.pathname==='/api/download/windows'){res.setHeader('Content-Type','application/vnd.microsoft.portable-executable');res.setHeader('Content-Disposition','attachment; filename="AI-Headquarters-Setup.exe"');res.end(readFileSync(process.env.HQ_INSTALLER_PATH||new URL('../downloads/AI-Headquarters-Setup.exe',import.meta.url)));return;}
  if(req.method==='GET'&&url.pathname==='/api/state'){
- const state=snapshot({recordPage:Number(url.searchParams.get('recordPage')||0),taskPage:Number(url.searchParams.get('taskPage')||0),query:url.searchParams.get('historyQuery')||''}),workPlan=workPlannerState(),learning=learningState(),deals=dealState();return send(200,{...state,backups:backupState(),deals,workPlan,learning,operations:operationsState({plan:workPlan,learning}),managedAISetup:managedAISetupState(),leadResearch:leadResearchState(),businessGuide:businessGuide(Date.now(),deals),officeDesign:getOfficeDesign(),businessProfile:profileState(),accountability:accountabilityState(),outcomes:outcomeState(),funding:fundingState(),pricing:pricingState(),opportunities:state.opportunities.map(record=>({...record,advice:awardAdvice(record,state.company.name)})),...teamState(),roleCharters:ROLE_CHARTERS,manager:managerState(),aiRuns:agentRuns(),aiConfigured:!!setting('ollama_model'),contactResearch:contactState(),drafts:draftState(),solicitations:solicitationState()});}
+ const state=snapshot({recordPage:Number(url.searchParams.get('recordPage')||0),taskPage:Number(url.searchParams.get('taskPage')||0),query:url.searchParams.get('historyQuery')||''}),workPlan=workPlannerState(),learning=learningState(),deals=dealState();return send(200,{...state,backups:backupState(),business:businessState(),mail:mailState(),sync:syncState(),deals,workPlan,learning,operations:operationsState({plan:workPlan,learning}),managedAISetup:managedAISetupState(),leadResearch:leadResearchState(),businessGuide:businessGuide(Date.now(),deals),officeDesign:getOfficeDesign(),businessProfile:profileState(),accountability:accountabilityState(),outcomes:outcomeState(),funding:fundingState(),pricing:pricingState(),opportunities:state.opportunities.map(record=>({...record,advice:awardAdvice(record,state.company.name)})),...teamState(),roleCharters:ROLE_CHARTERS,manager:managerState(),aiRuns:agentRuns(),aiConfigured:!!setting('ollama_model'),contactResearch:contactState(),drafts:draftState(),solicitations:solicitationState()});}
+ if(req.method==='GET'&&url.pathname==='/api/business/documents')return send(200,businessState(url.searchParams.get('dealId')||undefined));
+ if(req.method==='POST'&&url.pathname==='/api/business/documents/save')return send(201,saveDocument(body));
+ if(req.method==='POST'&&url.pathname==='/api/business/documents/status')return send(200,transitionDocument(body));
+ if(req.method==='POST'&&url.pathname==='/api/business/invoices/payment')return send(201,recordInvoicePayment(body));
+ if(req.method==='GET'&&url.pathname.startsWith('/api/business/documents/')){const path=url.pathname.slice('/api/business/documents/'.length);if(path.endsWith('/print')){res.setHeader('Content-Type','text/html; charset=utf-8');res.end(documentHTML(decodeURIComponent(path.slice(0,-6))));return;}return send(200,documentDetail(decodeURIComponent(path)));}
+ if(req.method==='GET'&&url.pathname==='/api/mail/state')return send(200,mailState());
+ if(req.method==='POST'&&url.pathname==='/api/mail/configure')return send(200,saveMailConfiguration(body));
+ if(req.method==='POST'&&url.pathname==='/api/mail/disconnect')return send(200,disconnectMail());
+ if(req.method==='POST'&&url.pathname==='/api/mail/test')return send(200,await testMailConnection());
+ if(req.method==='POST'&&url.pathname==='/api/mail/prepare-send')return send(200,prepareMailSend(body.draftId));
+ if(req.method==='POST'&&url.pathname==='/api/mail/send')return send(200,await sendApprovedMail(body));
+ if(req.method==='POST'&&url.pathname==='/api/mail/inbox')return send(200,await syncMailInbox());
+ if(req.method==='POST'&&url.pathname==='/api/mail/suppress')return send(200,suppressMail(body));
+ if(req.method==='POST'&&url.pathname==='/api/mail/seen')return send(200,markReplySeen(body.id));
+ if(req.method==='POST'&&url.pathname==='/api/sync/code')return send(200,createPairCode(body));
+ if(req.method==='POST'&&url.pathname==='/api/sync/connect')return send(200,await connectSync(body));
+ if(req.method==='POST'&&url.pathname==='/api/sync/run')return send(200,await runSync());
+ if(req.method==='POST'&&url.pathname==='/api/sync/disconnect')return send(200,disconnectSync());
+ if(req.method==='POST'&&url.pathname==='/api/sync/revoke')return send(200,revokeSyncDevice(body.id));
+ if(req.method==='POST'&&url.pathname==='/api/sync/resolve')return send(200,resolveSyncConflict(body));
+ if(req.method==='POST'&&url.pathname==='/api/calls/join')return send(200,joinCall(body,token));
+ if(req.method==='POST'&&url.pathname==='/api/calls/poll')return send(200,pollCall(body,token));
+ if(req.method==='POST'&&url.pathname==='/api/calls/signal')return send(200,signalCall(body,token));
+ if(req.method==='POST'&&url.pathname==='/api/calls/leave')return send(200,leaveCall(body,token));
  if(req.method==='GET'&&url.pathname==='/api/learning/state')return send(200,learningState());
  if(req.method==='POST'&&url.pathname==='/api/backups/create')return send(201,await createManagedBackup());
  if(req.method==='POST'&&url.pathname==='/api/deals/create')return send(201,createDeal(body));
@@ -167,5 +198,6 @@ const server=createServer(async(req,res)=>{
  send(404,{error:'Not found'});
  }catch(e){send(400,{error:String(e)});}
 });
+initializeSync();
 startOffice();
 server.listen(port,host,()=>{const address=server.address();console.log(`AI Headquarters listening on port ${typeof address==='object'&&address?address.port:port}`);});

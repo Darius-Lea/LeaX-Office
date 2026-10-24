@@ -58,3 +58,11 @@ Next-action explanations open as concise popups with a reason and short instruct
 
 
 Preview.5 installer repair: the verified local office now opens before large AI downloads, so a model setup failure does not block access to saved files and evidence tools. Automatic AI preparation continues in the visible setup window; only completed inference selects the model and reports readiness. Cancelling that later stage preserves the handed-off office. Damaged runtime caches are replaced from a freshly verified staging directory, with prior files retained and rollback on a failed replacement. Public download now shows progress, verifies file bytes and supports retry/cancel and HTTP resume. Linux tests/cross-builds do not establish actual Windows installation success.
+
+## October 24 audit and packaging repair
+
+The public web office scene matches the latest repository visuals, but the previous Windows executable embedded older code. Preview.8 rebuilds the same production application and adds `scripts/verify-installer.py` to the native build. After a production build, the verifier checks the executable checksum, embedded manifest, exact file inventory and every embedded/current file hash. A stale package fails verification. See WEB_DESKTOP_AUDIT.md for feature differences and incomplete requirements. Web/local databases remain separate and hosted inference cannot access a user's local engine.
+
+## Preview.9 — connected business workflow implementation
+
+Added opportunity-linked proposals, work orders, invoices/partial receipts and meeting agendas/minutes; live browser calls; private SMTP/IMAP connections including local Bridge support; explicit per-message sending, header-based reply tracking and opt-outs; paired record synchronization with conflict review and device revocation. See CONNECTED_WORKFLOWS.md for exact boundaries and target-environment checks. Core business records can now synchronize after explicit pairing; authentication, source/model credentials, host execution state and AI installation remain local. Existing older limitation entries describe their release date and are not a substitute for the current scope.

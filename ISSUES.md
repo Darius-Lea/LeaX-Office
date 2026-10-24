@@ -28,3 +28,7 @@ Read-aloud depends on an installed English device voice and browser support; nat
 
 
 Preview.5 installer repair: the verified local office now opens before large AI downloads, so a model setup failure does not block access to saved files and evidence tools. Automatic AI preparation continues in the visible setup window; only completed inference selects the model and reports readiness. Cancelling that later stage preserves the handed-off office. Damaged runtime caches are replaced from a freshly verified staging directory, with prior files retained and rollback on a failed replacement. Public download now shows progress, verifies file bytes and supports retry/cancel and HTTP resume. Linux tests/cross-builds do not establish actual Windows installation success.
+
+## Preview.9 remaining environment gates
+
+The earlier missing business, mail, sharing and meeting workflows now have implementations; consult CONNECTED_WORKFLOWS.md for exact scope. Mail bodies/attachments, OAuth registration/refresh, bank/accounting integration, multi-tenant isolation and universally verified source/contact coverage remain outside this increment. Local Bridge requires a supported provider account/plan and configuration; remote media may need suitable network services. No actual owner installation/import/DPAPI, signed publisher release, keyed live notices, real model inference, owner mail account, remote paired offices or cross-network real-device call has been validated. Free-host ephemeral storage remains a risk until backed up or moved to durable hosting.
