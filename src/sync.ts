@@ -1,3 +1,4 @@
+import './stores.ts';
 import {randomBytes,createHash,timingSafeEqual,randomUUID} from 'node:crypto';
 import {request} from 'node:https';
 import {db,setting,setSetting,audit,directory} from './store.ts';
