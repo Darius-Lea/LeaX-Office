@@ -23,3 +23,6 @@ export function revokeSyncDevice(id:any){if(typeof id!=='string')throw Error('Ch
 export function resolveSyncConflict(v:any){const result=ready().resolve(v);audit('sync','Owner resolved a conflicting business record; both earlier versions retained in sync history');return result;}
 export function isPairedCopy(){try{return !!readSyncAccess()}catch{return setting('sync_status')!=='Disconnected; local records retained'&&setting('sync_started')==='yes';}}
 export async function pollSync(){if(!engine||running||!isPairedCopy()||Date.now()-Number(setting('sync_last_attempt')||0)<60000)return;setSetting('sync_last_attempt',String(Date.now()));try{await runSync()}catch{}}
+
+export function syncDeviceId(header:any){if(!syncAuthorized(header))return null;return (db.prepare('SELECT id FROM sync_devices WHERE token_hash=? AND revoked=0').get(hash(header.slice(7))) as any)?.id||null;}
+export async function pairedRequest(path:string,body:any){if(!['/api/ai-worker/heartbeat','/api/ai-worker/claim','/api/ai-worker/complete'].includes(path))throw Error('Unsupported paired worker action');const saved=access();if(!saved)throw Error('Pair this desktop first');return remote(new URL(path,saved.url),body,saved.token);}

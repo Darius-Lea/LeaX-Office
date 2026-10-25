@@ -5,6 +5,23 @@ const webglHost=document.createElement('div');webglHost.className='office-webgl'
 const message=document.createElement('p');message.className='office-render-message';viewport.before(message);
 let renderer=null,loading=false,rendererLoad=null,latestState=null,latestInspect=null;
 let clericalDesignKey='';
+let activeMeetingPresentation=null,meetingPresentationVersion=0,meetingReturnView=null;
+function meetingSceneState(available,reason=''){window.dispatchEvent(new CustomEvent('hq-meeting-scene-state',{detail:{available,reason,...(renderer?.getMeetingPresentationState?.()||{}),source:activeMeetingPresentation?.source||null,sessionId:activeMeetingPresentation?.sessionId||null}}));}
+async function presentMeeting(value={}){
+ const source=String(value.source||'call'),sessionId=String(value.sessionId||source),previous=activeMeetingPresentation;
+ if(value.active!==true){if(previous&&(previous.source!==source||previous.sessionId!==sessionId))return;activeMeetingPresentation=null;++meetingPresentationVersion;renderer?.setMeetingPresentation?.({active:false});const restore=meetingReturnView;meetingReturnView=null;if(restore&&!restore.meeting)renderer?.exitMeetingRoom();if(restore&&restore.view!=='3d'&&document.body.dataset.view==='3d')setOfficeView(restore.view);meetingSceneState(!!renderer);return;}
+ const first=!previous||previous.source!==source||previous.sessionId!==sessionId;
+ if(first&&!meetingReturnView)meetingReturnView={view:document.body.dataset.view||'3d',meeting:document.body.dataset.camera==='meeting'};
+ activeMeetingPresentation={...value,active:true,source,sessionId};const version=++meetingPresentationVersion;
+ if(latestState?.officeDesign?.design?.meeting===false){meetingSceneState(false,'The meeting area is turned off in office design. Use the visible call panel, or enable the room in Remodel office.');return;}
+ if(first||value.enter===true)setOfficeView('3d');
+ const office=renderer||await ensure3D();if(version!==meetingPresentationVersion||!activeMeetingPresentation)return;
+ if(!office){meetingSceneState(false,'3D is unavailable on this device. The call remains available in its video panel.');return;}
+ office.setMeetingPresentation?.(activeMeetingPresentation);if(first||value.enter===true)office.enterMeetingRoom();meetingSceneState(true);
+}
+window.addEventListener('hq-meeting-presentation',event=>{void presentMeeting(event.detail||{});});
+window.hqMeetingRoom={present:presentMeeting,clear(source='call',sessionId=source){return presentMeeting({active:false,source,sessionId});},getState(){return {available:!!renderer,source:activeMeetingPresentation?.source||null,sessionId:activeMeetingPresentation?.sessionId||null,...(renderer?.getMeetingPresentationState?.()||{active:false,cameraMode:'orbit',hasVideo:false})};}};
+
 const meetingEnter=document.querySelector('#meeting-room-enter'),meetingControls=document.querySelector('#meeting-view-controls'),meetingExit=document.querySelector('#meeting-room-exit');
 function updateMeetingAvailability(){const enabled=latestState?.officeDesign?.design?.meeting!==false;if(meetingEnter){meetingEnter.disabled=!enabled;meetingEnter.title=enabled?'Enter the first-person meeting room view':'Turn on the meeting area in Remodel office & equipment to enter.';}if(!enabled)renderer?.exitMeetingRoom();}
 function applyClericalDesign(){

@@ -1,3 +1,5 @@
+import {pollAIWorker} from './ai-relay.ts';
+import {commercePreparationPulse} from './commerce.ts';
 import {pollSync,isPairedCopy,initializeSync} from './sync.ts';
 import {pollMail} from './mail.ts';
 import './outcomes.ts';
@@ -62,6 +64,6 @@ export async function pulse(fetcher:typeof fetch=fetch){
 }
 export function startOffice(){
  initializeSync();
- const timer=setInterval(()=>{void pollSync();void pollMail();void maintainBackups().catch(()=>console.error('Automatic backup needs attention; inspect Data protection in the office.'));pulse().catch(error=>console.error('Office worker failure:',String(error)));},1000);
+ const timer=setInterval(()=>{void pollAIWorker();try{commercePreparationPulse()}catch{}void pollSync();void pollMail();void maintainBackups().catch(()=>console.error('Automatic backup needs attention; inspect Data protection in the office.'));pulse().catch(error=>console.error('Office worker failure:',String(error)));},1000);
  timer.unref();return timer;
 }

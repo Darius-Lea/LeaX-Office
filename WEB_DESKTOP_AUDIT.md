@@ -1,3 +1,21 @@
+# LeaX Office audit — preview.10
+
+| Area | Released implementation and limits |
+|---|---|
+| Offices | Three saved virtual departments; 30-second drive and 45-second jet travel; mining sculpture only in Marketing |
+| Live meeting display | Actual selected remote video on the first-person room screen; audio-only state, mute/camera/leave and cleanup; remote networks may need STUN/TURN |
+| AI meetings | Saved real employee discussions using local inference or an explicitly enabled verified paired desktop; no invented fallback replies |
+| Products | Original SVG planners, trackers, checklists, type designs and patterns; exact-review export; template generation is labeled |
+| Store work | Saved niche preferences, dated source observations, listing/content drafts, analytics, orders and evidence-backed fulfillment states; no real marketplace account is connected |
+| Money | Existing owner-reported ledger, actual receipt/cost links, retry protection; no verified revenue or bank connection |
+| Paid tools | Disabled; review eligibility needs positive recorded net cash and enough reviewed niche products |
+| Mining | Disconnected by default, read-only existing local Monero status; no wallet, installed miner, start/stop, payout or profit claim |
+| Web/download | Same production application snapshot; rebuild and embedded parity verification required at release |
+
+122 automated tests and actual source-app browser checks pass. Packaging/hosted parity results follow below after publication. The Windows executable remains unsigned. No claim is made that every integration, device or commercial requirement is complete. Original source/history/data are retained; private accounts and credentials are excluded from the package.
+
+## Previous preview.9 audit
+
 # LeaX Office audit — preview.9
 
 The missing workflows identified in the earlier audit now have implementations in the review branch. This does not certify every integration, device or commercial requirement.
