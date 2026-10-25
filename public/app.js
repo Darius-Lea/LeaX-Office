@@ -1,3 +1,7 @@
+import {initMining,renderMining} from '/mining.js';
+import {initCampus,renderCampus} from '/campus.js';
+import {initCommerce,renderCommerce} from '/commerce.js';
+import {initAIMeetings,renderAIMeetings} from '/ai-meetings.js';
 import {initCalls} from '/calls.js';
 import {initSync,renderSync} from '/sync.js';
 import {initMail,renderMail} from '/mail.js';
@@ -256,7 +260,7 @@ document.addEventListener('pointerdown',event=>{if(!event.target.closest('#notif
 
 // Owner decisions and reported business results stay inside the desktop.
 const money=cents=>cents===null?'Not calculated':new Intl.NumberFormat(undefined,{style:'currency',currency:'USD'}).format(Number(cents||0)/100);
-function renderDesktopFeatures(s){renderSync(s);renderMail(s);renderBusiness(s);renderDeals(s);renderHistory(s.history);renderAccountability(s.accountability);renderOutcomes(s.outcomes);renderFunding(s.funding);renderBusinessProfile(s.businessProfile);const needsAccess=!s.solicitations?.keyConfigured||s.solicitations?.status==='Blocked';$('#source-access-card').hidden=!needsAccess;$('#source-access-card h3').textContent=s.solicitations?.keyConfigured?'Current federal access needs a check':'One private access step is needed';$('#source-access-card p:not(.eyebrow)').textContent=s.solicitations?.keyConfigured?'Your key is saved. Review Connections and check access before relying on current notices. Historical research and local AI can continue.':'Get your free SAM.gov key, then enter it here in Connections. We’ll show you how. Historical research and local AI can work without it.';}
+function renderDesktopFeatures(s){renderMining(s);renderCampus(s);renderCommerce(s);renderAIMeetings(s);renderSync(s);renderMail(s);renderBusiness(s);renderDeals(s);renderHistory(s.history);renderAccountability(s.accountability);renderOutcomes(s.outcomes);renderFunding(s.funding);renderBusinessProfile(s.businessProfile);const needsAccess=!s.solicitations?.keyConfigured||s.solicitations?.status==='Blocked';$('#source-access-card').hidden=!needsAccess;$('#source-access-card h3').textContent=s.solicitations?.keyConfigured?'Current federal access needs a check':'One private access step is needed';$('#source-access-card p:not(.eyebrow)').textContent=s.solicitations?.keyConfigured?'Your key is saved. Review Connections and check access before relying on current notices. Historical research and local AI can continue.':'Get your free SAM.gov key, then enter it here in Connections. We’ll show you how. Historical research and local AI can work without it.';}
 function renderAccountability(state){
  const incidents=state?.openIncidents||[];$('#patrol-alerts').hidden=!incidents.length;
  if(!$('#patrol-incidents').contains(document.activeElement))$('#patrol-incidents').replaceChildren(...incidents.map(incident=>{
@@ -401,3 +405,9 @@ initMail({api,refresh,openComputer});
 initSync({api,refresh,openComputer});
 
 initCalls({api});
+
+initCommerce({api,refresh,openComputer});
+initCampus({api,refresh,openComputer,onOfficeAction:id=>id==='hq'?openComputer('home'):window.hqCommerce.openOffice(id)});
+initAIMeetings({api,refresh,openComputer});
+
+initMining({api,refresh,openComputer});

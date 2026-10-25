@@ -1,7 +1,7 @@
 import {randomUUID} from 'node:crypto';
 import {syncCapture,rowHash} from './sync-capture.ts';
 const quote=(s:string)=>'"'+s.replace(/"/g,'""')+'"',literal=(s:string)=>"'"+s.replace(/'/g,"''")+"'";
-export const SHARED_TABLES=['settings','employees','tasks','opportunities','review_notes','task_findings','solicitations','solicitation_history','contact_research','contact_research_history','prospects','outgoing_drafts','business_outcomes','business_outcome_revisions','pricing_estimates','deal_cases','deal_outcome_links','deal_case_revisions','deal_case_events','business_documents','business_document_events','invoice_payments','mail_deliveries','mail_replies','mail_suppressions'];
+export const SHARED_TABLES=['settings','employees','tasks','opportunities','review_notes','task_findings','solicitations','solicitation_history','contact_research','contact_research_history','prospects','outgoing_drafts','business_outcomes','business_outcome_revisions','pricing_estimates','deal_cases','deal_outcome_links','deal_case_revisions','deal_case_events','business_documents','business_document_events','invoice_payments','mail_deliveries','mail_replies','mail_suppressions','commerce_records','commerce_events','commerce_requests','commerce_money_links'];
 const SHARED_SETTINGS=['company','standing_goal','business_profile_v1','office_design_v1'];
 export class SyncEngine{
  db:any;state:any;tables:Map<string,any>;schema:string;

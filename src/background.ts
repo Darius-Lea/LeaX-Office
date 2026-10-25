@@ -1,3 +1,5 @@
+import {pollAIWorker} from './ai-relay.ts';
+import {commercePreparationPulse} from './commerce.ts';
 import {db,clock,setting} from './store.ts';
 import {pulse} from './office.ts';
 import {restoreSavedConnections} from './connections.ts';
@@ -10,7 +12,7 @@ let stopping=false;
 process.on('SIGTERM',()=>{stopping=true;});
 process.on('SIGINT',()=>{stopping=true;});
 while(!stopping){
- try{await pulse();await maintainBackups();}catch(error){console.error('Background office failure:',String(error));}
+ try{await pollAIWorker();commercePreparationPulse();await pulse();await maintainBackups();}catch(error){console.error('Background office failure:',String(error));}
  if(!stopping)await new Promise(resolve=>setTimeout(resolve,1000));
 }
 db.close();

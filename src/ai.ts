@@ -1,3 +1,5 @@
+import {commerceState} from './commerce.ts';
+import {availableAIWorker} from './ai-routing.ts';
 import {profileState} from './business-profile.ts';
 import {dealState} from './deals.ts';
 import {fundingState} from './funding.ts';
@@ -65,7 +67,7 @@ export async function aiStatus(fetcher:typeof fetch=fetch){
  try{models=await installedModels(fetcher);available=true;}catch(cause){error='Local AI setup required: '+String(cause).slice(0,300);}
  const configuredModel=setting('ollama_model')||null;
  const setupRequired=!available||!configuredModel||!models.some(model=>model.name===configuredModel);
- return {available,configuredModel,models,hardware,recommendedModel,setupRequired,error,installation:setting('ollama_install_status')?JSON.parse(setting('ollama_install_status')):null,runs:agentRuns(),managedSetup:setting('managed_ai_setup')?JSON.parse(setting('managed_ai_setup')):null,scope:'Inference runs on this server machine. A hosted server cannot use the browser computer\'s localhost model.'};
+ const paired=availableAIWorker();return {available:available||!!paired,localAvailable:available,configuredModel:configuredModel||(paired?paired.model:null),models,hardware,recommendedModel,setupRequired:setupRequired&&!paired,error:paired?null:error,installation:setting('ollama_install_status')?JSON.parse(setting('ollama_install_status')):null,runs:agentRuns(),managedSetup:setting('managed_ai_setup')?JSON.parse(setting('managed_ai_setup')):null,pairedWorker:availableAIWorker(),scope:'Inference runs on this server machine. A hosted server cannot use the browser computer\'s localhost model.'};
 }
 export async function configureModel(name:string,fetcher:typeof fetch=fetch){
  if(typeof name!=='string'||!name.trim()||name.length>256)throw Error('Choose an installed model');
@@ -77,7 +79,7 @@ export function queueAgent(agent:string,prompt:string,contextTask?:string){
  if(typeof agent!=='string'||!db.prepare('SELECT id FROM employees WHERE id=?').get(agent))throw Error('Select an existing employee');
  if(typeof prompt!=='string'||!prompt.trim()||prompt.length>6000)throw Error('Enter an assignment of 1–6000 characters');
  if(contextTask!==undefined&&(typeof contextTask!=='string'||!db.prepare('SELECT id FROM tasks WHERE id=?').get(contextTask)))throw Error('Select an existing research task for the AI context');
- const model=setting('ollama_model');if(!model)throw Error('Setup required: connect Ollama and choose an installed model first');
+ const paired=availableAIWorker(),model=paired?'paired:'+paired.device_id:setting('ollama_model');if(!model)throw Error('Setup required: connect local AI or enable a verified paired desktop worker first');
  const id=randomUUID(),now=Date.now();
  db.prepare("INSERT INTO ai_runs(id,agent,prompt,status,model,created,updated,context_task) VALUES(?,?,?,'Queued',?,?,?,?)").run(id,agent,prompt.trim(),model,now,now,contextTask||null);
  audit('ai:'+id,'Owner queued local-model assignment for '+agent);return id;
@@ -87,11 +89,11 @@ export function retryAgent(id:string){
  const row=db.prepare('SELECT * FROM ai_runs WHERE id=?').get(id) as any;
  if(!row||row.status!=='Blocked')throw Error('Only blocked AI assignments may be retried');
  if(row.attempts>=ATTEMPTS)throw Error('Retry limit reached; resolve the cause before creating a new assignment');
- const model=setting('ollama_model');if(!model)throw Error('Setup required: select an installed model before retrying');
+ const worker=availableAIWorker(),model=worker?'paired:'+worker.device_id:setting('ollama_model');if(!model)throw Error('Setup required: select a local model or reconnect a verified paired desktop before retrying');
  db.prepare("UPDATE ai_runs SET status='Queued',model=?,error=NULL,updated=? WHERE id=? AND status='Blocked'").run(model,Date.now(),id);
  audit('ai:'+id,'Owner requested bounded inference retry');
 }
-function grounding(agent:string,contextTask:string|null){
+export function grounding(agent:string,contextTask:string|null){
  const company=setting('company');const goal=setting('standing_goal');
  const evidenceRows=contextTask?db.prepare('SELECT o.title,o.url,o.evidence FROM opportunities o JOIN task_findings f ON f.opportunity=o.id WHERE f.task=? ORDER BY o.rowid DESC LIMIT 10').all(contextTask):db.prepare('SELECT title,url,evidence FROM opportunities ORDER BY rowid DESC LIMIT 10').all();
  const evidence=evidenceRows.map((row:any)=>{
@@ -113,7 +115,8 @@ function grounding(agent:string,contextTask:string|null){
  const leadBrief=brief?{company:brief.company,nextStep:brief.nextStep,instruction:brief.instruction,location:brief.location,signal:brief.signal,contact:brief.contact,intel:brief.intel,missing:brief.missing,source:brief.source,research:{status:brief.research.status,message:brief.research.message}}:null;
  const evidenceUrls=new Set(evidence.map(row=>row.url));
  const trackedOpportunities=dealState().cases.filter(row=>row.stage!=='Closed'&&(!contextTask||evidenceUrls.has(row.source.url))).slice(0,3).map(row=>({id:row.id,company:row.company,stage:row.stage,source:row.source,scope:row.scope.slice(0,500),location:row.location.slice(0,180),currentNeed:row.currentNeed.slice(0,500),qualification:row.qualification,qualificationSource:'Owner attestations, not independently verified',nextAction:row.nextAction.slice(0,300),dueAt:row.dueAt,recommendation:{title:row.recommendation.title,why:row.recommendation.why,instruction:row.recommendation.instruction.slice(0,400)}}));
- const context:any={company,standingGoal:String(goal||'').slice(0,1500),ownerProvidedBusinessProfile,ownerReportedResults,trackedOpportunities,fundingResearch,contextTask,leadBrief,evidenceScope:contextTask?'Only records linked to this selected research task; at most 10 records, not all task evidence':'Latest saved evidence across research tasks; at most 10 records',currentNotices,publishedContacts,evidence,tasks,previousAdvisory:prior};
+ const store=commerceState();const commerce={preferences:store.preferences,cash:store.cash,counts:store.counts,paidToolsGate:store.paidToolsGate,preparation:store.preparation,products:store.products.slice(0,3).map((p:any)=>({title:p.title,category:p.category,audience:p.audience,evidence:String(p.evidence||'').slice(0,1000),status:p.status})),notice:store.notice};
+ const context:any={commerce,company,standingGoal:String(goal||'').slice(0,1500),ownerProvidedBusinessProfile,ownerReportedResults,trackedOpportunities,fundingResearch,contextTask,leadBrief,evidenceScope:contextTask?'Only records linked to this selected research task; at most 10 records, not all task evidence':'Latest saved evidence across research tasks; at most 10 records',currentNotices,publishedContacts,evidence,tasks,previousAdvisory:prior};
  // Preserve a complete context object rather than slicing JSON in the middle of a claim.
  for(const key of ['previousAdvisory','publishedContacts','tasks','evidence','currentNotices','trackedOpportunities']){while(JSON.stringify(context).length>CONTEXT_LIMIT&&context[key].length)context[key].pop();}
  while(JSON.stringify(context).length>CONTEXT_LIMIT&&ownerReportedResults.events.length>1)ownerReportedResults.events.pop();
@@ -134,7 +137,7 @@ export async function processAgent(fetcher:typeof fetch=fetch){
  try{
   recoverStale();db.exec('BEGIN IMMEDIATE');
   try{
-   run=db.prepare("SELECT * FROM ai_runs WHERE status='Queued' AND attempts<? ORDER BY created,id LIMIT 1").get(ATTEMPTS);
+   run=db.prepare("SELECT * FROM ai_runs WHERE status='Queued' AND model NOT LIKE 'paired:%' AND attempts<? ORDER BY created,id LIMIT 1").get(ATTEMPTS);
    if(run)db.prepare("UPDATE ai_runs SET status='Running',attempts=attempts+1,updated=?,error=NULL WHERE id=? AND status='Queued'").run(Date.now(),run.id);
    db.exec('COMMIT');
   }catch(error){db.exec('ROLLBACK');throw error;}
