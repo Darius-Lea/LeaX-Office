@@ -1,0 +1,27 @@
+import {readFileSync} from 'node:fs';
+import {setting,setSetting} from './store.ts';
+export const UPDATE_ORIGIN='https://leax-office.onrender.com';
+export const UPDATE_URL=UPDATE_ORIGIN+'/api/version';
+export const DOWNLOAD_URL=UPDATE_ORIGIN+'/download';
+export const UPDATE_INTERVAL=6*60*60*1000;
+const CACHE_KEY='app_update_check_v1';
+const RELEASE_NOTES=['Three virtual offices, live first-person meeting video, and original product files for review.','This release adds update alerts; use the official Windows setup to update your installed office.'];
+function parseVersion(value:unknown){if(typeof value!=='string')throw Error('Invalid release version');const m=/^(0|[1-9]\d{0,5})\.(0|[1-9]\d{0,5})\.(0|[1-9]\d{0,5})(?:-preview\.(0|[1-9]\d{0,5}))?$/.exec(value);if(!m)throw Error('Invalid release version');return {core:[Number(m[1]),Number(m[2]),Number(m[3])],preview:m[4]===undefined?null:Number(m[4])};}
+export function compareVersions(a:string,b:string){const x=parseVersion(a),y=parseVersion(b);for(let i=0;i<3;i++)if(x.core[i]!==y.core[i])return Math.sign(x.core[i]-y.core[i]);if(x.preview===y.preview)return 0;if(x.preview===null)return 1;if(y.preview===null)return -1;return Math.sign(x.preview-y.preview);}
+function currentVersion(){const v=JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8')).version;parseVersion(v);return v as string;}
+export function versionInfo(){return {product:'ai-headquarters',version:currentVersion(),downloadUrl:DOWNLOAD_URL,releaseNotes:RELEASE_NOTES};}
+function isWebHost(){return process.env.RENDER==='true'||!!process.env.PUBLIC_ORIGIN||!!process.env.RENDER_EXTERNAL_URL||!['127.0.0.1','localhost','::1',''].includes(process.env.HOST||'');}
+function readCache(){try{const c=JSON.parse(setting(CACHE_KEY)||'null');if(!c||typeof c!=='object'||!Number.isSafeInteger(c.checkedAt)||!['current','available','unknown'].includes(c.state))return null;if(c.latestVersion!==null)parseVersion(c.latestVersion);return c;}catch{return null;}}
+export function updateStatus(now=Date.now()){const installedVersion=currentVersion(),cache=readCache(),valid=cache&&cache.installedVersion===installedVersion&&cache.checkedAt<=now;const fresh=valid&&now-cache.checkedAt<UPDATE_INTERVAL;return {installedVersion,latestVersion:valid?cache.latestVersion:null,updateAvailable:!!valid&&cache.latestVersion!==null&&compareVersions(cache.latestVersion,installedVersion)>0,state:fresh?cache.state:'unknown',checkedAt:valid?cache.checkedAt:null,nextCheckAt:valid?cache.checkedAt+UPDATE_INTERVAL:null,downloadUrl:DOWNLOAD_URL,installationType:isWebHost()?'web':'local',releaseNotes:valid&&Array.isArray(cache.releaseNotes)?cache.releaseNotes:[],message:fresh?cache.message:'Latest update has not been checked recently. Check again when connected.'};}
+let pending:Promise<any>|null=null;
+export async function checkForUpdates(options:{force?:boolean}={},fetcher:typeof fetch=fetch,now=Date.now()){
+ if(!Number.isSafeInteger(now)||now<=0)throw Error('Invalid update check time');
+ const cached=updateStatus(now);if(options.force!==true&&cached.checkedAt!==null&&now-cached.checkedAt<UPDATE_INTERVAL)return cached;
+ if(pending)return pending;
+ pending=(async()=>{const installedVersion=currentVersion();let result:any;
+  if(isWebHost())result={state:'current',latestVersion:installedVersion,releaseNotes:RELEASE_NOTES,message:'This server is running '+installedVersion+'. Reload an older open web page to use this version.'};
+  else try{const response=await fetcher(UPDATE_URL,{method:'GET',headers:{Accept:'application/json'},redirect:'error',signal:AbortSignal.timeout(5000)});if(!response.ok||!response.body||Number(response.headers.get('content-length')||0)>16384)throw Error('Update metadata unavailable');let raw='',bytes=0;const decoder=new TextDecoder();for await(const chunk of response.body){bytes+=chunk.byteLength;if(bytes>16384)throw Error('Update metadata too large');raw+=decoder.decode(chunk,{stream:true});}raw+=decoder.decode();const value=JSON.parse(raw);if(value?.product!=='ai-headquarters'||value.downloadUrl!==DOWNLOAD_URL)throw Error('Invalid update publisher');parseVersion(value.version);if(!Array.isArray(value.releaseNotes)||value.releaseNotes.length>8||value.releaseNotes.some((n:any)=>typeof n!=='string'||n.length>500))throw Error('Invalid release notes');const newer=compareVersions(value.version,installedVersion)>0;result={state:newer?'available':'current',latestVersion:value.version,releaseNotes:value.releaseNotes,message:newer?'A newer app version is available. Download the official Windows setup and open it to update; your existing data folder is retained.':'No newer published app version was reported at this check.'};}
+  catch{result={state:'unknown',latestVersion:null,releaseNotes:[],message:'The latest version could not be verified. Your office still works; try checking again when connected.'};}
+  setSetting(CACHE_KEY,JSON.stringify({...result,installedVersion,checkedAt:now}));return updateStatus(now);
+ })();try{return await pending;}finally{pending=null;}
+}
