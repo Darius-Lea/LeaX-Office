@@ -1,3 +1,13 @@
+## 2026-10-26 — preview.12 release checkpoint
+
+Every new saved office journey takes ten seconds in both directions; existing in-flight deadlines remain intact. City travel now shows a chauffeured rear passenger cabin with a starlight ceiling and pointer/touch/keyboard look controls. Arrival greetings open the selected location for first-person walking or its saved work. The expanded conference suite has twelve seats, a long table, actual remote video on its wall display, a live-status table controller and CEO suit/cuffs/watch. A meeting returns to the exact prior exploration position. This is original room artwork inspired by a modular conferencing layout, not a physical Poly hardware integration.
+
+138 Node tests passed, zero failed/skipped, on pinned Windows Node24.19. Source Chromium checks passed actual two-session synthetic WebRTC audio/video, boardroom metadata, mute/leave/video cleanup, ten-second drive/jet and saved arrivals, chauffeur drag/button/keyboard controls, actual-CSP product previews, AI/human mutual exclusion with no fabricated missing-model response, exploration/meeting position restoration and mobile bounds. All five standalone-production browser checks passed: actual two-session WebRTC room display and cleanup, ten-second chauffeur/jet controls and arrivals, exploration with exact meeting return position, commerce/AI/CSP boundaries, and store/update/local-engine/mobile workflows. Desktop/mobile screenshots were inspected, including the corrected visible watch/cuffs and rear cabin. Early parallel browser attempts timed out waiting for stable controls under software-rendering load; sequential reruns are used for the final result.
+
+The unsigned Windows x64 installer is 11,984,896 bytes; all31 embedded production file hashes and its SHA-256 sidecar match preview.12. SHA-256: `03def486de7d87751be9fece5af2d02c8438ee6a47bf3dadff228ab9e1328fd4`. No target-device installation, actual owner local model, seller account, real sale, shipment or mining payout was validated. The virtual coin-fabrication scene is decorative and actual mining remains disconnected/read-only.
+
+Next increment: the owner supplied Distribution Center.html after the short Markdown reference. Its warehouse design is the reference for the sales-location replacement, with exact saved artwork, actual employee assignments, recorded orders, manual real jobs and printable proofs/preparation. Source/data/UI drafts are staged separately; they are not part of this preview.12 release. No live EverBee/seller feed, external job-platform integration or uninterrupted hosting is claimed.
+
 # LeaX Office audit — preview.10
 
 | Area | Released implementation and limits |

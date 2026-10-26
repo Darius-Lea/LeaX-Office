@@ -20,9 +20,24 @@ async function presentMeeting(value={}){
  office.setMeetingPresentation?.(activeMeetingPresentation);if(first||value.enter===true)office.enterMeetingRoom();meetingSceneState(true);
 }
 window.addEventListener('hq-meeting-presentation',event=>{void presentMeeting(event.detail||{});});
+window.addEventListener('hq-meeting-controller',()=>{const panel=document.querySelector('#meeting-call-controls:not([hidden])')||document.querySelector('.ai-meeting-panel:not([hidden])')||document.querySelector('#meeting-view-controls');if(panel){panel.tabIndex=-1;panel.focus();panel.scrollIntoView({block:'nearest'});}});
 window.hqMeetingRoom={present:presentMeeting,clear(source='call',sessionId=source){return presentMeeting({active:false,source,sessionId});},getState(){return {available:!!renderer,source:activeMeetingPresentation?.source||null,sessionId:activeMeetingPresentation?.sessionId||null,...(renderer?.getMeetingPresentationState?.()||{active:false,cameraMode:'orbit',hasVideo:false})};}};
 
 const meetingEnter=document.querySelector('#meeting-room-enter'),meetingControls=document.querySelector('#meeting-view-controls'),meetingExit=document.querySelector('#meeting-room-exit');
+
+const exploreControls=document.createElement('section');exploreControls.id='campus-explore-controls';exploreControls.className='campus-explore-controls';exploreControls.hidden=true;exploreControls.setAttribute('aria-label','First-person office exploration');
+const exploreHeading=document.createElement('h3'),exploreStatus=document.createElement('p'),explorePad=document.createElement('div'),exploreActions=document.createElement('div');exploreStatus.setAttribute('role','status');explorePad.className='campus-movement-pad';exploreActions.className='campus-explore-actions';
+function exploreButton(label,fn){const button=document.createElement('button');button.textContent=label;button.type='button';button.onclick=fn;return button;}
+for(const [direction,caption]of [['forward','Walk forward'],['left','Walk left'],['backward','Walk backward'],['right','Walk right']]){const button=exploreButton(caption,event=>{if(event.detail===0)renderer?.moveExplore(direction);});button.dataset.walk=direction;button.onpointerdown=event=>{event.preventDefault();button.setPointerCapture(event.pointerId);renderer?.setExploreInput(direction,true);};const release=()=>renderer?.setExploreInput(direction,false);button.onpointerup=button.onpointercancel=button.onlostpointercapture=release;explorePad.append(button);}
+explorePad.append(exploreButton('Turn left',()=>renderer?.lookExplore(.18,0)),exploreButton('Turn right',()=>renderer?.lookExplore(-.18,0)));
+exploreActions.append(exploreButton('Return to office overview',()=>renderer?.exitExplore()),exploreButton('Open this office work',()=>{const id=latestState?.campus?.activeOffice||'hq';document.querySelector('#owner-computer')?.click();if(id==='sales')window.hqStores?.open();else if(id==='marketing')window.hqCommerce?.openOffice('marketing');}));
+exploreControls.append(exploreHeading,exploreStatus,explorePad,exploreActions);document.body.append(exploreControls);
+function exploreMode(active,state={}){exploreControls.hidden=!active;if(active){document.body.dataset.camera='explore';const office=latestState?.campus?.offices?.find(o=>o.id===state.officeId);exploreHeading.textContent=office?.name||({hq:'Headquarters',sales:'Sales office',marketing:'Monetization & marketing'}[state.officeId]||'Your office');exploreStatus.textContent='Welcome! Drag to look around. Use WASD or these controls to walk through the clear aisles.';if(meetingEnter)meetingEnter.hidden=false;if(meetingControls)meetingControls.hidden=true;}else if(document.body.dataset.camera==='explore')document.body.dataset.camera='orbit';}
+async function exploreLocation(id){if(activeMeetingPresentation){message.textContent='Finish the current meeting before exploring the building.';return false;}if(id&&id!==latestState?.campus?.activeOffice){message.textContent='Your saved arrival is reconnecting. Try Look around again in a moment.';return false;}for(const selector of ['#owner-dialog','#focused-dialog']){const dialog=document.querySelector(selector);if(dialog?.open)dialog.close();}setOfficeView('3d');const office=await ensure3D();if(!office){message.textContent='The 3D walk-through is unavailable on this device. Your saved work remains available in the office computer.';return false;}return office.enterExplore();}
+window.addEventListener('hq-campus-explore',event=>{void exploreLocation(event.detail?.officeId);});
+window.hqCampusExplore={enter:exploreLocation,move:(direction,amount)=>renderer?.moveExplore(direction,amount),look:(dx,dy)=>renderer?.lookExplore(dx,dy),exit:()=>renderer?.exitExplore(),getState:()=>renderer?.getExploreState()||{active:false,cameraMode:'orbit',officeId:latestState?.campus?.activeOffice||'hq',position:{x:0,z:0},virtualFabrication:false}};
+const exploreEntry=exploreButton('Look around this location',()=>void exploreLocation(latestState?.campus?.activeOffice));exploreEntry.id='campus-explore-entry';document.querySelector('.office-dock')?.append(exploreEntry);
+
 function updateMeetingAvailability(){const enabled=latestState?.officeDesign?.design?.meeting!==false;if(meetingEnter){meetingEnter.disabled=!enabled;meetingEnter.title=enabled?'Enter the first-person meeting room view':'Turn on the meeting area in Remodel office & equipment to enter.';}if(!enabled)renderer?.exitMeetingRoom();}
 function applyClericalDesign(){
  const design=latestState?.officeDesign?.design||{},key=document.body.dataset.view+JSON.stringify(design);if(key===clericalDesignKey)return;clericalDesignKey=key;
@@ -36,7 +51,7 @@ async function ensure3D(){
  loading=true;message.textContent='Loading your 3D office…';
  rendererLoad=(async()=>{try{
  const {createOffice3D}=await import('/office3d.js');
- renderer=createOffice3D(webglHost,{onEmployee:id=>latestInspect?.(id),onOwner:(pane)=>{document.querySelector('#owner-computer').click();if(pane==='packets')document.querySelector('[data-pane=packets]').click();},onMeetingMode:active=>{document.body.dataset.camera=active?'meeting':'orbit';if(meetingEnter)meetingEnter.hidden=active;if(meetingControls)meetingControls.hidden=!active;}});
+ renderer=createOffice3D(webglHost,{onEmployee:id=>latestInspect?.(id),onOwner:(pane)=>{document.querySelector('#owner-computer').click();if(pane==='packets')document.querySelector('[data-pane=packets]').click();},onExploreMode:exploreMode,onMeetingMode:active=>{document.body.dataset.camera=active?'meeting':'orbit';if(meetingEnter)meetingEnter.hidden=active;if(meetingControls)meetingControls.hidden=!active;}});
  viewport.classList.add('webgl-ready');webglHost.hidden=document.body.dataset.view!=='3d';
  renderer.update(latestState);renderer.setEnabled(document.body.dataset.view==='3d');
  message.textContent='Drag to look around · Scroll or pinch to zoom · Click your computer, a desk or the printer.';
@@ -57,7 +72,7 @@ const figure=document.createElement('span');figure.className='person';figure.inn
 const caption=document.createElement('span');caption.className='patrol-caption';patrol.append(figure,caption);
 export function setOfficeView(view){
  if(!['3d','2d','terminal'].includes(view))view='3d';
- if(view!=='3d')renderer?.exitMeetingRoom();
+ if(view!=='3d'){renderer?.exitMeetingRoom();renderer?.exitExplore();}
  document.body.dataset.view=view;const files=document.querySelector('#clerical');if(files)files.open=view!=='3d';try{localStorage.setItem('hq-view',view);}catch{};
  const angleLabel=document.querySelector('#angle-label');if(angleLabel)angleLabel.hidden=true;
  for(const name of ['3d','2d','terminal'])document.querySelector('#view-'+name)?.setAttribute('aria-pressed',String(name===view));
