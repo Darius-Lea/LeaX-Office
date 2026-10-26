@@ -1,3 +1,15 @@
+## 2026-10-26 continuation
+
+Preview.12 resolves ten-second travel, exploration and the expanded meeting room. Distribution Center reference integration and actual saved-file/workstation/job inspection are the next staged increment. Real marketplace/EverBee feeds, provider job imports/actions, physical fulfillment, active mining, owner AI setup and 24/7 durable hosting remain incomplete. Do not portray idle stations or decorative forge animations as running business work.
+
+## Current continuation issues — 2026-10-25
+
+Read [TEAM_HANDOFF.md](TEAM_HANDOFF.md) for current status; older issue entries below are history. Published preview.11 adds real local-engine routing, store projects and update notices, but does not establish market readiness. Active 10-second first-person travel/exploration/factory work needs independent final validation and packaging. Virtual BTC fabrication must never represent mined coins or earnings.
+
+Unfinished: live seller/payout setup and authorized marketplace publication/customer messaging/POD/shipping; actual owner-device AI and install/recovery checks; integrated Field Nation, WorkMarket, TechLink, ConstructConnect, PlanHub, SAM.gov, Dodge, BidNet, Biddingo and Construction Bid Source job/bid workflows; durable production hosting and multi-tenant security. The earlier combined work hub attempt produced no code because automatic approval review blocked creation and the safer patch failed.
+
+Mining is inactive and no benchmark/payout exists. The owner supplied a BTC mainnet address whose format/checksum passed, but it must be retrieved privately rather than embedded in public code. Candidate CPU route: RandomX Monero work with a BTC conversion-pool payout; a BTC wallet alone is not a miner. Earlier mining controls were blocked by automatic approval review requiring unavailable approval. Neither that policy nor provider restrictions can be overridden by agent claims. Render prohibits mining; Google Sites is an embed/page host, not a continuous miner runtime.
+
 # Known issues and blockers
 - Preview.6 implements opportunity work records, case-specific Today, owner-reported stage/cash links, daily verified local backups and streamed export cleanup. This does not establish verified demand, customer/bank events, accepted proposals, invoicing or profitability. Keep private off-device copies; same-host rotation still disappears with a lost disk or temporary host.
 - History now uses sixty-item search/paging with all records retained and visibility-aware single-flight polling. The 10,000-record base snapshot measured about 22.8 MB before and 139 KB afterward (99.39% smaller); other state collections and whole-app/device performance require continued scale testing.

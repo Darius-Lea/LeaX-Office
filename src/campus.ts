@@ -31,7 +31,7 @@ export function campusState(now=Date.now()){
 export function startCampusTravel(input:unknown,now=Date.now()){
  const v=object(input);if(!validOffice(v.to))throw Error('Choose HQ, Sales or Monetization & Marketing');
  return transaction(()=>{const value=read(true);revision(value,v.expectedRevision);if(value.travel)throw Error('Finish or cancel your current virtual journey before starting another.');if(v.to===value.activeOffice)return campusState(now);
-  const mode=value.activeOffice==='marketing'||v.to==='marketing'?'jet':'drive',duration=mode==='drive'?30000:45000;
+  const mode=value.activeOffice==='marketing'||v.to==='marketing'?'jet':'drive',duration=10000;
   value.travel={id:randomUUID(),from:value.activeOffice,to:v.to,mode,startedAt:now,arrivesAt:now+duration};save(value);audit('campus','Owner began a virtual '+mode+' journey from '+value.activeOffice+' to '+v.to+'; no real booking or business action');return campusState(now);});
 }
 export function arriveCampusTravel(input:unknown,now=Date.now()){
