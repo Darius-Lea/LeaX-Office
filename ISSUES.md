@@ -1,6 +1,6 @@
 ## Preview.13 current continuation
 
-Distribution Center renderer/data/proof/job integration is complete; final production browser checks precede deployment. New store-connection, live market evidence and automatic pricing/publishing requests are the next increment. Actual seller accounts/costs/file delivery, durable hosting, provider work integrations and active mining remain unconnected or unfinished.
+Distribution Center renderer/data/proof/job integration is complete; source and standalone-production browser checks passed. New store-connection, live market evidence and automatic pricing/publishing requests are the next increment. Actual seller accounts/costs/file delivery, durable hosting, provider work integrations and active mining remain unconnected or unfinished.
 
 ## 2026-10-26 continuation
 
