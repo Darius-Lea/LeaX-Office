@@ -4,7 +4,7 @@ import {db,setting,setSetting,audit} from './store.ts';
 const KEY='campus_v1';
 export const CAMPUS_OFFICES=[
  {id:'hq',name:'Headquarters',shortName:'HQ',purpose:'Business operations',description:'Your original office for qualified opportunities, company records and delivery work.'},
- {id:'sales',name:'Sales Office',shortName:'Sales',purpose:'Online stores & fulfillment',description:'Research products, prepare listings and manage connected store operations. Account access and approved fulfillment are required.'},
+ {id:'sales',name:'Distribution Center',shortName:'Production',purpose:'Production campus & fulfillment',description:'Walk the warehouse floor, inspect saved product files, review actual assignments and prepare your real field jobs. Store and fulfillment connections show their actual status.'},
  {id:'marketing',name:'Monetization & Marketing',shortName:'Marketing',purpose:'Creative studio & monetization',description:'Plan content, outreach, brand campaigns and online income experiments. The optional miner station lives here.'},
 ] as const;
 type OfficeId=typeof CAMPUS_OFFICES[number]['id'];
@@ -29,7 +29,7 @@ export function campusState(now=Date.now()){
   notice:'Three virtual offices share your saved company. Driving and jet travel are an in-app experience; no real transportation is booked. Office views and travel do not create sales, content, mining income or provider connections.'};
 }
 export function startCampusTravel(input:unknown,now=Date.now()){
- const v=object(input);if(!validOffice(v.to))throw Error('Choose HQ, Sales or Monetization & Marketing');
+ const v=object(input);if(!validOffice(v.to))throw Error('Choose HQ, Distribution Center or Monetization & Marketing');
  return transaction(()=>{const value=read(true);revision(value,v.expectedRevision);if(value.travel)throw Error('Finish or cancel your current virtual journey before starting another.');if(v.to===value.activeOffice)return campusState(now);
   const mode=value.activeOffice==='marketing'||v.to==='marketing'?'jet':'drive',duration=10000;
   value.travel={id:randomUUID(),from:value.activeOffice,to:v.to,mode,startedAt:now,arrivesAt:now+duration};save(value);audit('campus','Owner began a virtual '+mode+' journey from '+value.activeOffice+' to '+v.to+'; no real booking or business action');return campusState(now);});

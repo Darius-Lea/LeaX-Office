@@ -206,3 +206,17 @@ html,body{background:#0b1620}
 /* Keep the floor visible while walking; exploration controls retain the work and return actions. */
 body[data-camera=explore] .office-hud,body[data-camera=explore] .office-dock,body[data-camera=explore] .floor-label,body[data-camera=explore] .office-supervision,body[data-camera=explore] .office-render-message,body[data-camera=explore] .operations-toggle,body[data-camera=explore] .operations-panel,body[data-camera=explore] .notifications-panel,body[data-camera=explore] .view-menu{visibility:hidden;pointer-events:none}
 body[data-camera=explore][data-operations=open] #office-section{right:0}
+
+/* Distinct Distribution Center surface and persistent camera-mode controls. */
+.office-webgl{position:relative}.office-renderer-surface{position:absolute;inset:0;width:100%;height:100%;overflow:hidden}.office-renderer-surface canvas{display:block;width:100%;height:100%}
+#distribution-view-controls{position:fixed;top:140px;right:16px;z-index:1400;display:flex;align-items:center;gap:6px;max-width:calc(100vw - 24px);padding:8px;border:1px solid #71989a66;border-radius:14px;background:#102c33ed;box-shadow:0 8px 24px #0003;backdrop-filter:blur(12px)}
+#distribution-view-controls button{font-size:11px;min-height:36px;padding:8px 12px;background:#284b56;color:#eef5ef;border:1px solid transparent;white-space:nowrap}
+#distribution-view-controls button[aria-pressed=true]{background:#b7dfcb;color:#14372f;border-color:#d3eddf}
+body[data-camera=explore] #distribution-view-controls{top:80px}
+@media(max-width:600px){#distribution-view-controls{top:126px;right:8px;padding:5px;gap:4px;border-radius:10px}#distribution-view-controls button{font-size:10px;padding:7px 9px;min-height:34px}body[data-camera=explore] #distribution-view-controls{top:74px}}
+
+@media(min-width:1100px){body[data-operations=open]:not([data-camera=explore]) #distribution-view-controls{right:384px}}
+
+/* Keyboard users navigate with WASD and arrows; touch-only users retain the pad. */
+.campus-movement-pad{display:none!important}
+@media(pointer:coarse){body:not([data-keyboard-controls=true]) .campus-movement-pad{display:grid!important}}

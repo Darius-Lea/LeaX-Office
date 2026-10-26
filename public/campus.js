@@ -2,7 +2,7 @@ const $=selector=>document.querySelector(selector);
 const node=(tag,text)=>{const element=document.createElement(tag);if(text!==undefined)element.textContent=text;return element;};
 const fallbackOffices=[
  {id:'hq',name:'Headquarters',shortName:'HQ',purpose:'Business operations',description:'Your original company office and saved business work.'},
- {id:'sales',name:'Sales Office',shortName:'Sales',purpose:'Online stores & fulfillment',description:'Product research, store plans and fulfillment work.'},
+ {id:'sales',name:'Distribution Center',shortName:'Production',purpose:'Production campus & fulfillment',description:'Saved product files, real assignments, job preparation and recorded fulfillment.'},
  {id:'marketing',name:'Monetization & Marketing',shortName:'Marketing',purpose:'Creative studio & monetization',description:'Campaigns, content, online income experiments and the optional miner station.'}
 ];
 let api,refresh,openComputer,onOfficeAction,latest=null,observedAt=0,travelDialog=null,arriving=false,nextAttemptAt=0,timer=null;
@@ -114,7 +114,7 @@ function showArrival(id){
  const item=office(id),d=dialog();d.replaceChildren();d.dataset.stage='arrived';d.dataset.destination=id;
  const header=node('header');header.append(node('p','ARRIVAL · YOUR VIRTUAL OFFICE HOST'));const close=node('button','×');close.className='campus-close';close.setAttribute('aria-label','Close arrival greeting');close.onclick=()=>d.close();header.append(close);
  const greeting=node('div');greeting.className='campus-arrival-greeting';const emblem=node('span',id==='marketing'?'✦':id==='sales'?'↗':'⌂');emblem.className='campus-arrival-emblem';
- const title=node('h2','Welcome to '+item.name),message=node('p',id==='marketing'?'Your creative playground is ready. Explore the studio, discover the displays and enjoy the space.':id==='sales'?'Welcome back to your product team. Explore the workspace and factory displays, then inspect your saved products and orders.':'Welcome home. Take a look around your headquarters or return to your saved company work.');message.setAttribute('role','status');greeting.append(emblem,title,message,node('small',item.purpose));
+ const title=node('h2','Welcome to '+item.name),message=node('p',id==='marketing'?'Your creative playground is ready. Explore the studio, discover the displays and enjoy the space.':id==='sales'?'Welcome to your production campus. Walk the warehouse floor, inspect saved artwork and review actual assignments, orders and field jobs.':'Welcome home. Take a look around your headquarters or return to your saved company work.');message.setAttribute('role','status');greeting.append(emblem,title,message,node('small',item.purpose));
  const controls=node('div');controls.className='campus-travel-controls';const look=node('button','Look around this location');look.dataset.travelEnter='';look.onclick=()=>explore(id);const work=node('button','Open department workspace');work.onclick=()=>workspace(id);controls.append(look,work);
  d.append(header,greeting,controls);if(!d.open)d.showModal();
 }
