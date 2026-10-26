@@ -1,7 +1,7 @@
 const $=s=>document.querySelector(s),el=(tag,value)=>{const e=document.createElement(tag);if(value!==undefined)e.textContent=value;return e;};
 let api,refresh,openComputer,latest;
 const money=n=>new Intl.NumberFormat(undefined,{style:'currency',currency:'USD'}).format((n||0)/100);
-function link(label,url){const a=el('a',label);let safe='';try{if(typeof url==='string'&&url.startsWith('/api/')&&!url.startsWith('//')&&!/[\\\x00-\x20]/.test(url))safe=url;else{const u=new URL(url);if(u.protocol==='https:'&&!u.username&&!u.password)safe=u.href;}}catch{}if(safe){a.href=safe;a.target='_blank';a.rel='noopener noreferrer';}else{a.removeAttribute('href');a.setAttribute('aria-disabled','true');a.title='No safe public source URL is saved';}return a;}
+function link(label,url){if(!url)return el('span',label+' — source unavailable');const a=el('a',label);let safe='';try{if(typeof url==='string'&&url.startsWith('/api/')&&!url.startsWith('//')&&!/[\\\x00-\x20]/.test(url))safe=url;else{const u=new URL(url);if(u.protocol==='https:'&&!u.username&&!u.password)safe=u.href;}}catch{}if(safe){a.href=safe;a.target='_blank';a.rel='noopener noreferrer';}else{a.removeAttribute('href');a.setAttribute('aria-disabled','true');a.title='No safe public source URL is saved';}return a;}
 function popup(title,node){window.hqPopup.open({title,contentNode:node,readable:false});}
 function button(label,fn){const b=el('button',label);b.onclick=()=>void Promise.resolve().then(fn).catch(e=>popup('Distribution Center needs attention',el('p',e.message)));return b;}
 function state(){return latest?.distribution||{products:[],orders:[],jobs:[],workers:[],analytics:[]};}

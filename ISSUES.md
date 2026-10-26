@@ -1,3 +1,7 @@
+## Preview.13 current continuation
+
+Distribution Center renderer/data/proof/job integration is complete; final production browser checks precede deployment. New store-connection, live market evidence and automatic pricing/publishing requests are the next increment. Actual seller accounts/costs/file delivery, durable hosting, provider work integrations and active mining remain unconnected or unfinished.
+
 ## 2026-10-26 continuation
 
 Preview.12 resolves ten-second travel, exploration and the expanded meeting room. Distribution Center reference integration and actual saved-file/workstation/job inspection are the next staged increment. Real marketplace/EverBee feeds, provider job imports/actions, physical fulfillment, active mining, owner AI setup and 24/7 durable hosting remain incomplete. Do not portray idle stations or decorative forge animations as running business work.

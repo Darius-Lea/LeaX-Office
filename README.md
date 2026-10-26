@@ -1,6 +1,6 @@
 # AI Headquarters
 
-Current release checkpoint: **preview.12**. Read [TEAM_HANDOFF.md](TEAM_HANDOFF.md) for shipped features, actual validation, unfinished integrations and the latest continuation requests.
+Current release checkpoint: **preview.13**. Read [TEAM_HANDOFF.md](TEAM_HANDOFF.md) for shipped features, actual validation, unfinished integrations and the latest continuation requests.
 
 Preview.9 adds saved proposals/jobs/invoices/meetings, explicitly approved SMTP/IMAP email, paired office sharing and live browser calls. See [Connected workflows](CONNECTED_WORKFLOWS.md) for setup, tested boundaries and remaining environment checks.
 A founder-controlled business office for LeaX LLC / American Power Global. This is an actively developed application, not a completed autonomous company.

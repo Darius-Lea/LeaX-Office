@@ -1,3 +1,15 @@
+## Preview.13 — integrated Distribution Center, 2026-10-26
+
+The saved sales location now uses a separate warehouse renderer adapted from the owner-supplied Distribution Center design. Headquarters retains its existing office. The warehouse has design/production, print/proof, quality, research, job preparation, racks, loading doors and town-hall zones. First-person, third-person and overview controls share the saved location. Real saved artwork appears on the line and design monitors; worker cards use actual roster/assignment state. Movement buttons are hidden on keyboard/pointer computers and shown on touch devices; using movement keys on a hybrid device hides the touch pad.
+
+Authenticated state/routes and UI are integrated: revision/hash-locked exact SVG inspection/print, actual jobs/orders/analytics, manual job drafts and printable saved tools/scope preparation. Original reference sample workers, fake sales/hashrate and CDN entry point are not served. Meetings retain the connected CEO boardroom and restore the exact prior warehouse position/look. Corrected overview fog/clipping on narrow sizes and preserved graphics quality/resource reuse.
+
+146 automated Node tests passed, zero failed/skipped, on pinned Windows Node24.19 with workspace TEMP/TMP. Source browser checks passed actual two-context synthetic WebRTC media/display/cleanup; commerce/AI/CSP boundaries; and the full warehouse, exact-proof, job, desktop/touch, revision and mobile workflow. Final packaged browser validation is running. The rebuilt unsigned Windows setup has34 matching embedded files, 12,004,864 bytes, SHA-256 `c45a324ccc1a759a254509752486dc199953071f633e311a58bbe44feb63eb09`.
+
+Next increment requested after this checkpoint: clickable store connections from the production line, current public-market evidence, quality feedback and guarded pricing/discount/publication. This release does not connect a seller account, publish listings, obtain live seller sales data, operate physical fulfillment or mine cryptocurrency. Those states remain explicit. No guaranteed income, profit or perpetual unattended operation is claimed.
+
+The current integrated warehouse architecture and next store-integration work are recorded in [DISTRIBUTION_CENTER_HANDOFF.md](DISTRIBUTION_CENTER_HANDOFF.md). Earlier development-checkpoint sections below are historical.
+
 ## Unpublished Distribution Center continuation — 2026-10-26
 
 Read [DISTRIBUTION_CENTER_HANDOFF.md](DISTRIBUTION_CENTER_HANDOFF.md) for the saved preview.13 development work and exact remaining integration. Preview.12 is published and live; this branch has no rebuilt preview.13 installer and must stay a draft until its integration/browser checks pass.

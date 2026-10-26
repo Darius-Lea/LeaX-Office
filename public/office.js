@@ -6,14 +6,15 @@ const message=document.createElement('p');message.className='office-render-messa
 let renderer=null,loading=false,rendererLoad=null,latestState=null,latestInspect=null;
 let clericalDesignKey='';
 let mainRenderer=null,distributionRenderer=null,distributionLoad=null,meetingRoomOpen=false,sceneEnabled=true,sceneDisposed=false;
-let mainSurface=null,distributionSurface=null;
+let mainSurface=null,distributionSurface=null,mainEnabled=null,distributionEnabled=null;
+function enableScene(scene,value,which){if(!scene)return;if(which==='main'){if(mainEnabled===value)return;mainEnabled=value;}else{if(distributionEnabled===value)return;distributionEnabled=value;}scene.setEnabled(value);}
 function usesDistribution(){return latestState?.campus?.activeOffice==='sales'&&!meetingRoomOpen&&!!distributionRenderer;}
 function selectedRenderer(){return usesDistribution()?distributionRenderer:mainRenderer;}
 function syncSceneSelection(){
  if(!mainRenderer)return;
- const factory=usesDistribution(),visible=sceneEnabled&&document.body.dataset.view==='3d';
- if(mainSurface)mainSurface.hidden=factory;if(distributionSurface)distributionSurface.hidden=!factory;
- mainRenderer.setEnabled(visible&&!factory);distributionRenderer?.setEnabled(visible&&factory);
+ const wantsFactory=latestState?.campus?.activeOffice==='sales'&&!meetingRoomOpen,factory=usesDistribution(),visible=sceneEnabled&&document.body.dataset.view==='3d';
+ if(mainSurface)mainSurface.hidden=wantsFactory;if(distributionSurface)distributionSurface.hidden=!factory;
+ enableScene(mainRenderer,visible&&!wantsFactory,'main');enableScene(distributionRenderer,visible&&factory,'distribution');
  distributionViewControls.hidden=latestState?.campus?.activeOffice!=='sales'||meetingRoomOpen||!visible;
  const state=selectedRenderer()?.getExploreState?.();
  for(const button of distributionViewControls.querySelectorAll('button'))button.setAttribute('aria-pressed',String((state?.cameraMode==='orbit'?'overview':state?.cameraMode==='third-person'?'third-person':'first-person')===button.dataset.distributionView));
@@ -27,7 +28,7 @@ async function ensureDistribution(){
  distributionSurface=document.createElement('div');distributionSurface.className='office-renderer-surface distribution-renderer-surface';distributionSurface.hidden=true;webglHost.append(distributionSurface);
  distributionRenderer=createDistribution3D(distributionSurface,{onEmployee:id=>latestInspect?.(id),onOwner:()=>window.hqDistribution?.open(),onExploreMode:(active,state)=>{if(usesDistribution()){exploreMode(active,state);syncSceneSelection();}},onMeetingMode:()=>{}});
  distributionRenderer.update(latestState);syncSceneSelection();return distributionRenderer;
- }catch(error){console.error('Distribution Center rendering is unavailable:',error);message.textContent='The Distribution Center floor could not load. Its saved records are available in the office computer.';distributionSurface?.remove();distributionSurface=null;return null;}finally{distributionLoad=null;}})();return distributionLoad;
+ }catch(error){console.error('Distribution Center rendering is unavailable:',error);message.textContent='The Distribution Center floor could not load. Your saved work remains available in the clerical view.';distributionSurface?.remove();distributionSurface=null;distributionEnabled=null;setOfficeView('2d');return null;}finally{distributionLoad=null;}})();return distributionLoad;
 }
 function createRendererFacade(){
  return {
@@ -64,16 +65,17 @@ const meetingEnter=document.querySelector('#meeting-room-enter'),meetingControls
 
 const exploreControls=document.createElement('section');exploreControls.id='campus-explore-controls';exploreControls.className='campus-explore-controls';exploreControls.hidden=true;exploreControls.setAttribute('aria-label','First-person office exploration');
 const distributionViewControls=document.createElement('div');distributionViewControls.id='distribution-view-controls';distributionViewControls.className='distribution-view-controls';distributionViewControls.hidden=true;distributionViewControls.setAttribute('aria-label','Distribution Center camera');
-for(const [value,label]of [['overview','Overview'],['first-person','First person'],['third-person','Third person']]){const button=document.createElement('button');button.type='button';button.textContent=label;button.dataset.distributionView=value;button.onclick=()=>void setDistributionView(value);distributionViewControls.append(button);}document.querySelector('.office-dock')?.append(distributionViewControls);
-async function setDistributionView(value){if(latestState?.campus?.activeOffice!=='sales'||meetingRoomOpen||activeMeetingPresentation)return false;setOfficeView('3d');await ensure3D();const changed=distributionRenderer?.setViewMode(value)||false;syncSceneSelection();return changed;}
+for(const [value,label]of [['overview','Overview'],['first-person','First person'],['third-person','Third person']]){const button=document.createElement('button');button.type='button';button.textContent=label;button.dataset.distributionView=value;button.onclick=()=>void setDistributionView(value);distributionViewControls.append(button);}document.body.append(distributionViewControls);
+async function setDistributionView(value){if(latestState?.campus?.activeOffice!=='sales'||meetingRoomOpen||activeMeetingPresentation)return false;setOfficeView('3d');await ensure3D();await ensureDistribution();const changed=distributionRenderer?.setViewMode(value)||false;syncSceneSelection();return changed;}
 window.hqDistributionScene={setViewMode:setDistributionView,getState:()=>({...distributionRenderer?.getDistributionState(),loaded:!!distributionRenderer,visible:usesDistribution()&&document.body.dataset.view==='3d',officeId:latestState?.campus?.activeOffice||'hq'})};
+document.addEventListener('keydown',event=>{if(!['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(event.key.toLowerCase())||event.target?.closest?.('input,textarea,select,[contenteditable=true]'))return;document.body.dataset.keyboardControls='true';});
 const exploreHeading=document.createElement('h3'),exploreStatus=document.createElement('p'),explorePad=document.createElement('div'),exploreActions=document.createElement('div');exploreStatus.setAttribute('role','status');explorePad.className='campus-movement-pad';exploreActions.className='campus-explore-actions';
 function exploreButton(label,fn){const button=document.createElement('button');button.textContent=label;button.type='button';button.onclick=fn;return button;}
 for(const [direction,caption]of [['forward','Walk forward'],['left','Walk left'],['backward','Walk backward'],['right','Walk right']]){const button=exploreButton(caption,event=>{if(event.detail===0)renderer?.moveExplore(direction);});button.dataset.walk=direction;button.onpointerdown=event=>{event.preventDefault();button.setPointerCapture(event.pointerId);renderer?.setExploreInput(direction,true);};const release=()=>renderer?.setExploreInput(direction,false);button.onpointerup=button.onpointercancel=button.onlostpointercapture=release;explorePad.append(button);}
 explorePad.append(exploreButton('Turn left',()=>renderer?.lookExplore(.18,0)),exploreButton('Turn right',()=>renderer?.lookExplore(-.18,0)));
 exploreActions.append(exploreButton('Return to office overview',()=>renderer?.exitExplore()),exploreButton('Open this office work',()=>{const id=latestState?.campus?.activeOffice||'hq';document.querySelector('#owner-computer')?.click();if(id==='sales')window.hqDistribution?.open();else if(id==='marketing')window.hqCommerce?.openOffice('marketing');}));
 exploreControls.append(exploreHeading,exploreStatus,explorePad,exploreActions);document.body.append(exploreControls);
-function exploreMode(active,state={}){exploreControls.hidden=!active;if(active){document.body.dataset.camera='explore';const office=latestState?.campus?.offices?.find(o=>o.id===state.officeId);exploreHeading.textContent=office?.name||({hq:'Headquarters',sales:'Distribution Center',marketing:'Monetization & marketing'}[state.officeId]||'Your office');exploreStatus.textContent=state.officeId==='sales'?'Welcome to the Distribution Center. Drag to look around, walk the aisles, and select a worker or saved product proof.':'Welcome! Drag to look around. Use WASD or these controls to walk through the clear aisles.';if(meetingEnter)meetingEnter.hidden=false;if(meetingControls)meetingControls.hidden=true;}else if(document.body.dataset.camera==='explore')document.body.dataset.camera='orbit';}
+function exploreMode(active,state={}){exploreControls.hidden=!active;if(active){document.body.dataset.camera='explore';const office=latestState?.campus?.offices?.find(o=>o.id===state.officeId);exploreHeading.textContent=office?.name||({hq:'Headquarters',sales:'Distribution Center',marketing:'Monetization & marketing'}[state.officeId]||'Your office');exploreStatus.textContent=state.officeId==='sales'?'WASD to walk · Arrows or drag to look. Select a worker or saved product proof.':'WASD to walk · Arrows or drag to look. Touch controls appear on mobile.';if(meetingEnter)meetingEnter.hidden=false;if(meetingControls)meetingControls.hidden=true;}else if(document.body.dataset.camera==='explore')document.body.dataset.camera='orbit';}
 async function exploreLocation(id){if(activeMeetingPresentation){message.textContent='Finish the current meeting before exploring the building.';return false;}if(id&&id!==latestState?.campus?.activeOffice){message.textContent='Your saved arrival is reconnecting. Try Look around again in a moment.';return false;}for(const selector of ['#owner-dialog','#focused-dialog']){const dialog=document.querySelector(selector);if(dialog?.open)dialog.close();}setOfficeView('3d');const office=await ensure3D();if(!office){message.textContent='The 3D walk-through is unavailable on this device. Your saved work remains available in the office computer.';return false;}return office.enterExplore();}
 window.addEventListener('hq-campus-explore',event=>{void exploreLocation(event.detail?.officeId);});
 window.hqCampusExplore={enter:exploreLocation,move:(direction,amount)=>renderer?.moveExplore(direction,amount),look:(dx,dy)=>renderer?.lookExplore(dx,dy),exit:()=>renderer?.exitExplore(),getState:()=>renderer?.getExploreState()||{active:false,cameraMode:'orbit',officeId:latestState?.campus?.activeOffice||'hq',position:{x:0,z:0},virtualFabrication:false}};
@@ -87,11 +89,11 @@ function applyClericalDesign(){
  room.style.borderColor=themed?(walls[design.wall]||walls.sage):'';room.style.background=themed?(floors[design.floor]||floors.oak):'';
 }
 async function ensure3D(){
- if(renderer){if(latestState?.campus?.activeOffice==='sales')await ensureDistribution();syncSceneSelection();return renderer;}if(!latestState||document.body.dataset.view!=='3d')return renderer;
+ if(sceneDisposed)return null;if(renderer){if(latestState?.campus?.activeOffice==='sales')await ensureDistribution();syncSceneSelection();return renderer;}if(!latestState||document.body.dataset.view!=='3d')return renderer;
  if(rendererLoad)return rendererLoad;
  loading=true;message.textContent='Loading your 3D office…';
  rendererLoad=(async()=>{try{
- const {createOffice3D}=await import('/office3d.js');
+ const {createOffice3D}=await import('/office3d.js');if(sceneDisposed)return null;
  mainSurface=document.createElement('div');mainSurface.className='office-renderer-surface';webglHost.append(mainSurface);
  mainRenderer=createOffice3D(mainSurface,{onEmployee:id=>latestInspect?.(id),onOwner:(pane)=>{document.querySelector('#owner-computer').click();if(pane==='packets')document.querySelector('[data-pane=packets]').click();},onExploreMode:(active,state)=>{if(!usesDistribution()&&!meetingRoomOpen)exploreMode(active,state);},onMeetingMode:active=>{if(active){meetingRoomOpen=true;}else if(meetingRoomOpen){meetingRoomOpen=false;}syncSceneSelection();}});
  renderer=createRendererFacade();
