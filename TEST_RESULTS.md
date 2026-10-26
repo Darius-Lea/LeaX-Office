@@ -1,3 +1,7 @@
+## Distribution Center development checkpoint validation — 2026-10-26
+
+145 Node tests passed, zero failed/skipped, on pinned Windows Node24.19 with workspace TEMP/TMP. This includes seven new isolated Distribution Center projection/proof/schedule/retry tests. JavaScript syntax and whitespace checks passed. These are module/existing-app tests: the new Distribution Center routes/UI are not wired into the server yet, and its renderer facade is not browser-validated. No preview.13 installer was built. Keep this work in a draft branch; preview.12 remains the tested live release.
+
 ## 2026-10-26 — preview.12 release checkpoint
 
 Every new saved office journey takes ten seconds in both directions; existing in-flight deadlines remain intact. City travel now shows a chauffeured rear passenger cabin with a starlight ceiling and pointer/touch/keyboard look controls. Arrival greetings open the selected location for first-person walking or its saved work. The expanded conference suite has twelve seats, a long table, actual remote video on its wall display, a live-status table controller and CEO suit/cuffs/watch. A meeting returns to the exact prior exploration position. This is original room artwork inspired by a modular conferencing layout, not a physical Poly hardware integration.

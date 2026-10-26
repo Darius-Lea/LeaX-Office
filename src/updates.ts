@@ -5,7 +5,7 @@ export const UPDATE_URL=UPDATE_ORIGIN+'/api/version';
 export const DOWNLOAD_URL=UPDATE_ORIGIN+'/download';
 export const UPDATE_INTERVAL=6*60*60*1000;
 const CACHE_KEY='app_update_check_v1';
-const RELEASE_NOTES=['Ten-second office journeys with chauffeured rear-cabin starlights, look-around controls and first-person arrival exploration.','Expanded twelve-seat conference room with live wall display, table controller and CEO suit/watch.','Virtual factory scenes; actual products, business activity and mining status remain separate from decorative animations.'];
+const RELEASE_NOTES=['Distribution Center warehouse with first-person, third-person and overview navigation.','Inspect exact saved product files, actual employee assignments and recorded order/job status.','Add your real field jobs and print private preparation sheets or revision-locked artwork proofs.'];
 function parseVersion(value:unknown){if(typeof value!=='string')throw Error('Invalid release version');const m=/^(0|[1-9]\d{0,5})\.(0|[1-9]\d{0,5})\.(0|[1-9]\d{0,5})(?:-preview\.(0|[1-9]\d{0,5}))?$/.exec(value);if(!m)throw Error('Invalid release version');return {core:[Number(m[1]),Number(m[2]),Number(m[3])],preview:m[4]===undefined?null:Number(m[4])};}
 export function compareVersions(a:string,b:string){const x=parseVersion(a),y=parseVersion(b);for(let i=0;i<3;i++)if(x.core[i]!==y.core[i])return Math.sign(x.core[i]-y.core[i]);if(x.preview===y.preview)return 0;if(x.preview===null)return 1;if(y.preview===null)return -1;return Math.sign(x.preview-y.preview);}
 function currentVersion(){const v=JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8')).version;parseVersion(v);return v as string;}

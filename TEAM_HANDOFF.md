@@ -1,3 +1,7 @@
+## Unpublished Distribution Center continuation — 2026-10-26
+
+Read [DISTRIBUTION_CENTER_HANDOFF.md](DISTRIBUTION_CENTER_HANDOFF.md) for the saved preview.13 development work and exact remaining integration. Preview.12 is published and live; this branch has no rebuilt preview.13 installer and must stay a draft until its integration/browser checks pass.
+
 ## 2026-10-26 — preview.12 release checkpoint
 
 Every new saved office journey takes ten seconds in both directions; existing in-flight deadlines remain intact. City travel now shows a chauffeured rear passenger cabin with a starlight ceiling and pointer/touch/keyboard look controls. Arrival greetings open the selected location for first-person walking or its saved work. The expanded conference suite has twelve seats, a long table, actual remote video on its wall display, a live-status table controller and CEO suit/cuffs/watch. A meeting returns to the exact prior exploration position. This is original room artwork inspired by a modular conferencing layout, not a physical Poly hardware integration.
