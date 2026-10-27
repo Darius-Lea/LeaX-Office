@@ -26,3 +26,7 @@ dist/
 .sync-account.encrypted
 .sync-device-id
 .sync-*.tmp
+
+.storefront-master.key
+.storefront-access.encrypted
+.storefront-*.tmp
