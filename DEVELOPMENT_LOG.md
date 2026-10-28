@@ -1,3 +1,5 @@
+2026-10-28 keyboard-navigation source follow-up: arrow keys and WASD both walk in first-person Headquarters and the Distribution Center; drag remains look. Added safe window-level input outside the canvas and cleanup on blur/page hide. Touch controls and meeting-room look controls remain unchanged. Production web bundle built successfully with 37 files. The Windows installer was not rebuilt because this environment has less free disk space than the Go toolchain requires; its current preview.15 binary does not contain this change. No automated test suite was run.
+
 ## Preview.14 — daylit Distribution Center, 2026-10-26
 
 Application source changes are confined to `public/distribution-scene.js`. The warehouse now has a bright sky/fog, roof and skylights, polished concrete and daylight materials; more detailed articulated workers; sixteen separate station positions; seated blue-gloved inspectors with lamps/scopes and copies of actual saved proofs; moving saved-file previews; and a truck/carton/loader visualization gated by recorded physical fulfillment. Idle staff stay still, while non-inspector workers marked Working walk between stations. Reduced motion keeps decorative animation still. Proof movement illustrates saved files and does not create products, shipments or cash.
@@ -129,3 +131,4 @@ Validation:158 automated Node tests passed, zero failed/skipped, on pinned Windo
 Next work: verified in-session desktop updates with background download choice, an actual isolated browser engine, current marketplace evidence, exact-file quality feedback and approved template variations. The newly supplied universal-hub architecture is reference for this continuation, not evidence that every listed provider is already connected. Existing official updates still require opening the setup executable. No untraceable/unhackable browser, unattended all-platform operation or guaranteed income is claimed.
 
 Windows x64 setup:12,027,904 bytes;37 matching embedded production files; SHA-256 `88625f46ca10e03413dfe299b357e9e568db87014a7240318040389a76e7240a`. The installer remains unsigned; no owner-device installation was performed.
+
