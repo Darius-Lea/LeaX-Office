@@ -131,4 +131,3 @@ Validation:158 automated Node tests passed, zero failed/skipped, on pinned Windo
 Next work: verified in-session desktop updates with background download choice, an actual isolated browser engine, current marketplace evidence, exact-file quality feedback and approved template variations. The newly supplied universal-hub architecture is reference for this continuation, not evidence that every listed provider is already connected. Existing official updates still require opening the setup executable. No untraceable/unhackable browser, unattended all-platform operation or guaranteed income is claimed.
 
 Windows x64 setup:12,027,904 bytes;37 matching embedded production files; SHA-256 `88625f46ca10e03413dfe299b357e9e568db87014a7240318040389a76e7240a`. The installer remains unsigned; no owner-device installation was performed.
-
