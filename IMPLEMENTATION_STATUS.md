@@ -12,6 +12,10 @@ Next work: verified in-session desktop updates with background download choice, 
 
 Windows x64 setup:12,027,904 bytes;37 matching embedded production files; SHA-256 `88625f46ca10e03413dfe299b357e9e568db87014a7240318040389a76e7240a`. The installer remains unsigned; no owner-device installation was performed.
 
+## Source follow-up — arrow-key walking, 2026-10-28
+
+Arrow keys and WASD now both walk during first-person desktop exploration in Headquarters and the Distribution Center, even when the 3D canvas does not have focus. Dragging remains the look control, and meeting-room camera controls are unchanged. The source-only production bundle built successfully with 37 files. The available Windows installer remains preview.15 and was not rebuilt here, so its Headquarters arrow-key behavior does not include this follow-up.
+
 ## Preview.14 — daylit Distribution Center, 2026-10-26
 
 Application source changes are confined to `public/distribution-scene.js`. The warehouse now has a bright sky/fog, roof and skylights, polished concrete and daylight materials; more detailed articulated workers; sixteen separate station positions; seated blue-gloved inspectors with lamps/scopes and copies of actual saved proofs; moving saved-file previews; and a truck/carton/loader visualization gated by recorded physical fulfillment. Idle staff stay still, while non-inspector workers marked Working walk between stations. Reduced motion keeps decorative animation still. Proof movement illustrates saved files and does not create products, shipments or cash.
@@ -128,3 +132,4 @@ Sales/Marketing now store source observations, product/listing/content drafts, o
 Saved AI meetings accept one to three actual employees and retain only completed inference output. An explicitly enabled, verified paired desktop can process web/mobile AI requests using its installed local model. Leases, device revocation, stale-job recovery and stop-sharing cancellation are enforced. No paid model API is enabled. A read-only local Monero-node status check reports hashing separately from earnings. This release installs no miner and starts no mining. Mining-control implementation was rejected by automatic approval review because its required approval is unavailable in this session.
 
 No seller/payout accounts, marketplace publishing, automatic fulfillment/shipping, unrestricted external outreach, live sales-rank connector, real model installation, or guaranteed income was created. The user reports no mining hardware or seller accounts. Always-on work requires an awake running host; free hosting is not a 24/7 guarantee. The executable is unsigned; customer-owned files cannot be made uneditable or unhackable.
+
