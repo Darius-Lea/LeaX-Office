@@ -165,4 +165,3 @@ export function renderOffice(state,inspect){
  requestAnimationFrame(()=>{patrol.style.left=(target.offsetLeft+target.offsetWidth-30)+'px';patrol.style.top=(target.offsetTop+target.offsetHeight+12)+'px';});
  }
 }
-
