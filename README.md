@@ -1,6 +1,6 @@
 # AI Headquarters
 
-Current release checkpoint: **preview.14**. Read [TEAM_HANDOFF.md](TEAM_HANDOFF.md) for shipped features, actual validation, unfinished integrations and the latest continuation requests.
+Current release checkpoint: **preview.15**. Read [TEAM_HANDOFF.md](TEAM_HANDOFF.md) for shipped features, actual validation, unfinished integrations and the latest continuation requests.
 
 Preview.9 adds saved proposals/jobs/invoices/meetings, explicitly approved SMTP/IMAP email, paired office sharing and live browser calls. See [Connected workflows](CONNECTED_WORKFLOWS.md) for setup, tested boundaries and remaining environment checks.
 A founder-controlled business office for LeaX LLC / American Power Global. This is an actively developed application, not a completed autonomous company.
@@ -21,7 +21,7 @@ Research and assignment archives now show sixty items per page with search, whil
 
 ## Start without coding on Windows
 
-Latest preview.11 installer: **[Download Windows setup](https://github.com/Darius-Lea/LeaX-Office/raw/refs/heads/main/downloads/AI-Headquarters-Setup.exe)**. Open the downloaded executable to update the local app; the data folder is retained. The Windows package is checked against the production build; hosting and local data remain separate. See WEB_DESKTOP_AUDIT.md for tested scope and unfinished capabilities.
+Latest preview.15 installer: **[Download Windows setup](https://github.com/Darius-Lea/LeaX-Office/raw/refs/heads/main/downloads/AI-Headquarters-Setup.exe)**. Open the downloaded executable to update the local app; the data folder is retained. The Windows package is checked against the production build; hosting and local data remain separate. See WEB_DESKTOP_AUDIT.md for tested scope and unfinished capabilities.
 Open **[/download](/download)** on your app site (for the existing host: https://leax-office.onrender.com/download). Click **Download for Windows**, then open **AI-Headquarters-Setup.exe** from the browser’s downloads. Setup starts automatically. No ZIP or project folders are involved. The download page shows transfer progress and checks the complete setup file before saving. Setup installs verified portable Node and opens the local office first, then automatically downloads/configures private local AI and verifies a real response. A failed or cancelled AI download keeps the opened office available. Signed installed Edge/Chrome can open it in a separate app-style window; the default browser is the fallback. No separate Ollama install, model selection, terminal, npm, paid AI key or administrator install is required. Setup offers progress, cancel and retry. Windows itself may display an unknown-publisher warning because the app is unsigned. Actual Windows installation remains unvalidated; this is **0.2.0 preview**, not a certified commercial release.
 
 Data stays in `%LOCALAPPDATA%\AIHeadquarters\data`, separate from installed versions. Download your private database backup from the existing Render office and use **Import saved office from Render / backup** in setup to retain your founder login, tasks and notes. Import validates and stages the selected database and preserves existing local files/recovery copies. It never synchronizes silently. Read [LOCAL_INSTALL.md](LOCAL_INSTALL.md) for transfer, updates and limits.
