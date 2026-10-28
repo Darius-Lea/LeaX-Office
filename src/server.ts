@@ -38,7 +38,7 @@ import {randomBytes} from 'node:crypto';
 import {backup} from 'node:sqlite';
 import {join} from 'node:path';
 import {db,directory,setup,login,authenticated,enqueue,snapshot,audit,clock,setting,setSetting,editTask} from './store.ts';
-import {solicitationState,searchSolicitations} from './solicitations.ts';
+import {solicitationState,searchSolicitations,normalizeSearchCriteria} from './solicitations.ts';
 import {contactState,researchContacts} from './contacts.ts';
 import {draftState,prepareContactDraft,prepareNoticeDraft,reviewDraft,composerLink} from './drafts.ts';
 import {OLLAMA,aiStatus,configureModel,queueAgent,processAgent,retryAgent,agentRuns,installRecommendedModel} from './ai.ts';
@@ -187,7 +187,7 @@ const server=createServer(async(req,res)=>{
  if(req.method==='POST'&&url.pathname==='/api/funding/search')return send(200,await searchFunding());
  if(req.method==='POST'&&url.pathname==='/api/pricing/save')return send(201,saveEstimate(body));
  if(req.method==='POST'&&url.pathname==='/api/business/readiness')return send(200,saveReadiness(body));
- if(req.method==='POST'&&url.pathname==='/api/solicitations/search'){return send(200,await searchSolicitations(setting('standing_goal')));}
+ if(req.method==='POST'&&url.pathname==='/api/solicitations/search'){let criteria;try{criteria=body.criteria===undefined?undefined:normalizeSearchCriteria(body.criteria);}catch(error){return send(400,{error:error instanceof Error?error.message:'Invalid lead search criteria'});}return send(200,await searchSolicitations(setting('standing_goal'),fetch,criteria));}
  if(req.method==='POST'&&url.pathname==='/api/contacts/research'){return send(200,await researchContacts(body.url,body.company));}
  if(req.method==='POST'&&url.pathname==='/api/drafts/notice'){return send(201,{id:prepareNoticeDraft(body.noticeid,body.address)});}
  if(req.method==='POST'&&url.pathname==='/api/drafts/prepare'){return send(201,{id:prepareContactDraft(body.contactId,body.address)});}
