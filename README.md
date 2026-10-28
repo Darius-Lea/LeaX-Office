@@ -110,4 +110,3 @@ The clocked-in office queues contact research for up to three relevant companies
 
 
 The manager window also offers an optional **Ask manager to check now** action, subject to source pacing and budgets, and a **Saved assignments** view of actual queued/running/blocked work. The normal schedule needs no CEO reminder. Its clickable molecular mark is decorative.
-
