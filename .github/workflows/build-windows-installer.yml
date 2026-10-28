@@ -1,0 +1,58 @@
+name: Build verified Windows setup
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - package.json
+      - package-lock.json
+      - src/**
+      - public/**
+      - scripts/build-production.mjs
+      - scripts/build-native-installer.py
+      - scripts/verify-installer.py
+      - installer/**
+      - .github/workflows/build-windows-installer.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: windows-installer-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out the release source
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ github.sha }}
+      - name: Set up Node.js
+        uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 24.22.1
+      - name: Set up Go
+        uses: actions/setup-go@v7.0.0
+        with:
+          go-version: 1.24.x
+      - name: Install locked Node dependencies
+        run: npm ci
+      - name: Build and verify the installer
+        run: python scripts/build-native-installer.py --go go
+      - name: Publish verified installer
+        shell: pwsh
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+        run: |
+          git add downloads/AI-Headquarters-Setup.exe downloads/AI-Headquarters-Setup.exe.sha256
+          git diff --cached --quiet
+          if ($LASTEXITCODE -eq 0) { Write-Host 'Installer is already current'; exit 0 }
+          git fetch origin main
+          $mainHead = (git rev-parse origin/main).Trim()
+          if ($mainHead -ne $env:GITHUB_SHA) { throw 'main advanced during the build; rerun to avoid publishing a stale installer' }
+          $version = node -p "JSON.parse(require('node:fs').readFileSync('package.json','utf8')).version"
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m "Publish verified Windows setup for $version"
+          git push origin HEAD:main

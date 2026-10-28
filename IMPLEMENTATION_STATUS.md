@@ -12,6 +12,10 @@ Next work: verified in-session desktop updates with background download choice, 
 
 Windows x64 setup:12,027,904 bytes;37 matching embedded production files; SHA-256 `88625f46ca10e03413dfe299b357e9e568db87014a7240318040389a76e7240a`. The installer remains unsigned; no owner-device installation was performed.
 
+## Preview.16 — remote Windows package build, 2026-10-28
+
+Arrow-key walking is in the web source. A Windows GitHub Actions job now builds the matching installer from the same source, checks the embedded production manifest and checksum with the existing verifier, and publishes the executable only when verification passes. Until that job succeeds, the existing download remains preview.15. The package remains unsigned, and a successful cross-build does not establish successful installation on an owner device.
+
 ## Source follow-up — arrow-key walking, 2026-10-28
 
 Arrow keys and WASD now both walk during first-person desktop exploration in Headquarters and the Distribution Center, even when the 3D canvas does not have focus. Dragging remains the look control, and meeting-room camera controls are unchanged. The source-only production bundle built successfully with 37 files. The available Windows installer remains preview.15 and was not rebuilt here, so its Headquarters arrow-key behavior does not include this follow-up.
