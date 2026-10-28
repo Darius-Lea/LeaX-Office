@@ -1,3 +1,5 @@
+2026-10-28 preview.16 desktop packaging: the source release now targets a verified remote Windows build because the local checkout lacks room for Go. GitHub Actions builds the production payload on Windows, runs the existing embedded-file/checksum verifier, and only then publishes the setup executable. The existing download remains preview.15 until that build succeeds. No Windows installation is claimed.
+
 2026-10-28 keyboard-navigation source follow-up: arrow keys and WASD both walk in first-person Headquarters and the Distribution Center; drag remains look. Added safe window-level input outside the canvas and cleanup on blur/page hide. Touch controls and meeting-room look controls remain unchanged. Production web bundle built successfully with 37 files. The Windows installer was not rebuilt because this environment has less free disk space than the Go toolchain requires; its current preview.15 binary does not contain this change. No automated test suite was run.
 
 ## Preview.14 — daylit Distribution Center, 2026-10-26
