@@ -1,3 +1,7 @@
+## Active continuation — 2026-10-27
+
+Preview.15 adds authenticated manual links and a tested WooCommerce digital-listing publisher; no owner store account is connected. It requires an already hosted exact approved file and does not implement marketplace file upload, Etsy/Amazon/eBay API publishing or an autonomous publishing worker. New guide progress APIs have no new guide frontend; existing store projects provide the in-app setup entry point. Browser and in-session update work are separate subsequent increments. Account verification, payout setup and provider approvals remain actual owner/provider steps. No live model, seller sale, shipment or mining payout is newly verified.
+
 ## Preview.13 current continuation
 
 Distribution Center renderer/data/proof/job integration is complete; source and standalone-production browser checks passed. New store-connection, live market evidence and automatic pricing/publishing requests are the next increment. Actual seller accounts/costs/file delivery, durable hosting, provider work integrations and active mining remain unconnected or unfinished.
