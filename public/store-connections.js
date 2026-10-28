@@ -12,7 +12,7 @@ const manual=connection=>connection.provider==='manual';
 function safeLink(label,value){
  const a=el('a',label);let safe='';
  try{const u=new URL(value);if(u.protocol==='https:'&&!u.username&&!u.password)safe=u.href;}catch{}
- if(!safe)return el('span',label+' â€” link unavailable');
+ if(!safe)return el('span',label+' — link unavailable');
  a.href=safe;a.target='_blank';a.rel='noopener noreferrer';return a;
 }
 function popup(title,body,actions=[]){window.hqPopup.open({title,contentNode:body,readable:false,actions});}
@@ -50,9 +50,9 @@ export function initStoreConnections(options){
 }
 function open(){openComputer('store-connections');renderStoreConnections(window.hqState||latest);}
 function publicationLabel(status=''){
- if(status==='Published; API confirmed')return 'Published â€” confirmed by your store';
- if(status==='Draft saved; API confirmed')return 'Draft saved â€” confirmed by your store';
- if(status.startsWith('Unknown'))return 'Result needs checking â€” do not submit again';
+ if(status==='Published; API confirmed')return 'Published — confirmed by your store';
+ if(status==='Draft saved; API confirmed')return 'Draft saved — confirmed by your store';
+ if(status.startsWith('Unknown'))return 'Result needs checking — do not submit again';
  if(status==='Blocked before store write')return 'Stopped before creating a store product';
  return status||'No result recorded';
 }
@@ -64,9 +64,9 @@ export function renderStoreConnections(snapshot){
  const grid=el('div');grid.className='store-connection-grid';
  for(const connection of s.connections||[]){
   const card=el('article');card.className='store-connection-card';
-  card.append(el('p',manual(connection)?'SAVED STORE LINK':'WOOCOMMERCE'),el('h3',connection.name),el('strong',connection.status||(manual(connection)?'Link saved â€” manual export only':'Connection not verified')),safeLink('Open your store',connection.baseUrl));
+  card.append(el('p',manual(connection)?'SAVED STORE LINK':'WOOCOMMERCE'),el('h3',connection.name),el('strong',connection.status||(manual(connection)?'Link saved — manual export only':'Connection not verified')),safeLink('Open your store',connection.baseUrl));
   if(manual(connection))card.append(el('p','Use reviewed exports in your seller account. This link has no publishing or order access.'));
-  else card.append(el('p','Last access check: '+when(connection.verifiedAt)+' Â· '+(connection.currency||'Currency not verified')),el('p',connection.policy?.autoPublish?'Approved-product publishing authority is saved within your limits. This does not promise continuous execution.':'Automatic publishing is off. Store changes require the review steps below.'));
+  else card.append(el('p','Last access check: '+when(connection.verifiedAt)+' · '+(connection.currency||'Currency not verified')),el('p',connection.policy?.autoPublish?'Approved-product publishing authority is saved within your limits. This does not promise continuous execution.':'Automatic publishing is off. Store changes require the review steps below.'));
   if(connection.notice)card.append(el('p',connection.notice));
   const actions=el('div');actions.className='store-connection-actions';actions.append(button('View connection',()=>connectionDetails(connection)));
   if(!manual(connection)){actions.append(button('Check store access',()=>verifyConnection(connection)),button('Pricing & publishing limits',()=>policyForm(connection)));const send=button('Prepare a product for this store',()=>publicationForm(connection));send.disabled=!connection.connected;actions.append(send);}
@@ -78,7 +78,7 @@ export function renderStoreConnections(snapshot){
  const history=el('section');history.className='store-connection-history';history.append(el('h3','Actual store results'));
  for(const receipt of (s.publications||[]).slice(0,30)){
   const row=el('article'),connection=s.connections?.find(c=>c.id===receipt.connectionId),listing=c.listings?.find(l=>l.id===receipt.listingId);
-  row.append(el('h4',listing?.title||'Saved listing'),el('p',(connection?.name||'Saved store')+' Â· '+publicationLabel(receipt.status)),el('small','Last recorded result: '+when(receipt.updatedAt||receipt.updated||receipt.created)));
+  row.append(el('h4',listing?.title||'Saved listing'),el('p',(connection?.name||'Saved store')+' · '+publicationLabel(receipt.status)),el('small','Last recorded result: '+when(receipt.updatedAt||receipt.updated||receipt.created)));
   if(receipt.remoteUrl)row.append(safeLink('Open actual store result',receipt.remoteUrl));
   if(receipt.status?.startsWith('Unknown')||receipt.status==='Sending'||receipt.status==='Preparing')row.append(button('Check store result',()=>reconcile(receipt.id)));
   history.append(row);
@@ -91,8 +91,8 @@ export function renderStoreConnections(snapshot){
 function connectionForm(existing=null){
  const form=el('form');form.className='business-document-form';form.dataset.storeConnection='true';
  const provider=select(form,'provider','What kind of store do you own?',[
-  {id:'woocommerce',name:'WooCommerce â€” connect supported product publishing'},
-  {id:'manual',name:'Another store â€” save its link and use reviewed exports'}
+  {id:'woocommerce',name:'WooCommerce — connect supported product publishing'},
+  {id:'manual',name:'Another store — save its link and use reviewed exports'}
  ],existing?.provider||'woocommerce');
  provider.disabled=!!existing;
  const name=field(form,'name','Store name',existing?.name||'','text',true);name.maxLength=120;
@@ -118,7 +118,7 @@ function connectionForm(existing=null){
  popup(existing?'Replace saved store access':'Add your store',form);
 }
 function connectionDetails(connection){
- const body=el('div');body.className='store-connection-details';body.append(el('p',manual(connection)?'Saved store link â€” manual exports only':'WooCommerce store connection'),safeLink('Open '+connection.name,connection.baseUrl),el('strong',connection.status||'Not verified'));
+ const body=el('div');body.className='store-connection-details';body.append(el('p',manual(connection)?'Saved store link — manual exports only':'WooCommerce store connection'),safeLink('Open '+connection.name,connection.baseUrl),el('strong',connection.status||'Not verified'));
  if(!manual(connection)){body.append(el('p','Last store access check: '+when(connection.verifiedAt)),el('p','Store currency: '+(connection.currency||'Not verified')),el('p','Saved access keys are private. This panel does not show or recover them.'));}
  if(connection.notice)body.append(el('p',connection.notice));
  const actions=[];
@@ -143,7 +143,7 @@ function policyForm(connection){
  const form=el('form');form.className='business-document-form';form.dataset.storePolicy='true';
  form.append(el('p','Set limits from the real costs and fees you checked. The office rejects a listing outside these limits or without current file/product approval. All amounts below are USD.'));
  const minimum=usdField(form,'minPrice','Lowest allowed sale price USD',reviewed?p.minPriceCents:null),maximum=usdField(form,'maxPrice','Highest allowed sale price USD',reviewed?p.maxPriceCents:null),profit=usdField(form,'minProfit','Minimum planned profit per sale USD',reviewed?p.minProfitCents:null),feeFixed=usdField(form,'feeFixed','Fixed store/payment fee per sale USD',reviewed?p.feeFixedCents:null),feePercent=percentField(form,'feePercent','Store/payment percentage fee',reviewed?p.feeBps:null),margin=percentField(form,'minMargin','Minimum planned margin percentage',reviewed?p.minMarginBps:null);
- const evidence=field(form,'costEvidence','Where and when I checked costs, fees and delivery terms',p.costEvidence||'','textarea',true);evidence.maxLength=3000;
+ const evidence=field(form,'costEvidence','Where and when I checked costs, fees and delivery terms',p.costEvidence||'','textarea',true);evidence.maxLength=2000;
  const authority=check(form,'Allow the office to publish already-approved digital products within these saved limits.',p.autoPublish===true);
  form.append(el('p','Leave this off to review each store write yourself. Publishing authority does not approve new artwork, waive pricing checks, buy services or promise continuous work.'));
  const confirmed=check(form,'These are the current costs and limits I checked, and I approve the authority selected above.');confirmed.required=true;
@@ -153,13 +153,13 @@ function policyForm(connection){
   if(policy.maxPriceCents<policy.minPriceCents)throw Error('Highest price must be at least the lowest price');
   const saved=await action('policy',{id:connection.id,expectedRevision:connection.revision,confirmed:true,policy});connectionDetails(saved?.id?saved:savedConnection(connection.id));
  }catch(error){feedback.textContent=error.message;save.disabled=false;}};
- popup(connection.name+' â€” pricing & publishing limits',form);
+ popup(connection.name+' — pricing & publishing limits',form);
 }
 function manualExport(connection){
  const body=el('div'),listings=commerce().listings.filter(l=>approved(l));body.append(el('p','Export exact reviewed listing content, then upload it in '+connection.name+'. This office will not submit it or mark it published for you.'));
  for(const listing of listings){const row=el('article');row.append(el('h3',listing.title),el('p',money(listing.priceCents)),button('Download reviewed listing content',()=>exportListing(listing.id)),button('Open saved listing',()=>window.hqCommerce.openRecord(listing.id)));body.append(row);}
  if(!listings.length)body.append(el('p','No reviewed listing is ready for export.'),button('Prepare or review a listing',()=>window.hqCommerce?.openOffice('sales')));
- popup(connection.name+' â€” reviewed exports',body);
+ popup(connection.name+' — reviewed exports',body);
 }
 async function exportListing(id){
  const file=await api('commerce/export/'+encodeURIComponent(id)),url=URL.createObjectURL(new Blob([file.body],{type:file.mime})),a=el('a');a.href=url;a.download=file.filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
@@ -170,18 +170,18 @@ function publicationForm(connection=null,listingId=null){
  const listings=c.listings.filter(l=>l.platform==='own-store');
  if(!listings.length){popup('Prepare a listing first',el('p','Save an original digital product, its artwork and a listing for Your own store. Review the exact records before sending them.'),[{label:'Open product & listing work',onClick:()=>window.hqCommerce?.openOffice('sales')}]);return;}
  const form=el('form');form.className='business-document-form';form.dataset.storePublication='true';
- const store=select(form,'connection','Send to this store',connections.map(c=>({id:c.id,name:c.name})),connection?.id||connections[0].id),listing=select(form,'listing','Saved listing',listings.map(l=>({id:l.id,name:l.title+' Â· '+money(l.priceCents)})),listingId||listings[0].id),design=select(form,'design','Exact reviewed artwork',[],undefined);
+ const store=select(form,'connection','Send to this store',connections.map(c=>({id:c.id,name:c.name})),connection?.id||connections[0].id),listing=select(form,'listing','Saved listing',listings.map(l=>({id:l.id,name:l.title+' · '+money(l.priceCents)})),listingId||listings[0].id),design=select(form,'design','Exact reviewed artwork',[],undefined);
  const review=el('div');review.className='store-publication-readiness';form.append(review);
  const update=()=>{
   const l=listings.find(row=>row.id===listing.value),p=c.products.find(row=>row.id===l?.parentId),designs=c.designs.filter(row=>row.parentId===l?.parentId);
-  design.replaceChildren(...designs.map(row=>{const option=el('option',row.title+' Â· '+(approved(row)?'Reviewed':'Needs review'));option.value=row.id;return option;}));
-  review.replaceChildren(el('p','Saved sale price: '+money(l?.priceCents)+' Â· Product cost recorded by owner: '+money(p?.unitCostCents)));
+  design.replaceChildren(...designs.map(row=>{const option=el('option',row.title+' · '+(approved(row)?'Reviewed':'Needs review'));option.value=row.id;return option;}));
+  review.replaceChildren(el('p','Saved sale price: '+money(l?.priceCents)+' · Product cost recorded by owner: '+money(p?.unitCostCents)));
   for(const [label,record]of [['Product',p],['Listing',l]]){review.append(el('p',label+': '+(record?.displayStatus||record?.status||'Missing from this snapshot')));for(const issue of record?.readiness?.issues||[])review.append(el('p',issue));}
   if(p?.fulfillmentMode!=='digital')review.append(el('p','This connection currently supports reviewed digital downloads only.'));
   if(!designs.length)review.append(el('p','No artwork is linked to this product. Prepare and review its actual file first.'));
  };listing.onchange=update;update();
  const delivery=field(form,'downloadUrl','Public download file URL on this store','','url',true);delivery.maxLength=2000;
- form.append(el('p','Upload the reviewed artwork to your storeâ€™s file storage, then paste its public HTTPS file link. The office checks the saved file hash before a store write. Private inspection/preview links do not deliver files to buyers.'));
+ form.append(el('p','Upload the reviewed artwork to your store’s file storage, then paste its public HTTPS file link. The office checks the saved file hash before a store write. Private inspection/preview links do not deliver files to buyers.'));
  const fileConfirmed=check(form,'This URL delivers the exact reviewed file, and I have checked how buyers receive it.');fileConfirmed.required=true;
  const mode=select(form,'publish','What should happen after the final review?',[{id:'draft',name:'Create a draft product in my store'},{id:'publish',name:'Publish the product in my store'}],'draft');
  const feedback=el('p'),prepare=el('button','Check file delivery & pricing');form.append(feedback,prepare);
@@ -197,7 +197,7 @@ function publicationForm(connection=null,listingId=null){
 }
 function publicationReview(connection,input,prepared){
  const body=el('div');body.className='store-publication-review';
- body.append(el('h3',prepared.title),el('p','Store: '+connection.name),el('p',input.publish?'Action: publish this digital product':'Action: create a draft product'),el('p','Sale price: '+money(prepared.priceCents)+' Â· Minimum planned price: '+money(prepared.minimumPlannedPriceCents)),safeLink('Verified buyer download file',prepared.downloadUrl));
+ body.append(el('h3',prepared.title),el('p','Store: '+connection.name),el('p',input.publish?'Action: publish this digital product':'Action: create a draft product'),el('p','Sale price: '+money(prepared.priceCents)+' · Minimum planned price: '+money(prepared.minimumPlannedPriceCents)),safeLink('Verified buyer download file',prepared.downloadUrl));
  if(prepared.notice)body.append(el('p',prepared.notice));
  const digest=el('details');digest.append(el('summary','Exact file verification'),el('code',prepared.fileSha256||'No file verification returned'));body.append(digest);
  const confirmed=check(body,input.publish?'I approve publishing this exact product to this store at this price.':'I approve creating this exact draft product in this store.');
