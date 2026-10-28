@@ -1,3 +1,12 @@
+## Preview.17 — guided live federal lead search, 2026-10-28
+
+Added a separate guided search for current SAM.gov public notices. The Research panel now covers every major NAICS sector, nationwide/state/territory scope, optional 2–6 digit NAICS refinement, open solicitations, sources sought/pre-solicitations, all current notice types, and custom federal title phrases. The four-position effort slider requests one, two, four or up to six distinct searches sequentially, with a visible approximate duration and the actual query count in the result status. Each query is limited to 25 returned notices and the results are deduplicated by SAM notice ID. The existing USAspending workflow remains separately labeled as historical award and possible partner research.
+
+Live notice cards group status/deadline, agency/type, posted date/NAICS, eligibility checks and source-published POC details. The app says when SAM.gov did not publish an email or phone; it does not infer a number or email. API credentials stay server-side. Search results remain subject to official notice amendments, fit, licensing, registration, scope and eligibility review. Only SAM.gov federal notices are covered; this is not a private marketplace crawler, a promise of complete sector coverage, or an earnings claim.
+
+The desktop updater checks for a newer release periodically and offers the official setup download. It does not silently replace the running Windows app; the downloaded setup must be opened. Render serves the current web version after deployment, and older open tabs may need a reload.
+
+Production bundle build completed with 37 files after this source change. No automated test suite or keyed live SAM.gov search was run for this checkpoint. CI must build and publish the preview.17 Windows setup after merge; the local Windows installer and actual SAM.gov account were not exercised.
 ## Preview.15 — store access and approval checkpoint, 2026-10-27
 
 The Distribution Center assembly line opens Store connections. Users without an account can open the existing in-app store workspace, save their store project and use its official provider signup link. A saved store URL is explicitly a manual handoff, not a verified API connection. New setup-guide progress APIs are implemented; a separate step-by-step guide frontend is not part of this release.
