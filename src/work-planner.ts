@@ -164,17 +164,44 @@ function retryEligibleContact(now:number){
  }
  return false;
 }
+function sourceRetryCandidate(now:number){
+ const rows=db.prepare("SELECT id,attempts,error,created FROM tasks WHERE status IN ('Blocked','Failed') AND agent='Alpha' AND attempts>0 AND attempts<3 ORDER BY created DESC,rowid DESC LIMIT 25").all() as any[];
+ const global=sourceBackoff(now);
+ const candidates=rows.filter(row=>{
+  const error=String(row.error||'');
+  return error.startsWith('Research unavailable:')&&/\bHTTP\s*\d{3}\b|fetch failed|\bnetwork\b|\boffline\b|timed?\s*out|timeout|AbortError|\b(?:ECONN\w*|ENOTFOUND|EAI_AGAIN|ETIMEDOUT)\b|socket (?:closed|hang up)/i.test(error)&&!/SyntaxError|\bJSON\b|schema|provenance|evidence|checkpoint|exceeds|missing valid|No research tool|SQLite|database/i.test(error);
+ }).map(row=>{
+  const failedAt=Number((db.prepare("SELECT max(time) AS stamp FROM audit WHERE task=? AND event='Research blocked; saved evidence and page checkpoint preserved'").get(row.id) as any)?.stamp||row.created||now);
+  const delay=Math.min(WORK_POLICY.maxSourceBackoffMs,WORK_POLICY.sourceFailureBackoffMs*2**Math.max(0,Number(row.attempts)-1));
+  return {task:String(row.id),attempts:Number(row.attempts),failedAt,retryAt:Math.max(failedAt+delay,global?.until||0)};
+ }).sort((a,b)=>a.retryAt-b.retryAt);
+ return candidates[0]||null;
+}
+export function sourceRetryAt(now=Date.now()):number|null{return sourceRetryCandidate(now)?.retryAt??null;}
+function retryEligibleSourceTask(now:number){
+ if(count("SELECT count(*) AS n FROM tasks WHERE status IN ('Queued','Running') AND agent IN ('Alpha','Bravo')")>0)return null;
+ const candidate=sourceRetryCandidate(now);if(!candidate||candidate.retryAt>now)return null;
+ const changed=db.prepare("UPDATE tasks SET status='Queued',lease=0,error=NULL WHERE id=? AND status IN ('Blocked','Failed') AND attempts=?").run(candidate.task,candidate.attempts);
+ if(!changed.changes)return null;
+ directive('award-retry:'+candidate.task+':'+candidate.attempts,'Johnson','award','Source retry scheduled · saved assignment','The temporary source failure passed its bounded backoff. Alpha will resume this saved assignment from its existing checkpoint; other contact and handoff work can continue.',candidate.task,'Queued',now);
+ audit(candidate.task,'Johnson scheduled an automatic bounded retry from the saved source checkpoint');
+ return candidate;
+}
 export function planWork(now=Date.now()):PlannerState{
  if(setting('clock')!=='in')return workPlannerState(now);
  if(now-Number(setting('learning_observed_at')||0)>=MINUTE){collectLearningEvidence(now);setSetting('learning_observed_at',String(now));}
  if(processCorrection(now)||followThrough(now)||retryEligibleContact(now))return save('Assigned','The manager assigned useful follow-through from saved evidence.','Workers will execute the saved directive; no CEO start instruction is needed.',now,[],now);
- const running=count("SELECT count(*) AS n FROM tasks WHERE status='Running'"),queued=count("SELECT count(*) AS n FROM tasks WHERE status='Queued'"),handoffs=count("SELECT count(*) AS n FROM team_jobs WHERE status='Queued'");
+ const running=count("SELECT count(*) AS n FROM tasks WHERE status='Running'"),queued=count("SELECT count(*) AS n FROM tasks WHERE status='Queued'"),handoffs=count("SELECT count(*) AS n FROM team_jobs j WHERE j.status='Queued' AND (j.agent<>'Einstein' OR (SELECT count(*) FROM team_jobs d JOIN office_notes n ON n.task=d.task AND n.agent=d.agent WHERE d.task=j.task AND d.agent IN ('Juliet','Hotel','Delta') AND d.status='Completed')=3)");
  const contact=candidateContact(now),jobs=leadResearchState(),activeContacts=jobs.filter(job=>job.status==='Running').length;
  if(running||queued||handoffs||activeContacts||contact.job){const backoff=sourceBackoff(now),reasons=[...contact.reasons];if(backoff&&backoff.until>now)reasons.push('New award cycles are paused until the failed source’s backoff ends; saved clerical/contact work can continue.');return save(running||activeContacts?'Working':'Queued',`${running} research running, ${queued} research queued; ${handoffs} clerical handoffs queued, ${activeContacts} contact checks running and ${contact.job?1:0} contact lookup ready.`,'Complete saved assignments and their follow-through before requesting another research cycle.',now+MINUTE,reasons,now);}
- const goal=setting('standing_goal');if(!goal?.trim())return save('Needs direction','The saved company goal is missing.','Restore the company services and customer direction.',null,['No research objective is invented.'],now);
- const usage=budgets(now),pendingContacts=jobs.filter(job=>job.status==='Queued').length;
+ const pendingContacts=jobs.filter(job=>job.status==='Queued').length;
  if(pendingContacts>=WORK_POLICY.maxContactBacklog)return save('Following through','The manager is prioritizing '+pendingContacts+' saved contact lookups before collecting more award records.','Finish eligible contact checks; unavailable discovery waits for its source, while a confirmed company site can proceed.',contact.nextActionAt,contact.reasons.length?contact.reasons:['Contact research is bounded to avoid an unmanageable backlog.'],now);
- const backoff=sourceBackoff(now);if(backoff&&backoff.until>now)return save('Source cooldown','The award source is unavailable; the manager retained saved work and scheduled a bounded retry.','Retry the award source after backoff; contact results, drafts and existing handoffs can still progress.',backoff.until,[...contact.reasons,'Repeated source failures are not employee slacking.'],now);
+ const retry=retryEligibleSourceTask(now);if(retry)return save('Retrying saved research','Alpha is retrying a saved award-source assignment from its preserved checkpoint. Contact research, review and approval work stay on their independent queues.','Wait for the bounded source retry to finish; no new award cycle was substituted for the saved assignment.',now,contact.reasons,now);
+ const sourceRetry=sourceRetryCandidate(now),backoff=sourceBackoff(now);
+ if(sourceRetry&&sourceRetry.retryAt>now)return save('Source retry scheduled','The saved award-source assignment is waiting through a bounded retry delay. Other eligible contact, review and owner-approval work can continue.','Automatically retry the saved research checkpoint after the source retry window.',Math.max(sourceRetry.retryAt,backoff?.until||0),[...contact.reasons,'The last source failure time and retry window are saved; no lead is marked complete.'],now);
+ if(backoff&&backoff.until>now)return save('Source cooldown','The award source is unavailable; the manager retained saved work and scheduled a bounded retry.','Retry the award source after backoff; contact results, drafts and existing handoffs can still progress.',backoff.until,[...contact.reasons,'Repeated source failures are not employee slacking.'],now);
+ const goal=setting('standing_goal');if(!goal?.trim())return save('Needs direction','The saved company goal is missing.','Restore the company services and customer direction.',null,['No research objective is invented.'],now);
+ const usage=budgets(now);
  const window=researchWindow(now,goal);
  if(usage.research.used>=WORK_POLICY.researchCyclesPerDay)return save('Daily source limit','The manager completed the automatic research allowance for this rolling day.','Continue saved contact and owner-review work; restart source cycles as the allowance becomes available.',window.nextAt,contact.reasons,now);
  const {spacing,eligible}=window;
