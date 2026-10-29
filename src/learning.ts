@@ -164,3 +164,35 @@ export function learningState(){
   eligibleReceipts,pendingCorrections:pendingLearningCorrections(20,true),model:{version:model.version,samples:model.examples,updatedAt:model.updated},
   explanation:NOTICE,recipes:parameters.map(row=>({id:row.recipe,label:row.recipe,mean:row.mean,positive:row.positiveWeight,negative:row.negativeWeight}))};
 }
+
+
+function csvCell(value:unknown){
+ let text=String(value??'');
+ if(/^\s*[=+@-]/.test(text))text="'"+text;
+ return '"'+text.replace(/"/g,'""')+'"';
+}
+// Export only the owner's explicit feedback labels and recipe metadata. The
+// receipt contents, prompts, model replies, emails and source documents stay out.
+export function learningDataset(format:'json'|'jsonl'|'csv'='json'){
+ if(!['json','jsonl','csv'].includes(format))throw Error('Choose JSON, JSONL or CSV');
+ const raw=db.prepare("SELECT * FROM learning_feedback WHERE source='owner' ORDER BY created ASC,id ASC").all() as any[];
+ const all=raw.map(row=>({row,item:presentedFeedback(row)}));
+ const active=all.filter(entry=>!entry.item.excluded).map(({row,item})=>({
+  schemaVersion:'leax-owner-work-feedback/v1',
+  id:item.id,receiptType:item.kind,savedReceiptId:item.receiptId,agent:item.agent,recipe:item.recipe,
+  relatedRecipes:JSON.parse(String(row.related_recipes||'[]')),rating:item.rating,weight:Number(row.weight),
+  ownerReason:item.reason,source:'owner',createdAt:new Date(Number(item.createdAt)).toISOString()
+ }));
+ const manifest={
+  dataset:'LeaX owner work feedback',schemaVersion:'leax-owner-work-feedback/v1',generatedAt:new Date().toISOString(),
+  purpose:'Preference labels for LeaX permitted-work recipe ranking.',
+  learningMethod:METHOD,isGeneralLanguageModelFineTuningData:false,
+  exampleCount:active.length,excludedFeedbackCount:all.length-active.length,
+  privacy:'Contains owner-written feedback reasons and saved receipt identifiers only. It does not export stored credentials, message bodies, prompts, generated answers or source documents. Owner-written reason text is included and may contain details you typed; review it before uploading elsewhere.',
+  examples:format==='json'?active:undefined
+ };
+ if(format==='json')return JSON.stringify(manifest,null,2)+'\n';
+ if(format==='jsonl')return [JSON.stringify({recordType:'manifest',...manifest}),...active.map(example=>JSON.stringify({recordType:'feedback',...example}))].join('\n')+'\n';
+ const fields=['schemaVersion','id','receiptType','savedReceiptId','agent','recipe','relatedRecipes','rating','weight','ownerReason','source','createdAt'];
+ return [fields.map(csvCell).join(','),...active.map(example=>fields.map(field=>csvCell(field==='relatedRecipes'?JSON.stringify(example.relatedRecipes):example[field])).join(','))].join('\r\n')+'\r\n';
+}
