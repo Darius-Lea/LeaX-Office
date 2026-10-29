@@ -24,7 +24,7 @@ function identityTokens(name:string){return [...new Set(companyKey(name).split('
 function identityMatches(text:string,name:string){const words=identityTokens(name),hay=' '+companyKey(text)+' ';return words.length>0&&words.every(word=>hay.includes(' '+word+' '));}
 function decode(value:string){return value.replace(/&amp;/gi,'&').replace(/&quot;/gi,'"').replace(/&#39;|&apos;/gi,"'").replace(/&nbsp;/gi,' ').replace(/&#(x[0-9a-f]+|\d+);?/gi,(_,number)=>{const value=Number.parseInt(number.replace(/^x/i,''),/^x/i.test(number)?16:10);return value>0&&value<=0x10ffff?String.fromCodePoint(value):' ';});}
 function visible(html:string){return decode(html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,' ').replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi,' ').replace(/<[^>]*>/g,' ')).replace(/\s+/g,' ').trim();}
-function links(html:string,base:string){const result:{url:string;title:string}[]=[];for(const match of html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,' ').matchAll(/<a\b([^>]*?)>([\s\S]*?)<\/a>/gi)){const href=match[1].match(/\bhref\s*=\s*(?:"([^"]*)"|'([^']*)')/i);if(!href)continue;try{const url=new URL(decode(href[1]??href[2]),base);url.hash='';validatePublicUrl(url.href);result.push({url:url.href,title:visible(match[2]).slice(0,180)});}catch{}}return result.slice(0,200);}
+function links(html:string,base:string){const result:{url:string;title:string}[]=[];for(const match of html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,' ').matchAll(/<a\b([^>]*?)>([\s\S]*?)<\/a>/gi)){const href=match[1].match(/\bhref\s*=\s*(?:"([^"]*)"|'([^']*)')/i);if(!href)continue;try{const url=new URL(decode(href[1]??href[2]),base);url.hash='';validatePublicUrl(url.href);result.push({url:url.href,title:visible(match[2]).slice(0,180)});}catch{}}return result;}
 function searchCandidates(html:string,company:string,searchUrl:string){
  const result:Candidate[]=[],seen=new Set<string>(),words=identityTokens(company);
  for(const link of links(html,searchUrl)){
@@ -36,7 +36,6 @@ function searchCandidates(html:string,company:string,searchUrl:string){
    const hay=' '+companyKey(link.title+' '+host)+' ',matchedNameTerms=words.filter(word=>hay.includes(' '+word+' ')).length;
    if(!words.length||matchedNameTerms<Math.min(2,words.length))continue;
    seen.add(target.origin);result.push({url:target.href,title:link.title,sourceUrl:searchUrl,matchedNameTerms,totalNameTerms:words.length});
-   if(result.length===5)break;
   }catch{}
  }
  return result;
@@ -44,13 +43,28 @@ function searchCandidates(html:string,company:string,searchUrl:string){
 function rankCandidates(items:Candidate[]){
  const best=new Map<string,Candidate>();
  for(const item of items){const origin=new URL(item.url).origin,prior=best.get(origin);if(!prior||item.matchedNameTerms/item.totalNameTerms>prior.matchedNameTerms/prior.totalNameTerms)best.set(origin,item);}
- return [...best.values()].sort((a,b)=>b.matchedNameTerms/b.totalNameTerms-a.matchedNameTerms/a.totalNameTerms||Number(/official|corporate|company/i.test(b.title))-Number(/official|corporate|company/i.test(a.title))).slice(0,5);
+ return [...best.values()].sort((a,b)=>b.matchedNameTerms/b.totalNameTerms-a.matchedNameTerms/a.totalNameTerms||Number(/official|corporate|company/i.test(b.title))-Number(/official|corporate|company/i.test(a.title)));
+}
+function leadSearchQueries(company:string){
+ const name=company.replace(/["']/g,' ').replace(/\s+/g,' ').trim().slice(0,180);
+ return ['"'+name+'" official website','"'+name+'" company website','"'+name+'" contact','"'+name+'" phone','"'+name+'" email','"'+name+'" business address','"'+name+'" vendor supplier','"'+name+'" procurement subcontractor','"'+name+'" partner services','"'+name+'" company profile'];
+}
+function nextSearchPage(html:string,base:string){
+ const source=new URL(base),query=source.searchParams.get('q'),currentOffset=Number(source.searchParams.get('s')||0),origin=new URL(SEARCH_ORIGIN).origin;
+ for(const link of links(html,base)){
+  try{
+   const next=validatePublicUrl(link.url),offset=Number(next.searchParams.get('s')||0);
+   if(next.origin!==origin||next.pathname!=='/html/'||next.searchParams.get('q')!==query||offset<=currentOffset)continue;
+   return next.href;
+  }catch{}
+ }
+ return null;
 }
 function leadSearchQueries(company:string){
  const name=company.replace(/["']/g,' ').replace(/\s+/g,' ').trim().slice(0,180);
  return ['"'+name+'" official website','"'+name+'" vendor supplier contact','"'+name+'" phone contact'];
 }
-function contactLinks(html:string,base:string){const origin=new URL(base).origin,seen=new Set([base]);return links(html,base).filter(link=>{if(new URL(link.url).origin!==origin||seen.has(link.url)||new URL(link.url).search||/\.(pdf|docx?|xlsx?|zip|exe|jpg|png|svg|gif)$/i.test(new URL(link.url).pathname)||!/contact|vendor|supplier|subcontract|procurement|partner/i.test(link.title+' '+new URL(link.url).pathname))return false;seen.add(link.url);return true;}).sort((a,b)=>Number(/vendor|supplier|subcontract|procurement/i.test(b.title+' '+b.url))-Number(/vendor|supplier|subcontract|procurement/i.test(a.title+' '+a.url))).slice(0,2);}
+function contactLinks(html:string,base:string){const origin=new URL(base).origin,seen=new Set([base]);return links(html,base).filter(link=>{if(new URL(link.url).origin!==origin||seen.has(link.url)||new URL(link.url).search||/\.(pdf|docx?|xlsx?|zip|exe|jpg|png|svg|gif)$/i.test(new URL(link.url).pathname)||!/contact|vendor|supplier|subcontract|procurement|partner/i.test(link.title+' '+new URL(link.url).pathname))return false;seen.add(link.url);return true;}).sort((a,b)=>Number(/vendor|supplier|subcontract|procurement/i.test(b.title+' '+b.url))-Number(/vendor|supplier|subcontract|procurement/i.test(a.title+' '+a.url)));}
 function observedSignals(html:string,sourceUrl:string):Signal[]{const result:Signal[]=[];for(const match of html.matchAll(/<(?:p|h[1-4]|li)\b[^>]*>([\s\S]*?)<\/(?:p|h[1-4]|li)>/gi)){const quote=visible(match[1]);if(quote.length<25||!/vendor|supplier|subcontract|procurement|partner|cabling|network|installation|construction|service area|nationwide|service coverage/i.test(quote))continue;result.push({title:/vendor|supplier|subcontract|procurement|partner/i.test(quote)?'Published partner information':/service area|nationwide|service coverage/i.test(quote)?'Published coverage information':'Published service information',quote:quote.slice(0,260),sourceUrl});if(result.length===2)break;}return result;}
 function observedLocation(html:string,sourceUrl:string,company:string):Location|null{
  for(const match of html.matchAll(/<script\b[^>]*type\s*=\s*["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)){if(match[1].length>64000)continue;try{const nodes:any[]=[JSON.parse(match[1])];let checked=0;while(nodes.length&&checked++<30){const node=nodes.shift();if(Array.isArray(node)){nodes.push(...node.slice(0,10));continue;}if(!node||typeof node!=='object')continue;if(Array.isArray(node['@graph']))nodes.push(...node['@graph'].slice(0,10));const types=Array.isArray(node['@type'])?node['@type']:[node['@type']];if(!types.some((type:any)=>typeof type==='string'&&/^(?:Organization|Corporation|LocalBusiness|ProfessionalService|GeneralContractor|Electrician|HomeAndConstructionBusiness)$/.test(type)))continue;if(typeof node.name==='string'&&!identityMatches(node.name,company))continue;const address=node.address;if(!address||typeof address!=='object'||Array.isArray(address))continue;const pieces=['streetAddress','addressLocality','addressRegion','postalCode','addressCountry'].map(key=>address[key]).filter(value=>typeof value==='string'&&value.trim()&&value.length<=160);if(pieces.length>=2)return {value:pieces.join(', '),sourceUrl};}}catch{}}
@@ -92,14 +106,18 @@ export async function processLeadResearch(transport:ContactTransport=publicReque
  try{
   let homepage:Awaited<ReturnType<typeof readPublicPage>>|null=null;
   if(!website){
-   const searchUrls=leadSearchQueries(current.company).map(query=>SEARCH_ORIGIN+'/html/?q='+encodeURIComponent(query)),discovered:Candidate[]=[],searchErrors:string[]=[];
-   for(let index=0;index<searchUrls.length;index++){
-    db.prepare('UPDATE lead_research SET message=? WHERE record_id=?').run('Searching public company sources · query '+(index+1)+' of '+searchUrls.length+'.',current.recordId);
-    try{const search=await read(searchUrls[index],'search');discovered.push(...searchCandidates(search.html,current.company,search.url));}catch(error){searchErrors.push(String(error));}
-   }
+    const searchQueue=leadSearchQueries(current.company).map(query=>SEARCH_ORIGIN+'/html/?q='+encodeURIComponent(query)),visitedSearchPages=new Set<string>(),discovered:Candidate[]=[],searchErrors:string[]=[];
+    while(searchQueue.length){
+     const searchUrl=searchQueue.shift()!;if(visitedSearchPages.has(searchUrl))continue;visitedSearchPages.add(searchUrl);
+     db.prepare('UPDATE lead_research SET message=? WHERE record_id=?').run('Searching public company sources · page '+visitedSearchPages.size+'; '+searchQueue.length+' more search pages queued.',current.recordId);
+     try{
+      const search=await read(searchUrl,'search');discovered.push(...searchCandidates(search.html,current.company,search.url));
+      const next=nextSearchPage(search.html,search.url);if(next&&!visitedSearchPages.has(next)&&!searchQueue.includes(next))searchQueue.push(next);
+     }catch(error){searchErrors.push(String(error));}
+    }
    candidates=rankCandidates(discovered);
    if(!candidates.length){
-    const blocked=searchErrors.length===searchUrls.length;
+    const blocked=searchErrors.length===visitedSearchPages.size;
     finish(blocked?'Blocked':'Needs website',blocked?'Public web search could not be reached. Your lead is saved; retry the search later.':'No likely company website appeared in the public search results. You can add the official website if you know it; no contact details were guessed.',searchErrors.length?searchErrors.join(' | ').slice(0,1000):null);
     return true;
    }
@@ -107,7 +125,7 @@ export async function processLeadResearch(transport:ContactTransport=publicReque
    for(let index=0;index<candidates.length;index++){
     const candidate=candidates[index];website=candidate.url;
     db.prepare('UPDATE lead_research SET message=? WHERE record_id=?').run('Checking candidate '+(index+1)+' of '+candidates.length+' against the company name.',current.recordId);
-    try{const page=await read(candidate.url,'website');readable++;if(current.identityConfirmed||identityMatches(visible(page.html),current.company)){homepage=page;break;}}
+    try{const page=await read(candidate.url,'website');readable++;if(!homepage&&(current.identityConfirmed||identityMatches(visible(page.html),current.company)))homepage=page;}
     catch(error){lastError=String(error);}
    }
    if(!homepage){

@@ -58,7 +58,7 @@ function openLeadBrief(note){
  const research=brief.research||{},pending=['Queued','Running'].includes(research.status);if(research.status&&!['Not started','Completed'].includes(research.status)){const line=text('p',research.status+(research.message?' · '+research.message:''));line.className='lead-research-status';body.append(line);}
  if(Array.isArray(research.candidates)&&research.candidates.length&&!research.identityConfirmed){
   const sources=document.createElement('section');sources.className='lead-candidates';sources.append(text('h3','Suggested company websites'),text('p','Search found possible matches. Check a site belongs to this company before using its contact details.'));
-  for(const candidate of research.candidates.slice(0,5)){
+  for(const candidate of research.candidates){
    const card=document.createElement('article'),heading=text('strong',candidate.title||candidate.url);card.append(heading);
    const matched=Number(candidate.matchedNameTerms),total=Number(candidate.totalNameTerms),match=text('small',matched>0&&total>0?'Search title or domain matches '+matched+' of '+total+' company-name terms.':'Public search result; identity is not confirmed.');card.append(match);
    const site=publicLink('Open company website',candidate.url);if(site)card.append(site);

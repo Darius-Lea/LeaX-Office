@@ -160,3 +160,10 @@ No seller/payout accounts, marketplace publishing, automatic fulfillment/shippin
 Lead contact research now starts from a saved company without requiring the user to supply a website. It compares three public search queries, ranks and checks up to five candidate sites, continues past inaccessible or mismatched candidates, and shows site/search source links with company-name match evidence in the lead brief. An uncertain site remains unconfirmed until the CEO checks it. Contact results still come only from checked public company pages; no contact details, decision-maker role, current demand, outreach, sales or mining income are invented.
 
 Validation: `npm run build:app` completed with 37 production files and `git diff --check` passed. Automated tests were not run in this turn. Live Render company discovery and the Windows installer build are not yet verified.
+
+
+## Preview.20 — expanded public lead discovery
+
+Removed the fixed five-candidate, three-query, 200-link and two-contact-page limits from public company research. It now follows the public search provider's next-result links for ten targeted company queries, checks every matching candidate domain it finds, reads all matching contact/vendor pages on a company site, and shows every candidate in the lead brief. Existing HTTPS, public-address, robots-policy, source-attribution and company-identity confirmation safeguards remain in place. Coverage is limited to pages available in the public search index; the app cannot exhaustively scan every website on the internet.
+
+Validation: production app build completed with 37 files; `git diff --check` passed. Automated tests were not run in this turn. Live public-index behavior and Render deployment are not independently verified.
