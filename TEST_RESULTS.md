@@ -1,3 +1,7 @@
+## Preview.18 — resilient work continuity, 2026-10-28
+
+`npm run build:app` passed and built 37 production files. No automated test suite was run for this increment. The release notes and source changes are prepared for a GitHub PR; deployed Render state and the Windows installer have not yet been checked.
+
 ## Preview.15 — store access and approval checkpoint, 2026-10-27
 
 The Distribution Center assembly line opens Store connections. Users without an account can open the existing in-app store workspace, save their store project and use its official provider signup link. A saved store URL is explicitly a manual handoff, not a verified API connection. New setup-guide progress APIs are implemented; a separate step-by-step guide frontend is not part of this release.

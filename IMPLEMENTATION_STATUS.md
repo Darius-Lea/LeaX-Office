@@ -1,3 +1,11 @@
+## Preview.18 — resilient work continuity, 2026-10-28
+
+Transient failures in the built-in historical-award worker now requeue the same saved task from its last checkpoint after bounded exponential backoff, up to three worker claims. Manager scheduling reports the retry time and does not count an ineligible Einstein handoff as work that blocks the next permitted source cycle. Contact research and internal handoffs remain separate from award-source retries.
+
+Internal employee handoff failures now save the error, attempt count and next retry on that specific row. Other eligible reports continue while one report waits. The queue retries an internal failure twice after the first attempt; after three total attempts the saved error is exposed in Live Operations with a manual retry action. Live Operations now shows each employee’s saved action, why it is waiting and a scheduled time where one exists. CEO approvals link to the exact draft or company-site check. No email is sent automatically.
+
+Validation: `npm run build:app` succeeded on Node 24.19 with 37 production files. Automated test suites were not run for this increment. This does not guarantee continuous work when the host is stopped/asleep, the office is clocked out, an external source is unavailable, or required owner action is pending. No live owner database, external account, or Windows installation was exercised. Preview.18 is source-built; deployment and the Windows package are pending publication.
+
 ## Preview.17 — guided live federal lead search, 2026-10-28
 
 Added a separate guided search for current SAM.gov public notices. The Research panel now covers every major NAICS sector, nationwide/state/territory scope, optional 2–6 digit NAICS refinement, open solicitations, sources sought/pre-solicitations, all current notice types, and custom federal title phrases. The four-position effort slider requests one, two, four or up to six distinct searches sequentially, with a visible approximate duration and the actual query count in the result status. Each query is limited to 25 returned notices and the results are deduplicated by SAM notice ID. The existing USAspending workflow remains separately labeled as historical award and possible partner research.

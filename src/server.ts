@@ -242,6 +242,12 @@ const server=createServer(async(req,res)=>{
  if(!changed.changes)return send(409,{error:'Only blocked tasks can be retried'});
  audit(body.id,'Founder retried blocked task from saved checkpoint');
  return send(200,{ok:true});}
+ if(req.method==='POST'&&url.pathname==='/api/team/retry'){
+ if(typeof body.task!=='string'||!['Juliet','Hotel','Delta','Einstein'].includes(body.agent))return send(400,{error:'Choose a saved follow-up and its employee'});
+ const changed=db.prepare("UPDATE team_jobs SET status='Queued',error=NULL,attempts=0,next_retry=0 WHERE task=? AND agent=? AND status='Blocked'").run(body.task,body.agent);
+ if(!changed.changes)return send(409,{error:'This follow-up is no longer waiting for a manual retry'});
+ audit(body.task,'Founder asked '+body.agent+' to retry the saved internal follow-up');return send(200,{ok:true});
+ }
  if(req.method==='POST'&&url.pathname==='/api/backup'){const path=join(directory,'backup-'+Date.now()+'.sqlite');await backup(db,path);return send(200,{saved:path});}
  if(req.method==='POST'&&url.pathname==='/api/logout'){db.prepare('DELETE FROM sessions WHERE token=?').run(token);return send(200,{ok:true});}
  send(404,{error:'Not found'});

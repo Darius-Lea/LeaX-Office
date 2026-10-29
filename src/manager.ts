@@ -67,7 +67,8 @@ export function managerPatrol(now=Date.now()):ManagerStatus{
      issues.push({type:'missing_output',task:task.id,agent,message:'Completed stage had no saved report; stage requeued to produce its output'});
      audit(task.id,'Johnson requeued '+agent+' because its completed stage had no saved report');
     }else if(job.status==='Blocked'||job.status==='Failed'){
-     issues.push({type:'followup_blocked',task:task.id,agent,message:'Internal follow-up requires review; no retry forced'});
+     const failed=db.prepare('SELECT attempts,next_retry FROM team_jobs WHERE task=? AND agent=?').get(task.id,agent) as any;
+     if(Number(failed?.attempts)>=3||!Number(failed?.next_retry))issues.push({type:'followup_blocked',task:task.id,agent,message:'Internal follow-up stopped after its automatic retry limit. Saved evidence is retained; retry this handoff from Live Operations after reviewing the saved error.'});
     }
    }
   }
