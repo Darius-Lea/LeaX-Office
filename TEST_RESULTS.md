@@ -180,3 +180,10 @@ Remaining checks: actual owner Windows setup/import/DPAPI/shortcuts/rollback, ta
 Actual source-app Chromium checks passed: two authenticated sessions exchanged synthetic camera/audio media, received inbound RTP, displayed 640x480 remote video through the first-person wall texture, preserved mobile bounds, muted, left, restored the orbit camera and cleared a departed peer. Desktop/mobile screenshots were inspected. A separate integrated check used the actual CSP to save niche preferences, prepare three real SVG draft files, display an authenticated same-origin image, block unreviewed export, preserve zero receipts, open/cancel drive and jet interfaces, open first-person AI controls without the computer modal, reject absent inference without saving a fake turn, exclude concurrent human/AI presentations, and restore the prior clerical view. No real customer media, owner database, provider connection, sale, payout or message was used.
 
 Actual local model ports were unavailable. Paired inference tests use explicit synthetic protocol fixtures, not a live model claim. Owner-specific installation, model quality, marketplace accounts, production pairing and cross-network media remain environment checks. Production bundle and rebuilt installer validation are recorded in WEB_DESKTOP_AUDIT.md.
+
+
+## Preview.19 — company lead discovery
+
+Lead contact research now starts from a saved company without requiring the user to supply a website. It compares three public search queries, ranks and checks up to five candidate sites, continues past inaccessible or mismatched candidates, and shows site/search source links with company-name match evidence in the lead brief. An uncertain site remains unconfirmed until the CEO checks it. Contact results still come only from checked public company pages; no contact details, decision-maker role, current demand, outreach, sales or mining income are invented.
+
+Validation: `npm run build:app` completed with 37 production files and `git diff --check` passed. Automated tests were not run in this turn. Live Render company discovery and the Windows installer build are not yet verified.

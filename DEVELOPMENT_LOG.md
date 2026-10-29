@@ -135,3 +135,10 @@ Validation:158 automated Node tests passed, zero failed/skipped, on pinned Windo
 Next work: verified in-session desktop updates with background download choice, an actual isolated browser engine, current marketplace evidence, exact-file quality feedback and approved template variations. The newly supplied universal-hub architecture is reference for this continuation, not evidence that every listed provider is already connected. Existing official updates still require opening the setup executable. No untraceable/unhackable browser, unattended all-platform operation or guaranteed income is claimed.
 
 Windows x64 setup:12,027,904 bytes;37 matching embedded production files; SHA-256 `88625f46ca10e03413dfe299b357e9e568db87014a7240318040389a76e7240a`. The installer remains unsigned; no owner-device installation was performed.
+
+
+## Preview.19 — company lead discovery
+
+Lead contact research now starts from a saved company without requiring the user to supply a website. It compares three public search queries, ranks and checks up to five candidate sites, continues past inaccessible or mismatched candidates, and shows site/search source links with company-name match evidence in the lead brief. An uncertain site remains unconfirmed until the CEO checks it. Contact results still come only from checked public company pages; no contact details, decision-maker role, current demand, outreach, sales or mining income are invented.
+
+Validation: `npm run build:app` completed with 37 production files and `git diff --check` passed. Automated tests were not run in this turn. Live Render company discovery and the Windows installer build are not yet verified.

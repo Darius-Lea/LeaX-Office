@@ -153,3 +153,10 @@ Sales/Marketing now store source observations, product/listing/content drafts, o
 Saved AI meetings accept one to three actual employees and retain only completed inference output. An explicitly enabled, verified paired desktop can process web/mobile AI requests using its installed local model. Leases, device revocation, stale-job recovery and stop-sharing cancellation are enforced. No paid model API is enabled. A read-only local Monero-node status check reports hashing separately from earnings. This release installs no miner and starts no mining. Mining-control implementation was rejected by automatic approval review because its required approval is unavailable in this session.
 
 No seller/payout accounts, marketplace publishing, automatic fulfillment/shipping, unrestricted external outreach, live sales-rank connector, real model installation, or guaranteed income was created. The user reports no mining hardware or seller accounts. Always-on work requires an awake running host; free hosting is not a 24/7 guarantee. The executable is unsigned; customer-owned files cannot be made uneditable or unhackable.
+
+
+## Preview.19 — company lead discovery
+
+Lead contact research now starts from a saved company without requiring the user to supply a website. It compares three public search queries, ranks and checks up to five candidate sites, continues past inaccessible or mismatched candidates, and shows site/search source links with company-name match evidence in the lead brief. An uncertain site remains unconfirmed until the CEO checks it. Contact results still come only from checked public company pages; no contact details, decision-maker role, current demand, outreach, sales or mining income are invented.
+
+Validation: `npm run build:app` completed with 37 production files and `git diff --check` passed. Automated tests were not run in this turn. Live Render company discovery and the Windows installer build are not yet verified.

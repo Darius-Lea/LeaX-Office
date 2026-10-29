@@ -226,3 +226,10 @@ body[data-camera=explore] #distribution-view-controls{top:80px}
 
 .operations-employee-detail,.operations-employee-next{display:block;font-size:8px;line-height:1.5;margin-top:4px;color:#91aa99;white-space:normal}.operations-employee-detail{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}.operations-employee-next{color:#c6b884}
 .operations-owner-action{display:block;font-size:8px;line-height:1.5;margin-top:4px;color:#efc878;font-weight:700;letter-spacing:.04em}
+
+.lead-candidates{margin:14px 0;padding:14px;border:1px solid rgba(80,168,145,.35);border-radius:12px;background:rgba(23,58,58,.3)}
+.lead-candidates>p{margin:6px 0 12px;color:var(--muted);font-size:13px}
+.lead-candidates article{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;align-items:center;padding:10px 0;border-top:1px solid rgba(255,255,255,.08)}
+.lead-candidates article small{grid-column:1/-1;color:var(--muted)}
+.lead-candidates article a{font-size:12px}
+.lead-candidates article button{grid-column:1/-1;justify-self:start}
