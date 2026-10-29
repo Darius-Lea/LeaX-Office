@@ -1,3 +1,17 @@
+Deployment boundary for preview.21: the public Render version request was rejected by this environment's HTTPS CONNECT proxy with403. This does not establish Render deployment success or failure. Git push and package verification are separate evidence.
+
+## Preview.21 — technology rollout research, 2026-10-29
+
+Node 24.19.0 Linux: `npm test` executed 167 tests: **164 passed, 3 failed, 0 skipped/cancelled**. All nine new rollout/backend HTTP tests passed. The three failures are the same independently reproduced baseline discrepancies in `lead-research.test.ts` (page receipts 4 vs 3 and discovery requests 10 vs 1) and `operations.test.ts` (Retry scheduled vs Waiting on a tool); those files/source were unchanged. Full run log in the development machine: `/workspace/leax-preview21-test.log`.
+
+New tests verify actual-page provenance instead of snippets, publication uncertainty, bounded candidate/contact requests, responsibility excerpts without inferred contact authority, blocked/partial outcomes, persisted cooldown and overlap protection, clock-out/pause, stale lease recovery, duplicate refresh history, preserved >60-source storage and rejection of hidden script/template/comment evidence. Isolated HTTP test verifies founder auth, origin protection, validation before fetching and preference persistence across server restart.
+
+Source and standalone-production Chromium rollout checks passed with isolated synthetic offices/provider responses: actual founder authentication, source/contact/responsibility display, malicious text and unsafe-link rejection, typed form/focus preservation during rendering, settings/manual URL actions, cooldown controls, CSP and mobile document/computer-content bounds. Desktop/mobile screenshots were inspected. Reproduce with `HQ_PLAYWRIGHT_MODULE=file:///workspace/.tools/browser/node_modules/playwright/index.mjs HQ_CHROME_PATH=/usr/bin/chromium node scripts/qa/rollouts-browser-check.mjs`, plus `HQ_TEST_PACKAGED=1` for the production bundle. These fixtures do not establish live provider access, current jobs or a verified hiring person.
+
+A real default-transport public search attempt returned `getaddrinfo EAI_AGAIN html.duckduckgo.com`, status Blocked, zero leads. No robots/TLS/DNS safety was bypassed. Hosted Render search and a keyed/current external integration were not validated.
+
+`npm run build:app` passed with **38 production files**. Verified official Go1.24.13 installed outside the repository; `go test ./...` passed in installer/. Final `scripts/build-native-installer.py` cross-build and `scripts/verify-installer.py` passed with preview.21: **38 matching embedded files**, **11,156,992 bytes**, SHA-256 `023a9f7069fec3fcea2763e45844ff1bfc4413d76f9ce4b9a7cdc5fda6ffa55e`. It remains unsigned and was not executed on Windows. Final HTML-only copy clarification was included by rebuilding and reverifying the package. No new credentials, owner data, seller account, outgoing message, binding bid or revenue were used.
+
 ## Preview.18 — resilient work continuity, 2026-10-28
 
 `npm run build:app` passed and built 37 production files. No automated test suite was run for this increment. Production Render `/api/version` reports 0.2.0-preview.18. GitHub Actions run #14 succeeded and published the 37-file Windows x64 setup (11,147,776 bytes; SHA-256 `e58dd95ddf672125ebcd87095268dfe8e411143ada98b4d29b4ef545d1672513`). The installer is unsigned; no owner-device installation was performed.

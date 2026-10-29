@@ -1,3 +1,13 @@
+Deployment boundary for preview.21: the public Render version request was rejected by this environment's HTTPS CONNECT proxy with403. This does not establish Render deployment success or failure. Git push and package verification are separate evidence.
+
+## Preview.21 — technology rollout research, 2026-10-29
+
+The Research workspace now starts with separate public technology-rollout and installation-partner research: retail, restaurants, nursing homes/healthcare, new builds/upgrades, partner programs and awarded contractors. It stores checked source excerpts, publication dates when stated, actual public contact listings, procurement links and published responsibility/contract-holder excerpts. No company, decision-maker, current demand, open job or contracting authority is inferred from a keyword or mailbox. The public-source worker is separate from federal-award evidence and does not insert private announcements as USAspending awards.
+
+Automatic checks rotate lanes while the office is clocked in, with a persistent six-hour source cooldown, bounded reads, restart recovery, pause/clock-out checks and failure backoff. Manual URL inspection uses the same safe reader and source budget. Earlier sources are retained; full raw pages are not saved. Search is limited by provider access and source availability; it cannot establish complete internet coverage. No bid or message is sent.
+
+The owner's delivery order and remaining integrations are recorded in DELIVERY_PRIORITIES.md. Next priority is reviewed bid preparation and temporary bid-file review, followed by supported provider connections. These later steps are not implemented by this research increment. See TEST_RESULTS.md for actual validation and deployment evidence.
+
 ## Preview.15 — store access and approval checkpoint, 2026-10-27
 
 The Distribution Center assembly line opens Store connections. Users without an account can open the existing in-app store workspace, save their store project and use its official provider signup link. A saved store URL is explicitly a manual handoff, not a verified API connection. New setup-guide progress APIs are implemented; a separate step-by-step guide frontend is not part of this release.

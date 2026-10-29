@@ -1,3 +1,4 @@
+import {initRollouts,renderRollouts} from '/rollouts.js';
 import {initApprovalAttention,renderApprovalAttention} from '/approval-attention.js';
 import {initStoreConnections,renderStoreConnections} from '/store-connections.js';
 import {initDistribution,renderDistribution} from '/distribution.js';
@@ -279,7 +280,7 @@ document.addEventListener('pointerdown',event=>{if(!event.target.closest('#notif
 
 // Owner decisions and reported business results stay inside the desktop.
 const money=cents=>cents===null?'Not calculated':new Intl.NumberFormat(undefined,{style:'currency',currency:'USD'}).format(Number(cents||0)/100);
-function renderDesktopFeatures(s){renderApprovalAttention(s);renderStoreConnections(s);renderUpdates(s);renderLocalEngines(s);renderStores(s);renderDistribution(s);renderMining(s);renderCampus(s);renderCommerce(s);renderAIMeetings(s);renderSync(s);renderMail(s);renderBusiness(s);renderDeals(s);renderHistory(s.history);renderAccountability(s.accountability);renderOutcomes(s.outcomes);renderFunding(s.funding);renderBusinessProfile(s.businessProfile);const needsAccess=!s.solicitations?.keyConfigured||s.solicitations?.status==='Blocked';$('#source-access-card').hidden=!needsAccess;$('#source-access-card h3').textContent=s.solicitations?.keyConfigured?'Current federal access needs a check':'One private access step is needed';$('#source-access-card p:not(.eyebrow)').textContent=s.solicitations?.keyConfigured?'Your key is saved. Review Connections and check access before relying on current notices. Historical research and local AI can continue.':'Get your free SAM.gov key, then enter it here in Connections. We’ll show you how. Historical research and local AI can work without it.';}
+function renderDesktopFeatures(s){renderRollouts(s);renderApprovalAttention(s);renderStoreConnections(s);renderUpdates(s);renderLocalEngines(s);renderStores(s);renderDistribution(s);renderMining(s);renderCampus(s);renderCommerce(s);renderAIMeetings(s);renderSync(s);renderMail(s);renderBusiness(s);renderDeals(s);renderHistory(s.history);renderAccountability(s.accountability);renderOutcomes(s.outcomes);renderFunding(s.funding);renderBusinessProfile(s.businessProfile);const needsAccess=!s.solicitations?.keyConfigured||s.solicitations?.status==='Blocked';$('#source-access-card').hidden=!needsAccess;$('#source-access-card h3').textContent=s.solicitations?.keyConfigured?'Current federal access needs a check':'One private access step is needed';$('#source-access-card p:not(.eyebrow)').textContent=s.solicitations?.keyConfigured?'Your key is saved. Review Connections and check access before relying on current notices. Historical research and local AI can continue.':'Get your free SAM.gov key, then enter it here in Connections. We’ll show you how. Historical research and local AI can work without it.';}
 function renderAccountability(state){
  const incidents=state?.openIncidents||[];$('#patrol-alerts').hidden=!incidents.length;
  if(!$('#patrol-incidents').contains(document.activeElement))$('#patrol-incidents').replaceChildren(...incidents.map(incident=>{
@@ -417,6 +418,7 @@ for(const [kind,prefix]of [['recordPage','record'],['taskPage','task']])for(cons
 let historySearchTimer;for(const input of document.querySelectorAll('[data-history-query]'))input.oninput=()=>{clearTimeout(historySearchTimer);const value=input.value;for(const other of document.querySelectorAll('[data-history-query]'))if(other!==input)other.value=value;historySearchTimer=setTimeout(()=>{historyView.historyQuery=value.trim().slice(0,200);historyView.recordPage=0;historyView.taskPage=0;void refresh();},300);};
 $('#business-profile-form').onsubmit=async event=>{event.preventDefault();const button=event.target.querySelector('button');button.disabled=true;try{await api('business/profile',Object.fromEntries(new FormData(event.target)));await refresh();$('#message').textContent='Business profile saved. Review the prepared documents before sharing them.';}catch(e){$('#message').textContent=e.message;}finally{button.disabled=false}};
 
+initRollouts({api,refresh});
 initBusiness({api,refresh,openComputer});
 
 initMail({api,refresh,openComputer});

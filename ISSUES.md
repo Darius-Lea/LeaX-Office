@@ -1,3 +1,11 @@
+## Preview.21 remaining gates — 2026-10-29
+
+The new bounded rollout research implementation and source-linked UI are separate from existing federal awards. A live default-transport probe in this cloud returned `getaddrinfo EAI_AGAIN html.duckduckgo.com`; no real rollout lead or verified hiring contact was collected. The shared public reader uses DNS-pinned HTTPS and cannot assume this proxy-only cloud supplies direct DNS/network access. Do not weaken TLS, robots or private-address controls to conceal that limitation. Hosted public search on Render remains unverified.
+
+Baseline suite discrepancies reproduce before this increment: two assertions in lead-research.test.ts assume older crawl counts, and operations.test.ts expects Waiting on a tool where existing source retry logic reports Retry scheduled. They are reported separately from the new rollout checks.
+
+Bid-file transient review, reviewed estimating and provider bid submission remain subsequent work. PlanHub/BuildingConnected and the other named work/seller platforms are not newly connected. See DELIVERY_PRIORITIES.md.
+
 ## Active continuation — 2026-10-27
 
 Preview.15 adds authenticated manual links and a tested WooCommerce digital-listing publisher; no owner store account is connected. It requires an already hosted exact approved file and does not implement marketplace file upload, Etsy/Amazon/eBay API publishing or an autonomous publishing worker. New guide progress APIs have no new guide frontend; existing store projects provide the in-app setup entry point. Browser and in-session update work are separate subsequent increments. Account verification, payout setup and provider approvals remain actual owner/provider steps. No live model, seller sale, shipment or mining payout is newly verified.

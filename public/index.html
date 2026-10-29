@@ -362,6 +362,22 @@
 </div>
 </section>
 <section data-file-folder="research" hidden>
+<section id="rollout-workspace" aria-labelledby="rollout-heading">
+<p class="eyebrow">INSTALLATION &amp; PARTNER DISCOVERY</p>
+<h2 id="rollout-heading">Technology rollouts &amp; installation partners</h2>
+<p>Find published rollouts, major upgrades, new builds and partner programs across retail chains, restaurants, nursing homes and healthcare. Follow the source to procurement, an installation partner route or the announced contract holder.</p>
+<form id="rollout-search" class="rollout-search">
+<label>Research lane<select id="rollout-lane" name="lane" required></select></label>
+<label>Optional public source URL<input id="rollout-source-url" name="url" type="url" maxlength="2048" pattern="https://.*" placeholder="https://company.example/news/rollout"><span class="fine-print">At the next available source window, inspect a public company announcement or vendor page directly instead of using the search index. No login pages or private bid files.</span></label>
+<button id="rollout-search-button" type="submit">Check rollout sources</button>
+</form>
+<label class="rollout-auto"><input id="rollout-enabled" type="checkbox"><span>Keep looking automatically while the office is clocked in</span></label>
+<p id="rollout-status" role="status" aria-live="polite">Loading saved rollout research…</p>
+<p id="rollout-timing" class="fine-print"></p>
+<p id="rollout-feedback" class="rollout-feedback" role="status" aria-live="polite"></p>
+<p class="fine-print">Source checks rotate through the research lanes and are normally at least six hours apart. Failures can delay the next check longer. Manual checks share this limit. Announcements and awarded contracts are leads to qualify; they do not establish open work, a verified hiring contact or permission to bid.</p>
+<div id="rollout-leads"></div>
+</section>
 <h2>Guided live federal lead search</h2>
 <p>Search current public SAM.gov notices across every major industry. Choose the kind of notice, narrow by state or NAICS, and set how many distinct searches to run. This source covers U.S. federal notices only; it does not search private job boards or guarantee a bid is suitable.</p>
 <form id="lead-search" class="grid">

@@ -15,6 +15,7 @@ import {queueTaskLeadResearch} from './lead-research.ts';
 import {planWork,runPlannedContactResearch,nextResearchAt} from './work-planner.ts';
 import {allTermsFor,termsFor} from './research.ts';
 import {syncDealCandidates} from './deals.ts';
+import {rolloutPulse} from './rollouts.ts';
 // Clock state persists across tab closure and process restarts. Explicit clock-out wins.
 let busy=false;
 export function requestManagerResearch(now=Date.now()){
@@ -29,6 +30,7 @@ export function requestManagerResearch(now=Date.now()){
 }
 export async function pulse(fetcher:typeof fetch=fetch){
  if(isPairedCopy()||setting('clock')!=='in')return false;
+ void rolloutPulse().catch(()=>console.error('Technology rollout research needs attention; inspect its saved source status'));
  // Continue contact work independently of the award fetch and model queues.
  // Backfill only the latest saved cycle, rather than replaying all old research.
  if(!setting('lead_briefing_bootstrap_v1')){
