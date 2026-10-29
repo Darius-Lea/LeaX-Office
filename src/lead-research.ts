@@ -36,7 +36,6 @@ function searchCandidates(html:string,company:string,searchUrl:string){
    const hay=' '+companyKey(link.title+' '+host)+' ',matchedNameTerms=words.filter(word=>hay.includes(' '+word+' ')).length;
    if(!words.length||matchedNameTerms<Math.min(2,words.length))continue;
    seen.add(target.origin);result.push({url:target.href,title:link.title,sourceUrl:searchUrl,matchedNameTerms,totalNameTerms:words.length});
-   
   }catch{}
  }
  return result;
