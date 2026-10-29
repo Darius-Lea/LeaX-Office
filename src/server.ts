@@ -20,7 +20,7 @@ import {dealState,dealDetail,createDeal,updateDeal,recordDealOutcome} from './de
 import {serveDatabaseExport} from './transfers.ts';
 import {serveWindowsDownload} from './download.ts';
 import {operationsState} from './operations.ts';
-import {learningState,recordWorkFeedback,collectLearningEvidence} from './learning.ts';
+import {learningState,recordWorkFeedback,collectLearningEvidence,learningDataset} from './learning.ts';
 import {planWork,workPlannerState} from './work-planner.ts';
 import {leadBriefing} from './briefings.ts';
 import {queueLeadResearch,processLeadResearch,leadResearchState} from './lead-research.ts';
@@ -158,6 +158,12 @@ const server=createServer(async(req,res)=>{
  if(req.method==='GET'&&url.pathname.startsWith('/api/stores/'))return send(200,storeProjectDetail(decodeURIComponent(url.pathname.slice('/api/stores/'.length))));
  if(req.method==='POST'&&url.pathname.startsWith('/api/commerce/')){const actions:Record<string,(v:any)=>any>={'products/save':saveProduct,'listings/save':saveListing,'campaigns/save':saveCampaign,'orders/save':saveOrder,'review':reviewCommerce,'orders/status':transitionOrder,'published':recordCommercePublication,'template':prepareCampaignTemplate,'orders/money':recordCommerceMoney,'preferences':saveCommercePreferences,'analytics/save':saveCommerceAnalytics,'designs/save':saveDesign};const action=url.pathname.slice('/api/commerce/'.length);if(action==='prepare')return send(200,commercePreparationPulse(Date.now(),true));if(actions[action])return send(200,actions[action](body));}
  if(req.method==='GET'&&url.pathname.startsWith('/api/commerce/')){const action=url.pathname.slice('/api/commerce/'.length);if(action.startsWith('preview/')){const design=commerceDetail(decodeURIComponent(action.slice(8)));if(design.kind!=='design')return send(404,{error:'Choose an original design'});res.writeHead(200,{'Content-Type':'image/svg+xml; charset=utf-8','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'none'; style-src 'none'; sandbox"});return res.end(design.svg);}if(action.startsWith('records/'))return send(200,commerceDetail(decodeURIComponent(action.slice(8))));if(action.startsWith('context/'))return send(200,commerceAIContext(decodeURIComponent(action.slice(8))));if(action.startsWith('export/'))return send(200,commerceExport(decodeURIComponent(action.slice(7))));}
+ if(req.method==='GET'&&url.pathname==='/api/learning/export'){
+  const format=url.searchParams.get('format')||'json';if(!['json','jsonl','csv'].includes(format))return send(400,{error:'Choose JSON, JSONL or CSV'});
+  const content=learningDataset(format as 'json'|'jsonl'|'csv'),suffix=format==='jsonl'?'jsonl':format;
+  res.setHeader('Content-Type',format==='csv'?'text/csv; charset=utf-8':'application/'+(format==='jsonl'?'x-ndjson':'json')+'; charset=utf-8');
+  res.setHeader('Content-Disposition','attachment; filename="leax-owner-work-feedback.'+suffix+'"');res.setHeader('Cache-Control','private, no-store');res.setHeader('X-Content-Type-Options','nosniff');res.end(content);return;
+ }
  if(req.method==='GET'&&url.pathname==='/api/learning/state')return send(200,learningState());
  if(req.method==='POST'&&url.pathname==='/api/backups/create')return send(201,await createManagedBackup());
  if(req.method==='POST'&&url.pathname==='/api/deals/create')return send(201,createDeal(body));

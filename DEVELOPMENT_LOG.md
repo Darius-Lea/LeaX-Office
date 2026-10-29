@@ -155,3 +155,14 @@ Validation: `npm run build:app` completed with 37 production files and `git diff
 Removed the fixed five-candidate, three-query, 200-link and two-contact-page limits from public company research. It now follows the public search provider's next-result links for ten targeted company queries, checks every matching candidate domain it finds, reads all matching contact/vendor pages on a company site, and shows every candidate in the lead brief. Existing HTTPS, public-address, robots-policy, source-attribution and company-identity confirmation safeguards remain in place. Coverage is limited to pages available in the public search index; the app cannot exhaustively scan every website on the internet.
 
 Validation: production app build completed with 37 files; `git diff --check` passed. Automated tests were not run in this turn. Live public-index behavior and Render deployment are not independently verified.
+
+
+## Preview.23 — Control Center Leaus
+
+Added a Control Center dashboard over the existing LeaX Office workspaces. It presents durable operations metrics, real employee statuses, saved work activity and links to the existing research, opportunity, email, store, production, model, meeting and results screens. The existing LeaX AI Browser remains under Automations. The interface identifies Control Center Leaus as a subsidiary of LeaX Technologies and explains that the current workspace still uses a single owner account.
+
+Added an AI Agents view with owner-action counts and a clear lead-search effort control synchronized to the existing SAM.gov notice slider. Added Learning & data with owner feedback actions and authenticated JSON, JSONL and CSV exports. The exports contain feedback labels and owner-written reason text, but not complete work receipts or source documents; they are not a general language-model fine-tuning corpus.
+
+The connector directory distinguishes current app capabilities from provider integrations that still require official APIs and account authorization. The blueprint’s static demo activity, simulated publishing, simulated failover, and simulated missed-deadline actions are not presented as real operations. Invitations and per-person roles remain unavailable because this version has a single-owner authentication model.
+
+Validation: source review only. Automated tests were not run. GitHub Actions installer build and Render deployment status are pending the release workflow.
