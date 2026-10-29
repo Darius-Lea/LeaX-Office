@@ -36,6 +36,7 @@ function searchCandidates(html:string,company:string,searchUrl:string){
    const hay=' '+companyKey(link.title+' '+host)+' ',matchedNameTerms=words.filter(word=>hay.includes(' '+word+' ')).length;
    if(!words.length||matchedNameTerms<Math.min(2,words.length))continue;
    seen.add(target.origin);result.push({url:target.href,title:link.title,sourceUrl:searchUrl,matchedNameTerms,totalNameTerms:words.length});
+
   }catch{}
  }
  return result;
@@ -59,10 +60,6 @@ function nextSearchPage(html:string,base:string){
   }catch{}
  }
  return null;
-}
-function leadSearchQueries(company:string){
- const name=company.replace(/["']/g,' ').replace(/\s+/g,' ').trim().slice(0,180);
- return ['"'+name+'" official website','"'+name+'" vendor supplier contact','"'+name+'" phone contact'];
 }
 function contactLinks(html:string,base:string){const origin=new URL(base).origin,seen=new Set([base]);return links(html,base).filter(link=>{if(new URL(link.url).origin!==origin||seen.has(link.url)||new URL(link.url).search||/\.(pdf|docx?|xlsx?|zip|exe|jpg|png|svg|gif)$/i.test(new URL(link.url).pathname)||!/contact|vendor|supplier|subcontract|procurement|partner/i.test(link.title+' '+new URL(link.url).pathname))return false;seen.add(link.url);return true;}).sort((a,b)=>Number(/vendor|supplier|subcontract|procurement/i.test(b.title+' '+b.url))-Number(/vendor|supplier|subcontract|procurement/i.test(a.title+' '+a.url)));}
 function observedSignals(html:string,sourceUrl:string):Signal[]{const result:Signal[]=[];for(const match of html.matchAll(/<(?:p|h[1-4]|li)\b[^>]*>([\s\S]*?)<\/(?:p|h[1-4]|li)>/gi)){const quote=visible(match[1]);if(quote.length<25||!/vendor|supplier|subcontract|procurement|partner|cabling|network|installation|construction|service area|nationwide|service coverage/i.test(quote))continue;result.push({title:/vendor|supplier|subcontract|procurement|partner/i.test(quote)?'Published partner information':/service area|nationwide|service coverage/i.test(quote)?'Published coverage information':'Published service information',quote:quote.slice(0,260),sourceUrl});if(result.length===2)break;}return result;}
@@ -106,7 +103,7 @@ export async function processLeadResearch(transport:ContactTransport=publicReque
  try{
   let homepage:Awaited<ReturnType<typeof readPublicPage>>|null=null;
   if(!website){
-    const searchQueue=leadSearchQueries(current.company).map(query=>SEARCH_ORIGIN+'/html/?q='+encodeURIComponent(query)),visitedSearchPages=new Set<string>(),discovered:Candidate[]=[],searchErrors:string[]=[];
+   const searchQueue=leadSearchQueries(current.company).map(query=>SEARCH_ORIGIN+'/html/?q='+encodeURIComponent(query)),visitedSearchPages=new Set<string>(),discovered:Candidate[]=[],searchErrors:string[]=[];
     while(searchQueue.length){
      const searchUrl=searchQueue.shift()!;if(visitedSearchPages.has(searchUrl))continue;visitedSearchPages.add(searchUrl);
      db.prepare('UPDATE lead_research SET message=? WHERE record_id=?').run('Searching public company sources · page '+visitedSearchPages.size+'; '+searchQueue.length+' more search pages queued.',current.recordId);
@@ -115,7 +112,7 @@ export async function processLeadResearch(transport:ContactTransport=publicReque
       const next=nextSearchPage(search.html,search.url);if(next&&!visitedSearchPages.has(next)&&!searchQueue.includes(next))searchQueue.push(next);
      }catch(error){searchErrors.push(String(error));}
     }
-   candidates=rankCandidates(discovered);
+    candidates=rankCandidates(discovered);
    if(!candidates.length){
     const blocked=searchErrors.length===visitedSearchPages.size;
     finish(blocked?'Blocked':'Needs website',blocked?'Public web search could not be reached. Your lead is saved; retry the search later.':'No likely company website appeared in the public search results. You can add the official website if you know it; no contact details were guessed.',searchErrors.length?searchErrors.join(' | ').slice(0,1000):null);
