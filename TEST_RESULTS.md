@@ -1,6 +1,6 @@
 ## Preview.18 — resilient work continuity, 2026-10-28
 
-`npm run build:app` passed and built 37 production files. No automated test suite was run for this increment. The release notes and source changes are prepared for a GitHub PR; deployed Render state and the Windows installer have not yet been checked.
+`npm run build:app` passed and built 37 production files. No automated test suite was run for this increment. Production Render `/api/version` reports 0.2.0-preview.18. GitHub Actions run #14 succeeded and published the 37-file Windows x64 setup (11,147,776 bytes; SHA-256 `e58dd95ddf672125ebcd87095268dfe8e411143ada98b4d29b4ef545d1672513`). The installer is unsigned; no owner-device installation was performed.
 
 ## Preview.15 — store access and approval checkpoint, 2026-10-27
 
