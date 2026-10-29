@@ -106,7 +106,7 @@ $('#employee-form').onsubmit=e=>{e.preventDefault();action('employees',Object.fr
 for(const view of ['3d','2d','terminal'])$('#view-'+view).onclick=()=>setOfficeView(view);
 setOfficeView(localStorage.getItem('hq-view')||'3d');
 
-function openComputer(pane='home'){closePopup();stopReading();if(pane==='connections')void refreshConnections();closePanels();for(const el of document.querySelectorAll('[data-computer-pane]'))el.hidden=el.dataset.computerPane!==pane;for(const b of document.querySelectorAll('[data-pane]'))b.setAttribute('aria-pressed',String(b.dataset.pane===pane));if(!$('#owner-dialog').open)$('#owner-dialog').showModal();placeToast();$('.computer-content').scrollTop=0;}
+function openComputer(pane='home',shortcut=null){closePopup();stopReading();if(pane==='connections')void refreshConnections();closePanels();for(const el of document.querySelectorAll('[data-computer-pane]'))el.hidden=el.dataset.computerPane!==pane;for(const b of document.querySelectorAll('[data-pane]'))b.setAttribute('aria-pressed',String(b.dataset.pane===pane&&(b.dataset.shortcut?b.dataset.shortcut===shortcut:shortcut===null)));if(!$('#owner-dialog').open)$('#owner-dialog').showModal();placeToast();$('.computer-content').scrollTop=0;}
 for(const button of document.querySelectorAll('[data-pane]'))button.onclick=()=>openComputer(button.dataset.pane);
 $('#owner-computer').onclick=()=>openComputer();
 $('#close-computer').onclick=()=>$('#owner-dialog').close();
@@ -135,10 +135,11 @@ function showFolder(folder='company'){
 }
 for(const button of document.querySelectorAll('[data-folder]'))button.onclick=()=>showFolder(button.dataset.folder);
 showFolder('company');
-function focusSection(pane,section){
- openComputer(pane);
+function focusSection(pane,section,shortcut=null){
+ openComputer(pane,shortcut);
  if(section){const target=$('#'+CSS.escape(section));const folder=target?.closest('[data-file-folder]')?.dataset.fileFolder;if(folder)showFolder(folder);if(target){requestAnimationFrame(()=>target.scrollIntoView({block:'start',behavior:'smooth'}));target.setAttribute('tabindex','-1');target.focus({preventScroll:true});}}
 }
+$('#open-rollout-browser').onclick=()=>focusSection('files','rollout-workspace','rollouts');
 function beginGuide(action){if(action.dealId||action.caseId)return openDeal(action.dealId||action.caseId);if(action.id==='connect-federal-search'||action.pane==='connections')return openSAM();focusSection(action.pane||'assistant',action.section);if(action.pane==='assistant'&&action.detail){const form=$('#assistant-form');form.elements.agent.value='Einstein';form.elements.prompt.value=action.title+'\n\nHelp me complete this next step using our saved company information and source evidence. Explain what I should do, why it matters, the missing facts and what needs my approval. '+action.detail;}}
 function followGuide(action){if(!action)return openComputer('home');if(action.dealId||action.caseId)return openDeal(action.dealId||action.caseId);const explanation=action.explanation||{title:action.title,why:action.why,steps:[{title:'Your next action',body:action.detail||'Open the workspace to review and save the relevant information.'}]};openPopup({title:explanation.title,intro:explanation.why,steps:explanation.steps,actions:[{label:action.pane==='connections'?'Set up access':'Open this workspace',primary:true,onClick:()=>beginGuide(action)}]});}
 function hideToast(){$('#toast').hidden=true;clearTimeout(toastTimer);}
