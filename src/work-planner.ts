@@ -202,8 +202,7 @@ export function planWork(now=Date.now()):PlannerState{
  if(backoff&&backoff.until>now)return save('Source cooldown','The award source is unavailable; the manager retained saved work and scheduled a bounded retry.','Retry the award source after backoff; contact results, drafts and existing handoffs can still progress.',backoff.until,[...contact.reasons,'Repeated source failures are not employee slacking.'],now);
  const goal=setting('standing_goal');if(!goal?.trim())return save('Needs direction','The saved company goal is missing.','Restore the company services and customer direction.',null,['No research objective is invented.'],now);
  const usage=budgets(now);
- const window=researchWindow(now,goal);
- if(usage.research.used>=WORK_POLICY.researchCyclesPerDay)return save('Daily source limit','The manager completed the automatic research allowance for this rolling day.','Continue saved contact and owner-review work; restart source cycles as the allowance becomes available.',window.nextAt,contact.reasons,now);
+ const window=researchWindow(now,goal); if(usage.research.used>=WORK_POLICY.researchCyclesPerDay)return save('Daily source limit','The manager completed the automatic research allowance for this rolling day.','Continue saved contact and owner-review work; restart source cycles as the allowance becomes available.',window.nextAt,contact.reasons,now);
  const {spacing,eligible}=window;
  if(spacing>now||!eligible.length)return save('Monitoring','The manager has finished the currently eligible source checks and is monitoring the next research window.','Automatically assign the next eligible service lane; no CEO reminder is required.',window.nextAt,[...contact.reasons,'Provider pacing prevents repeated requests for the same records.'],now);
  const choice=rankWorkOptions(eligible.sort((a,b)=>a.lastAt-b.lastAt))[0];

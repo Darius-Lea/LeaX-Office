@@ -1,7 +1,6 @@
 ## Preview.18 — resilient work continuity, 2026-10-28
 
-`npm run build:app` passed and built 37 production files. No automated test suite was run for this increment. Production Render `/api/version` reports 0.2.0-preview.18. GitHub Actions run #14 succeeded and published the 37-file Windows x64 setup (11,147,776 bytes; SHA-256 `e58dd95ddf672125ebcd87095268dfe8e411143ada98b4d29b4ef545d1672513`). The installer is unsigned; no owner-device installation was performed.
-
+`npm run build:app` passed and built 37 production files. No automated test suite was run for this increment. The release notes and source changes are prepared for a GitHub PR; deployed Render state and the Windows installer have not yet been checked.
 ## Preview.15 — store access and approval checkpoint, 2026-10-27
 
 The Distribution Center assembly line opens Store connections. Users without an account can open the existing in-app store workspace, save their store project and use its official provider signup link. A saved store URL is explicitly a manual handoff, not a verified API connection. New setup-guide progress APIs are implemented; a separate step-by-step guide frontend is not part of this release.
@@ -180,3 +179,10 @@ Remaining checks: actual owner Windows setup/import/DPAPI/shortcuts/rollback, ta
 Actual source-app Chromium checks passed: two authenticated sessions exchanged synthetic camera/audio media, received inbound RTP, displayed 640x480 remote video through the first-person wall texture, preserved mobile bounds, muted, left, restored the orbit camera and cleared a departed peer. Desktop/mobile screenshots were inspected. A separate integrated check used the actual CSP to save niche preferences, prepare three real SVG draft files, display an authenticated same-origin image, block unreviewed export, preserve zero receipts, open/cancel drive and jet interfaces, open first-person AI controls without the computer modal, reject absent inference without saving a fake turn, exclude concurrent human/AI presentations, and restore the prior clerical view. No real customer media, owner database, provider connection, sale, payout or message was used.
 
 Actual local model ports were unavailable. Paired inference tests use explicit synthetic protocol fixtures, not a live model claim. Owner-specific installation, model quality, marketplace accounts, production pairing and cross-network media remain environment checks. Production bundle and rebuilt installer validation are recorded in WEB_DESKTOP_AUDIT.md.
+
+
+## Preview.19 — lead research and recovery
+
+Guided SAM.gov search now lets the CEO choose an industry, search goal, state or territory, optional NAICS code and effort level (1, 2, 4 or 6 live queries). It uses the user's own free SAM.gov key and reports federal coverage only; estimates are approximate, each notice still needs review, and no bid is submitted automatically. Public company contact research runs from a saved lead without requiring the user to supply a website: it compares three public searches, checks up to five candidate sites, and shows source links and match evidence if the company identity is uncertain. Published contact details are never guessed, and the CEO must confirm an ambiguous company site before the agent proceeds. Live Operations now identifies actionable CEO approvals and retries eligible internal handoffs from saved evidence, with bounded retries and visible wait reasons.
+
+Validation: the production application build completed with 37 files and `git diff --check` passed. Automated tests were not run in this turn. Live Render deployment, a real SAM.gov key/search, real company discovery and the Windows installer build remain unverified at this point. Store marketplace accounts, sales and mining hardware are not connected by this release.

@@ -45,12 +45,12 @@ export function buildLeadBriefing(record:any):LeadBriefing{
  let nextStep=advice.focusedAdvice.title,reason=advice.focusedAdvice.why,instruction=advice.focusedAdvice.steps[0]?.body||'';
  if(fit==='strong service match'&&(!e.country||e.country==='USA')){
   reason='The award mentions '+service(e)+'. '+company+' is a potential partner to qualify.';
-  if(hasContact&&research?.website&&!matchConfirmed){nextStep='Confirm this company’s website before outreach';instruction='Check that the published site belongs to '+company+', then confirm it in the contact research window.';}
+  if(research?.website&&!matchConfirmed){nextStep='Confirm the suggested company website';instruction='The research team found a possible site. Check that it belongs to '+company+' and confirm it before using its contact details.';}
   else if(emails.length){nextStep='Prepare a short vendor-services introduction';instruction='Ask who manages subcontractor onboarding for '+service(e)+' and whether they currently need help in your service area.';}
   else if(phones.length){nextStep='Call and ask for the vendor-services contact';instruction='Use the published number and ask who handles subcontractor onboarding for '+service(e)+'. Confirm a business email and current need.';}
   else{nextStep='Find the vendor-services contact';instruction='The research worker will look for a company site and published contact details. Review the results here before outreach.';}
  }
- const status=hasContact?(research?.website&&!matchConfirmed?'Published contact · company match needs confirmation':'Published business contact · role not confirmed'):'Contact research unfinished';
+ const status=research?.website&&!matchConfirmed?'Suggested company site · match needs confirmation':hasContact?'Published business contact · role not confirmed':'Contact research unfinished';
  const intel:{title:string;body:string;sourceUrl?:string}[]=[];
  if(scope)intel.push({title:'What the award says',body:scope,sourceUrl:publicLink(record.url)});
  for(const signal of (research?.signals||[]).slice(0,2)){const url=publicLink(signal.sourceUrl),quote=clean(signal.quote,200);if(url&&quote)intel.push({title:clean(signal.title,60)||'Published company information',body:quote,sourceUrl:url})}
