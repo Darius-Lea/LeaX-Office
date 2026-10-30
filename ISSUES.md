@@ -1,3 +1,7 @@
+## Preview.30 packaging status
+
+- Preview.29 has no published installer: GitHub Actions failed while transforming `public/app.js`. Preview.30 contains corrected line endings and release metadata; its Windows build must pass before the download is available.
+
 ## Preview.29 scope and remaining limits
 
 - Workflow feedback is separated by the currently configured company name. This workspace still has one active company profile at a time; saved company profiles and one-click profile switching remain unimplemented.

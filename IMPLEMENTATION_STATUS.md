@@ -1,3 +1,7 @@
+## Preview.30 — packaging repair in progress
+
+Preview.29's GitHub Windows packaging job failed while transforming `public/app.js`, so no installer was published for .29. The malformed source line endings and release-note separator have been corrected, and .30 is being built. Workflow learning scope remains as described above; .30 is not ready for download until GitHub Actions verifies the installer.
+
 ## Preview.29 — reusable workflow learning with company scope
 
 Owner feedback is now labeled as either specific to the currently configured company or explicitly shared as a general workflow habit. Company-specific learning and automatic verified-work ranking are stored under that company label. General habits require owner-written context and guide later AI presentation/process only; they do not affect business rankings. Future AI requests receive only the active company’s lessons plus explicitly shared habits. Exported owner preference labels carry scope and business name.

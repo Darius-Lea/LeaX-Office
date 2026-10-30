@@ -1,3 +1,7 @@
+## Preview.30 packaging repair
+
+Preview.29's Windows installer workflow failed in `build-production.mjs`: esbuild reported a syntax error at the end of `public/app.js`, caused by malformed carriage returns introduced during the UI edit. The source was normalized, and the release-note separator was corrected. Preview.30's GitHub installer build is pending; it must pass before publication. The focused 6 learning/AI tests and changed-file syntax checks had passed before packaging. The local build still cannot run without installed `esbuild`.
+
 ## Preview.29 — workflow feedback scope
 
 6 focused tests passed in `test/learning.test.ts` and `test/ai.test.ts` under Node 22.15 experimental type stripping. The new regression covers American Power-specific feedback staying out of another configured company’s AI context, explicitly shared process habits appearing across company scopes, and shared feedback leaving company work-ranking weights unchanged. Changed JS and TypeScript files passed syntax checks.

@@ -1,3 +1,7 @@
+## 2026-10-29 — preview.30: installer build repair
+
+The preview.29 GitHub Windows installer build exposed malformed carriage returns in `public/app.js`; the local production build could not run because `esbuild` was absent. Corrected the app source line endings and release-note separator, then bumped the app to preview.30 so the corrected installer build is distinct. The Windows workflow must succeed before a new setup file is published.
+
 ## 2026-10-29 — preview.29: business-scoped workflow learning
 
 Learning feedback now has an explicit scope. American Power Global corrections and work rankings stay with the configured company name; an owner can separately share a reusable process habit across businesses. Shared habits guide later AI workflow context only and do not change work ranking. Feedback exports identify the scope and business label.
