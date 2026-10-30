@@ -1,3 +1,8 @@
+## 2026-10-30 — preview.34: AI-directed invitation drafts in LeaX Studio and CCL
+
+Added an owner-initiated party-invitation workflow. A selected local model or verified paired local worker generates original copy and design direction; LeaX renders that specification into a 5×7 editable SVG. The CCL Studio can start a request, show the real saved preview, edit the wording/details, require explicit rights and print-layout checks, approve the exact revision, and download the SVG. The draft is not a raster image, store listing, supplier order, or POD fulfillment. Preview.34 also corrects the release-note syntax that caused the preview.33 Windows installer build to fail.
+
+Validation: production application bundle built locally; all 10 commerce tests passed under Node 22 type stripping, including synthetic local-AI response, queued/idempotent design job, preview-ready SVG, and no export before approval. Windows installer build, Render rollout, and browser click-through are pending.
 ## 2026-10-30 — preview.33: real CCL connector statuses
 
 CCL Automations now includes the prototype’s provider categories and services, but status badges are derived from the saved account checks. The WooCommerce REST connection can be entered and checked inside CCL. Other shop URLs can be saved as manual references only. Providers without an API adapter are clearly marked unconnected; prototype demo badges are not treated as live accounts.

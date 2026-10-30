@@ -1,3 +1,9 @@
+## Preview.34 verification — 2026-10-30
+
+- `npm run build:app -- --out .\dist-preview-034` — passed; 43 production files bundled.
+- `node --experimental-strip-types --test test/commerce.test.ts` — passed, 10/10. AI invitation test used a synthetic response from a stubbed `127.0.0.1:11434` Ollama endpoint, verified idempotency and draft status, and confirmed export is blocked until approval. No external model or network call was used by that test.
+- Changed public JS and TypeScript syntax checks — passed.
+- Windows installer CI, Render deployment, and manual browser workflow remain pending.
 ## Preview.33 CCL integration check
 
 - node --check public/ccl-app.js — passed.

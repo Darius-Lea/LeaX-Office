@@ -1,3 +1,9 @@
+## Preview.34 remaining commerce limits
+
+- Invitation output is an AI-directed editable SVG built by LeaX’s local renderer; it is not generative raster artwork or a complete drag-and-drop design canvas.
+- The file remains owner-reviewed draft content. Storefront API coverage still excludes Etsy, eBay, Amazon, Shopify and social channels. Printful/Printify production and shipping, live EverBee/trend-data feeds, automatic product variations and sales analytics sync are not connected.
+- Meeting speech is browser speech-to-text sent to AI agents. It is not raw audio streaming or an actual Poly Studio G62 connection. Human calling/invites still need user-controlled call setup.
+- Preview.34 requires successful installer CI, Render deployment and browser click-through before calling the update ready for download/use.
 ## Preview.33 connector limitations
 
 The CCL Automations provider directory is not a universal integration layer. WooCommerce REST v3 is the only marketplace API connection available here. Manual shop links do not publish items or sync orders. Etsy, eBay, Amazon, Walmart, Shopify, Printful, Printify, Field Nation, WorkMarket, ConstructConnect, PlanHub, BuildingConnected, Dodge, BidNet, Biddingo, finance, calendar, SMS, social and cloud AI connectors still need provider-authorized adapters. The embedded LeaX AI Browser is also not implemented.

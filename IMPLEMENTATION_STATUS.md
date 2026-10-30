@@ -1,3 +1,9 @@
+## Preview.34 — invitation design workflow
+
+- CCL Studio and LeaX Office Studio can send an invitation brief only to the selected local model or verified paired worker. AI output is structured copy/art direction; the application renders an editable SVG locally.
+- CCL displays the actual saved preview and lets the owner correct copy/date/place/RSVP, attest rights and print-layout checks, approve the exact revision, and download the SVG. Approval does not publish or order printing.
+- The flow requires local inference. No raster image model, Etsy/Amazon/eBay publishing adapter, Printful/Printify integration, or live trend-data feed was added.
+- Preview.33’s malformed release-note string was repaired. Local production bundle and all 10 commerce tests passed. Installer, Render and browser interaction checks are pending.
 ## Preview.33 — CCL Automations status
 
 The CCL sidebar now keeps a provider directory in the CCL layout, covering the prototype’s social, marketplace, POD, bid, lead, finance, schedule and AI categories. It shows actual known state for WooCommerce, email, federal notices, the selected AI model/paired worker and the device-browser handoff. The only direct storefront API setup in CCL is WooCommerce; shop URLs saved for Etsy, Amazon, eBay or other sites are reference links, not active integrations.
