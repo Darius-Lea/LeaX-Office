@@ -1,3 +1,9 @@
+## Preview.29 — reusable workflow learning with company scope
+
+Owner feedback is now labeled as either specific to the currently configured company or explicitly shared as a general workflow habit. Company-specific learning and automatic verified-work ranking are stored under that company label. General habits require owner-written context and guide later AI presentation/process only; they do not affect business rankings. Future AI requests receive only the active company’s lessons plus explicitly shared habits. Exported owner preference labels carry scope and business name.
+
+The current connected model’s weights remain unchanged; no automatic fine-tuning or provider upload occurs. CCL and the regular LeaX Office feedback dialogs expose the scope choice. This is one active company profile per workspace, not a multi-profile manager. American Power Global is the current profile when configured under that name.
+
 ## Preview.28 — adaptive workflow learning and LeaX Office Pro desktop
 
 Owner feedback now changes two app-level behaviors: it adjusts the ranking of permitted work recipes and supplies recent same-employee preferences to later AI requests. This lets the workflow adapt without changing any model weights. It is business-agnostic, while company facts and goals come from the current workspace; this version supports one company profile per workspace. JSON, JSONL and CSV downloads contain owner preference labels, not provider-ready fine-tuning payloads for every model. No model is trained or sent data automatically.

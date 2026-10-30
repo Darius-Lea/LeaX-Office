@@ -1,3 +1,11 @@
+## 2026-10-29 — preview.29: business-scoped workflow learning
+
+Learning feedback now has an explicit scope. American Power Global corrections and work rankings stay with the configured company name; an owner can separately share a reusable process habit across businesses. Shared habits guide later AI workflow context only and do not change work ranking. Feedback exports identify the scope and business label.
+
+This remains app-level workflow adaptation. It does not fine-tune the selected GPT/Ollama/other model, train another provider, grant permissions or create a new company profile switcher. The workspace still has one configured company profile at a time.
+
+Validation: 6 focused tests passed in `test/learning.test.ts` and `test/ai.test.ts` with Node 22.15 experimental type stripping; checks for changed JS/TS syntax passed. A local production build could not start because `esbuild` is not installed. The GitHub release workflow must complete before the Windows installer is available; full suite and Render deployment were not verified.
+
 ## 2026-10-29 — preview.28 adaptive workflow learning and desktop exit
 
 Owner corrections and rewards already updated the permitted-work ranking. This release also passes a bounded set of recent explicit preferences for the same employee into future agent requests. The selected business profile remains the factual grounding; preference text cannot grant permissions or authorize sending, spending, publication or computer control. Model weights are unchanged. Exports remain owner preference data in JSON, JSONL and CSV; no model receives training data automatically.

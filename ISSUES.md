@@ -1,3 +1,10 @@
+## Preview.29 scope and remaining limits
+
+- Workflow feedback is separated by the currently configured company name. This workspace still has one active company profile at a time; saved company profiles and one-click profile switching remain unimplemented.
+- All-business feedback is reserved for general process or presentation habits. It does not alter company-specific ranking. Owner feedback exports are preference labels, not ready-made fine-tuning data.
+- LeaX learning does not update model weights or upload training data to any provider. The user can download labeled data and later choose their own connected model/training workflow.
+- The app still does not grant agents unrestricted browser/computer control. A real local control worker with visible consent and a green acting indicator remains a separate capability.
+
 ## Preview.28 boundaries
 
 - Workflow learning is business-agnostic and scoped to the same owner workspace and employee. This version keeps one company profile per workspace; separate business profiles are not implemented. Feedback exports are preference labels; providers differ in fine-tuning format. No AI model is trained or sent data automatically.

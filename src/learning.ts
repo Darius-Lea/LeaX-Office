@@ -1,27 +1,54 @@
-import {randomUUID} from 'node:crypto';
-import {db,audit} from './store.ts';
+import {createHash,randomUUID} from 'node:crypto';
+import {db,audit,setting,setSetting} from './store.ts';
 import {termsFor,SOURCE,verifyFinding} from './research.ts';
 
 // Persistent workflow learning changes permitted-work rankings and supplies
 // bounded owner preferences to later same-agent inference. It does not change
 // the underlying language model's weights.
-const METHOD='LeaX adaptive workflow learning';
-const NOTICE='Validated saved outcomes and owner feedback update persistent work-priority preferences. Recent owner feedback for the same employee also guides later AI advisory requests. This adapts LeaX workflows; base model weights remain unchanged and are not fine-tuned, and it does not prove profitability or imply that software feels punishment. Waiting for sources, setup or approval is not a performance failure.';
+const METHOD='LeaX scoped adaptive workflow learning';
+const NOTICE='Saved, validated outcomes and owner feedback improve LeaX work-priority preferences. Business-specific lessons stay with the configured company; only feedback explicitly marked all-business is shared as a general workflow habit. Relevant feedback guides later AI requests, but no connected model weights are changed or fine-tuned. Learning does not prove profitability or grant new permissions. Waiting for sources, setup or approval is not a performance failure.';
 const PRIOR=1,OWNER_WEIGHT=3,AUTO_WEIGHT=.15,EXPLORATION=.12;
 type ReceiptKind='task'|'note'|'lead'|'ai'|'incident';
 type Rating='reward'|'correct';
 type Source='owner'|'automatic';
+type LearningScope='business'|'all_businesses';
 type Receipt={kind:ReceiptKind;id:string;agent:string;label:string;status:string;recipe:string;taskId:string|null;relatedRecipes:string[];canReward:boolean;canCorrect:boolean;createdAt:number};
 db.exec(`CREATE TABLE IF NOT EXISTS learning_feedback(
  id TEXT PRIMARY KEY,receipt_kind TEXT NOT NULL,receipt_id TEXT NOT NULL,agent TEXT NOT NULL,recipe TEXT NOT NULL,
  related_recipes TEXT NOT NULL,rating TEXT NOT NULL,weight REAL NOT NULL,reason TEXT NOT NULL,source TEXT NOT NULL,
- created INTEGER NOT NULL,UNIQUE(receipt_kind,receipt_id,agent,source));
+ created INTEGER NOT NULL,scope TEXT NOT NULL DEFAULT 'business',business_key TEXT NOT NULL DEFAULT '',business_name TEXT NOT NULL DEFAULT '',UNIQUE(receipt_kind,receipt_id,agent,source));
  CREATE TABLE IF NOT EXISTS learning_parameters(recipe TEXT PRIMARY KEY,positive_weight REAL NOT NULL DEFAULT 0,negative_weight REAL NOT NULL DEFAULT 0,observations INTEGER NOT NULL DEFAULT 0,updated INTEGER NOT NULL);
+ CREATE TABLE IF NOT EXISTS learning_parameters_scoped(business_key TEXT NOT NULL,recipe TEXT NOT NULL,positive_weight REAL NOT NULL DEFAULT 0,negative_weight REAL NOT NULL DEFAULT 0,observations INTEGER NOT NULL DEFAULT 0,updated INTEGER NOT NULL,PRIMARY KEY(business_key,recipe));
  CREATE TABLE IF NOT EXISTS learning_model(id INTEGER PRIMARY KEY CHECK(id=1),version INTEGER NOT NULL DEFAULT 0,examples INTEGER NOT NULL DEFAULT 0,updated INTEGER);
  INSERT OR IGNORE INTO learning_model(id) VALUES(1);
  CREATE TABLE IF NOT EXISTS learning_exclusions(feedback_id TEXT PRIMARY KEY,reason TEXT NOT NULL,created INTEGER NOT NULL);
- CREATE TABLE IF NOT EXISTS learning_corrections(id TEXT PRIMARY KEY,feedback_id TEXT UNIQUE NOT NULL,agent TEXT NOT NULL,receipt_kind TEXT NOT NULL,receipt_id TEXT NOT NULL,recipe TEXT NOT NULL,task_id TEXT,reason TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'Queued',created INTEGER NOT NULL,resolved INTEGER,result TEXT);`);
+ CREATE TABLE IF NOT EXISTS learning_corrections(id TEXT PRIMARY KEY,feedback_id TEXT UNIQUE NOT NULL,agent TEXT NOT NULL,receipt_kind TEXT NOT NULL,receipt_id TEXT NOT NULL,recipe TEXT NOT NULL,task_id TEXT,reason TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'Queued',created INTEGER NOT NULL,resolved INTEGER,result TEXT,scope TEXT NOT NULL DEFAULT 'business',business_key TEXT NOT NULL DEFAULT '',business_name TEXT NOT NULL DEFAULT '');`);
 function hasTable(name:string){return !!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name)}
+function ensureColumn(table:string,name:string,definition:string){const columns=db.prepare('PRAGMA table_info('+table+')').all() as any[];if(!columns.some(column=>column.name===name))db.exec('ALTER TABLE '+table+' ADD COLUMN '+name+' '+definition)}
+ensureColumn('learning_feedback','scope',"TEXT NOT NULL DEFAULT 'business'");
+ensureColumn('learning_feedback','business_key',"TEXT NOT NULL DEFAULT ''");
+ensureColumn('learning_feedback','business_name',"TEXT NOT NULL DEFAULT ''");
+ensureColumn('learning_corrections','scope',"TEXT NOT NULL DEFAULT 'business'");
+ensureColumn('learning_corrections','business_key',"TEXT NOT NULL DEFAULT ''");
+ensureColumn('learning_corrections','business_name',"TEXT NOT NULL DEFAULT ''");
+function activeBusiness(){
+ let company:any={};try{company=JSON.parse(setting('company')||'{}')}catch{}
+ const name=typeof company.name==='string'&&company.name.trim()?company.name.trim().slice(0,160):'Your business';
+ const normalized=name.normalize('NFKC').toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim()||'unconfigured-business';
+ return {key:createHash('sha256').update(normalized).digest('hex').slice(0,32),name};
+}
+// Attribute prior unscoped preferences to the configured business once.
+const SCOPE_MIGRATION='learning_business_scope_v1';
+if(setting(SCOPE_MIGRATION)!=='complete'){
+ const business=activeBusiness();db.exec('SAVEPOINT hq_learning_scope_migration');
+ try{
+  for(const row of db.prepare('SELECT * FROM learning_parameters').all() as any[])db.prepare('INSERT OR IGNORE INTO learning_parameters_scoped(business_key,recipe,positive_weight,negative_weight,observations,updated) VALUES(?,?,?,?,?,?)').run(business.key,row.recipe,row.positive_weight,row.negative_weight,row.observations,row.updated);
+  db.prepare('DELETE FROM learning_parameters').run();
+  db.prepare("UPDATE learning_feedback SET scope='business',business_key=?,business_name=? WHERE business_key='' OR business_name=''").run(business.key,business.name);
+  db.prepare("UPDATE learning_corrections SET scope='business',business_key=?,business_name=? WHERE business_key='' OR business_name=''").run(business.key,business.name);
+  setSetting(SCOPE_MIGRATION,'complete');db.exec('RELEASE hq_learning_scope_migration');
+ }catch(error){db.exec('ROLLBACK TO hq_learning_scope_migration; RELEASE hq_learning_scope_migration');throw error}
+}
 function validId(value:unknown){return (typeof value==='string'||typeof value==='number')&&String(value).length>0&&String(value).length<=300&&!/[\u0000-\u001f\u007f]/.test(String(value))}
 function employee(agent:string){return db.prepare('SELECT id,name FROM employees WHERE id=?').get(agent) as any}
 function taskFor(id:string|null){return id?db.prepare('SELECT * FROM tasks WHERE id=?').get(id) as any:null}
@@ -76,7 +103,11 @@ function receipt(kind:ReceiptKind,id:string,requestedAgent?:string):Receipt{
  if(!employee(item.agent))throw Error('The assigned employee no longer exists');
  return item;
 }
-function parameter(recipe:string){return db.prepare('SELECT * FROM learning_parameters WHERE recipe=?').get(recipe) as any}
+function parameter(recipe:string,businessKey=activeBusiness().key){
+ const shared=db.prepare('SELECT * FROM learning_parameters WHERE recipe=?').get(recipe) as any;
+ const business=db.prepare('SELECT * FROM learning_parameters_scoped WHERE business_key=? AND recipe=?').get(businessKey,recipe) as any;
+ return {positive_weight:Number(shared?.positive_weight||0)+Number(business?.positive_weight||0),negative_weight:Number(shared?.negative_weight||0)+Number(business?.negative_weight||0),observations:Number(shared?.observations||0)+Number(business?.observations||0),updated:Math.max(Number(shared?.updated||0),Number(business?.updated||0))||null};
+}
 function score(row:any,total:number){
  const positive=Number(row?.positive_weight||0),negative=Number(row?.negative_weight||0),observations=Number(row?.observations||0);
  const mean=(PRIOR+positive)/(PRIOR*2+positive+negative),bonus=EXPLORATION*Math.sqrt(Math.log(total+2)/(observations+1));
@@ -92,35 +123,38 @@ export function rankWorkOptions<T extends {id:string;recipe:string;agent?:string
 }
 export function ownerLearningGuidance(agent:string){
  if(!employee(agent))return {method:'Recent owner feedback for this employee',examples:[]};
- const rows=db.prepare('SELECT f.recipe,f.receipt_kind,f.rating,f.reason,f.created FROM learning_feedback f LEFT JOIN learning_exclusions x ON x.feedback_id=f.id WHERE f.agent=? AND f.source=? AND x.feedback_id IS NULL ORDER BY f.created DESC,f.id DESC LIMIT 4').all(agent,'owner') as any[];
- return {method:'Recent explicit CEO feedback; operational preferences only',examples:rows.map(row=>({recipe:String(row.recipe).slice(0,180),workType:String(row.receipt_kind).slice(0,40),direction:row.rating==='correct'?'Correction requested':'Marked useful',preference:String(row.reason||'').replaceAll(String.fromCharCode(13),' ').replaceAll(String.fromCharCode(10),' ').slice(0,320),recordedAt:new Date(Number(row.created)).toISOString()}))};
+ const business=activeBusiness();
+ const rows=db.prepare("SELECT f.recipe,f.receipt_kind,f.rating,f.reason,f.created,f.scope,f.business_name FROM learning_feedback f LEFT JOIN learning_exclusions x ON x.feedback_id=f.id WHERE f.agent=? AND f.source='owner' AND (f.scope='all_businesses' OR (f.scope='business' AND f.business_key=?)) AND x.feedback_id IS NULL ORDER BY CASE WHEN f.scope='business' THEN 0 ELSE 1 END,f.created DESC,f.id DESC LIMIT 6").all(agent,business.key) as any[];
+ return {method:'Owner feedback scoped to this business plus explicitly shared workflow preferences',business:business.name,examples:rows.map(row=>({scope:row.scope==='all_businesses'?'all-business workflow preference':'business-specific preference',business:row.scope==='business'?String(row.business_name||business.name).slice(0,160):null,recipe:String(row.recipe).slice(0,180),workType:String(row.receipt_kind).slice(0,40),direction:row.rating==='correct'?'Correction requested':'Marked useful',preference:String(row.reason||'').replaceAll(String.fromCharCode(13),' ').replaceAll(String.fromCharCode(10),' ').slice(0,320),recordedAt:new Date(Number(row.created)).toISOString()}))};
 }
-function presentedFeedback(row:any){const excluded=!!db.prepare('SELECT feedback_id FROM learning_exclusions WHERE feedback_id=?').get(row.id);return {id:row.id,agent:row.agent,kind:row.receipt_kind,receiptId:row.receipt_id,recipe:row.recipe,rating:row.rating,reason:row.reason,source:row.source,createdAt:row.created,excluded,trainingStatus:excluded?'Excluded':'Active'}}
-function train(item:Receipt,rating:Rating,reason:string,source:Source,now:number){
+function presentedFeedback(row:any){const excluded=!!db.prepare('SELECT feedback_id FROM learning_exclusions WHERE feedback_id=?').get(row.id);return {id:row.id,agent:row.agent,kind:row.receipt_kind,receiptId:row.receipt_id,recipe:row.recipe,rating:row.rating,reason:row.reason,source:row.source,scope:row.scope||'business',businessKey:row.business_key||'',businessName:row.business_name||'',createdAt:row.created,excluded,trainingStatus:excluded?'Excluded':'Active'}}
+function train(item:Receipt,rating:Rating,reason:string,source:Source,now:number,scope:LearningScope='business'){
+ const business=activeBusiness(),businessKey=business.key,preferenceScope=scope==='all_businesses'&&source==='owner'?'all_businesses':'business';
  const old=db.prepare('SELECT * FROM learning_feedback WHERE receipt_kind=? AND receipt_id=? AND agent=? AND source=?').get(item.kind,item.id,item.agent,source) as any;
  if(old){if(old.rating!==rating&&source==='owner')throw Error('This output already has your feedback. Review a newer saved output instead.');return {feedback:presentedFeedback(old),duplicate:true,correctionRequested:!!db.prepare('SELECT id FROM learning_corrections WHERE feedback_id=?').get(old.id)}}
  const id=randomUUID(),weight=source==='owner'?OWNER_WEIGHT:AUTO_WEIGHT;
  db.exec('SAVEPOINT hq_learning_update');
  try{
-  db.prepare('INSERT INTO learning_feedback VALUES(?,?,?,?,?,?,?,?,?,?,?)').run(id,item.kind,item.id,item.agent,item.recipe,JSON.stringify(item.relatedRecipes),rating,weight,reason,source,now);
+  db.prepare('INSERT INTO learning_feedback(id,receipt_kind,receipt_id,agent,recipe,related_recipes,rating,weight,reason,source,created,scope,business_key,business_name) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run(id,item.kind,item.id,item.agent,item.recipe,JSON.stringify(item.relatedRecipes),rating,weight,reason,source,now,preferenceScope,preferenceScope==='all_businesses'?'':businessKey,preferenceScope==='all_businesses'?'All businesses':business.name);
   const recipes=[...new Set([item.recipe,...item.relatedRecipes])];
-  for(const recipe of recipes){const amount=weight*(recipe===item.recipe?1:.5);db.prepare('INSERT INTO learning_parameters(recipe,positive_weight,negative_weight,observations,updated) VALUES(?,?,?,?,?) ON CONFLICT(recipe) DO UPDATE SET positive_weight=positive_weight+excluded.positive_weight,negative_weight=negative_weight+excluded.negative_weight,observations=observations+1,updated=excluded.updated').run(recipe,rating==='reward'?amount:0,rating==='correct'?amount:0,1,now)}
+  if(preferenceScope==='business')for(const recipe of recipes){const amount=weight*(recipe===item.recipe?1:.5);db.prepare('INSERT INTO learning_parameters_scoped(business_key,recipe,positive_weight,negative_weight,observations,updated) VALUES(?,?,?,?,?,?) ON CONFLICT(business_key,recipe) DO UPDATE SET positive_weight=positive_weight+excluded.positive_weight,negative_weight=negative_weight+excluded.negative_weight,observations=observations+1,updated=excluded.updated').run(businessKey,recipe,rating==='reward'?amount:0,rating==='correct'?amount:0,1,now)}
   db.prepare('UPDATE learning_model SET version=version+1,examples=examples+1,updated=? WHERE id=1').run(now);
-  if(source==='owner'&&rating==='correct')db.prepare('INSERT INTO learning_corrections(id,feedback_id,agent,receipt_kind,receipt_id,recipe,task_id,reason,created) VALUES(?,?,?,?,?,?,?,?,?)').run(randomUUID(),id,item.agent,item.kind,item.id,item.recipe,item.taskId,reason,now);
-  audit('learning:'+id,(source==='owner'?'CEO feedback':'Validated execution receipt')+' trained work-priority model: '+rating+' · '+item.recipe+' · output '+item.kind+':'+item.id+'; no source, permission or retry limit changed');
+  if(source==='owner'&&rating==='correct')db.prepare('INSERT INTO learning_corrections(id,feedback_id,agent,receipt_kind,receipt_id,recipe,task_id,reason,created,scope,business_key,business_name) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)').run(randomUUID(),id,item.agent,item.kind,item.id,item.recipe,item.taskId,reason,now,preferenceScope,preferenceScope==='all_businesses'?'':businessKey,preferenceScope==='all_businesses'?'All businesses':business.name);
+  audit('learning:'+id,(source==='owner'?'CEO feedback':'Validated execution receipt')+' trained '+preferenceScope+' workflow preferences: '+rating+' · '+item.recipe+' · output '+item.kind+':'+item.id+'; no model weights, source, permission or retry limit changed');
   db.exec('RELEASE hq_learning_update');
  }catch(error){db.exec('ROLLBACK TO hq_learning_update; RELEASE hq_learning_update');throw error}
- return {feedback:{id,agent:item.agent,kind:item.kind,receiptId:item.id,recipe:item.recipe,rating,reason,source,createdAt:now},duplicate:false,correctionRequested:source==='owner'&&rating==='correct'};
+ return {feedback:{id,agent:item.agent,kind:item.kind,receiptId:item.id,recipe:item.recipe,rating,reason,source,scope:preferenceScope,businessName:preferenceScope==='all_businesses'?'All businesses':business.name,createdAt:now},duplicate:false,correctionRequested:source==='owner'&&rating==='correct'};
 }
 export function recordWorkFeedback(input:unknown){
  if(!input||typeof input!=='object'||Array.isArray(input))throw Error('Choose an actual saved work output to review');
  const value=input as any;
- if(Object.keys(value).some(key=>!['agent','kind','receiptId','rating','reason'].includes(key)))throw Error('Unsupported feedback setting');
+ if(Object.keys(value).some(key=>!['agent','kind','receiptId','rating','reason','scope'].includes(key)))throw Error('Unsupported feedback setting');
  if(!['task','note','lead','ai','incident'].includes(value.kind)||!validId(value.receiptId)||!['reward','correct'].includes(value.rating)||value.agent!==undefined&&(typeof value.agent!=='string'||value.agent.length>100)||value.reason!==undefined&&typeof value.reason!=='string')throw Error('Choose a saved receipt, employee and reward or correction');
- const reason=String(value.reason||'').trim();if(reason.length>1200||value.rating==='correct'&&reason.length<3)throw Error('Describe the specific output to improve in 3–1200 characters');
+ if(value.scope!==undefined&&!['business','all_businesses'].includes(value.scope))throw Error('Choose this business or an all-business workflow preference');
+ const reason=String(value.reason||'').trim();if(reason.length>1200||value.rating==='correct'&&reason.length<3)throw Error('Describe the specific output to improve in 3–1200 characters');if(value.scope==='all_businesses'&&reason.length<3)throw Error('For an all-business lesson, describe the reusable workflow habit in 3–1200 characters');
  const item=receipt(value.kind,String(value.receiptId),value.agent);
  if(!(value.rating==='reward'?item.canReward:item.canCorrect))throw Error(value.rating==='reward'?'This output has no verified saved execution/source evidence to reward':'Waiting or source setup is not an output failure');
- const result=train(item,value.rating,reason||(value.rating==='reward'?'Owner marked this saved work useful':'Owner requested an output correction'),'owner',Date.now());
+ const result=train(item,value.rating,reason||(value.rating==='reward'?'Owner marked this saved work useful':'Owner requested an output correction'),'owner',Date.now(),value.scope||'business');
  const model=db.prepare('SELECT version,examples,updated FROM learning_model WHERE id=1').get() as any;
  return {...result,model:{version:model.version,trainedExamples:model.examples,updatedAt:model.updated}};
 }
@@ -131,7 +165,7 @@ export function collectLearningEvidence(now=Date.now()){
   for(const example of cancelled){
    db.exec('SAVEPOINT hq_learning_retract');try{
     const related=JSON.parse(example.related_recipes) as string[];
-    for(const recipe of [...new Set([example.recipe,...related])]){const weight=example.weight*(recipe===example.recipe?1:.5);db.prepare('UPDATE learning_parameters SET positive_weight=max(0,positive_weight-?),negative_weight=max(0,negative_weight-?),observations=max(0,observations-1),updated=? WHERE recipe=?').run(example.rating==='reward'?weight:0,example.rating==='correct'?weight:0,now,recipe)}
+    for(const recipe of [...new Set([example.recipe,...related])]){const weight=example.weight*(recipe===example.recipe?1:.5);if(example.scope==='all_businesses')db.prepare('UPDATE learning_parameters SET positive_weight=max(0,positive_weight-?),negative_weight=max(0,negative_weight-?),observations=max(0,observations-1),updated=? WHERE recipe=?').run(example.rating==='reward'?weight:0,example.rating==='correct'?weight:0,now,recipe);else db.prepare('UPDATE learning_parameters_scoped SET positive_weight=max(0,positive_weight-?),negative_weight=max(0,negative_weight-?),observations=max(0,observations-1),updated=? WHERE business_key=? AND recipe=?').run(example.rating==='reward'?weight:0,example.rating==='correct'?weight:0,now,example.business_key,recipe)}
     db.prepare('INSERT INTO learning_exclusions VALUES(?,?,?)').run(example.id,'The CEO excused this incident; it is no longer active failure evidence.',now);db.prepare('UPDATE learning_model SET version=version+1,examples=max(0,examples-1),updated=? WHERE id=1').run(now);
     db.prepare("UPDATE learning_corrections SET status='Dismissed',resolved=?,result='The CEO excused the underlying incident; no corrective action remains.' WHERE feedback_id=? AND status IN ('Queued','Waiting')").run(now,example.id);
     audit('learning:'+example.id,'Excused incident removed from active work-priority training; original feedback and source history retained');db.exec('RELEASE hq_learning_retract');retracted++;
@@ -143,10 +177,10 @@ export function collectLearningEvidence(now=Date.now()){
  if(hasTable('accountability_incidents'))for(const row of db.prepare("SELECT id,agent FROM accountability_incidents WHERE status<>'Excused' ORDER BY created DESC LIMIT 20").all() as any[]){try{const item=receipt('incident',row.id,row.agent);const result=train(item,'correct','Recorded repeated execution/output fault; waiting and provider failures excluded','automatic',now);if(!result.duplicate)added++}catch{}}
  return {added,retracted,trainedExamples:(db.prepare('SELECT examples FROM learning_model WHERE id=1').get() as any).examples};
 }
-function correction(row:any){return {id:row.id,feedbackId:row.feedback_id,agent:row.agent,kind:row.receipt_kind,receiptId:row.receipt_id,recipe:row.recipe,taskId:row.task_id,reason:row.reason,status:row.status,createdAt:row.created,resolvedAt:row.resolved,result:row.result}}
+function correction(row:any){return {id:row.id,feedbackId:row.feedback_id,agent:row.agent,kind:row.receipt_kind,receiptId:row.receipt_id,recipe:row.recipe,taskId:row.task_id,reason:row.reason,status:row.status,scope:row.scope||'business',businessKey:row.business_key||'',businessName:row.business_name||'',createdAt:row.created,resolvedAt:row.resolved,result:row.result}}
 export function pendingLearningCorrections(limit=8,includeWaiting=false){
  const capped=Number.isSafeInteger(limit)?Math.min(40,Math.max(1,limit)):8;
- return db.prepare("SELECT * FROM learning_corrections WHERE status='Queued' OR (?=1 AND status='Waiting') ORDER BY created,id LIMIT ?").all(includeWaiting?1:0,capped).map(correction);
+ const business=activeBusiness();return db.prepare("SELECT * FROM learning_corrections WHERE (scope='all_businesses' OR (scope='business' AND business_key=?)) AND (status='Queued' OR (?=1 AND status='Waiting')) ORDER BY created,id LIMIT ?").all(business.key,includeWaiting?1:0,capped).map(correction);
 }
 export function resolveLearningCorrection(id:string,input:{status:'Applied'|'Waiting'|'Dismissed';result:string}){
  if(typeof id!=='string'||!input||!['Applied','Waiting','Dismissed'].includes(input.status)||typeof input.result!=='string'||!input.result.trim()||input.result.length>2000)throw Error('Record the actual manager correction result');
@@ -155,8 +189,9 @@ export function resolveLearningCorrection(id:string,input:{status:'Applied'|'Wai
  audit('learning-correction:'+id,'Manager '+input.status.toLowerCase()+' corrective review: '+input.result.trim());return correction(db.prepare('SELECT * FROM learning_corrections WHERE id=?').get(id));
 }
 export function learningState(){
- const model=db.prepare('SELECT * FROM learning_model WHERE id=1').get() as any;
- const parameters=(db.prepare('SELECT * FROM learning_parameters ORDER BY recipe').all() as any[]).map(row=>({recipe:row.recipe,...score(row,model.examples)}));
+ const model=db.prepare('SELECT * FROM learning_model WHERE id=1').get() as any,business=activeBusiness();
+ const recipes=db.prepare('SELECT recipe FROM learning_parameters UNION SELECT recipe FROM learning_parameters_scoped WHERE business_key=? ORDER BY recipe').all(business.key) as any[];
+ const parameters=recipes.map(({recipe}:any)=>({recipe,...score(parameter(recipe,business.key),model.examples)}));
  const candidates:{kind:ReceiptKind;id:string;agent?:string}[]=[];
  for(const row of db.prepare("SELECT id,agent FROM tasks WHERE status='Completed' ORDER BY created DESC LIMIT 25").all() as any[]){candidates.push({kind:'task',id:row.id,agent:row.agent});if(row.agent==='Bravo')candidates.push({kind:'task',id:row.id,agent:'Alpha'});}
  if(hasTable('office_notes'))for(const row of db.prepare('SELECT id FROM office_notes ORDER BY id DESC LIMIT 40').all() as any[])candidates.push({kind:'note',id:String(row.id)});
@@ -164,9 +199,10 @@ export function learningState(){
  if(hasTable('ai_runs'))for(const row of db.prepare("SELECT id FROM ai_runs WHERE status='Completed' ORDER BY updated DESC LIMIT 20").all() as any[])candidates.push({kind:'ai',id:row.id});
  if(hasTable('accountability_incidents'))for(const row of db.prepare("SELECT id FROM accountability_incidents WHERE status<>'Excused' ORDER BY created DESC LIMIT 20").all() as any[])candidates.push({kind:'incident',id:row.id});
  const eligibleReceipts=candidates.flatMap(candidate=>{try{const item=receipt(candidate.kind,candidate.id,candidate.agent);const previous=db.prepare("SELECT id,rating FROM learning_feedback WHERE receipt_kind=? AND receipt_id=? AND agent=? AND source='owner'").get(item.kind,item.id,item.agent) as any;return [{...item,canReward:item.canReward&&!previous,canCorrect:item.canCorrect&&!previous,feedback:previous||null}]}catch{return []}});
- return {method:METHOD,notice:NOTICE,version:model.version,trainedExamples:model.examples,updatedAt:model.updated,parameters,
-  futureAdvisoryGuidance:'Recent explicit owner feedback for the same employee is included in subsequent local AI requests. It influences workflow preferences only; base model weights are unchanged.',
-  recentFeedback:(db.prepare('SELECT * FROM learning_feedback ORDER BY created DESC,id DESC LIMIT 40').all() as any[]).map(presentedFeedback),
+ const generalCount=Number((db.prepare("SELECT count(*) AS n FROM learning_feedback WHERE source='owner' AND scope='all_businesses'").get() as any).n),businessCount=Number((db.prepare("SELECT count(*) AS n FROM learning_feedback WHERE source='owner' AND scope='business' AND business_key=?").get(business.key) as any).n);
+ return {method:METHOD,notice:NOTICE,version:model.version,trainedExamples:model.examples,updatedAt:model.updated,parameters,businessScope:{name:business.name,key:business.key,ownerExamples:businessCount},generalWorkflowExamples:generalCount,
+  futureAdvisoryGuidance:'Recent feedback for the same employee is included in later local AI requests only when it matches the active company or the owner explicitly shared it across businesses. It influences workflow preferences only; model weights remain unchanged.',
+  recentFeedback:(db.prepare("SELECT * FROM learning_feedback WHERE scope='all_businesses' OR (scope='business' AND business_key=?) ORDER BY created DESC,id DESC LIMIT 40").all(business.key) as any[]).map(presentedFeedback),
   eligibleReceipts,pendingCorrections:pendingLearningCorrections(20,true),model:{version:model.version,samples:model.examples,updatedAt:model.updated},
   explanation:NOTICE,recipes:parameters.map(row=>({id:row.recipe,label:row.recipe,mean:row.mean,positive:row.positiveWeight,negative:row.negativeWeight}))};
 }
@@ -184,21 +220,21 @@ export function learningDataset(format:'json'|'jsonl'|'csv'='json'){
  const raw=db.prepare("SELECT * FROM learning_feedback WHERE source='owner' ORDER BY created ASC,id ASC").all() as any[];
  const all=raw.map(row=>({row,item:presentedFeedback(row)}));
  const active=all.filter(entry=>!entry.item.excluded).map(({row,item})=>({
-  schemaVersion:'leax-owner-work-feedback/v1',
-  id:item.id,receiptType:item.kind,savedReceiptId:item.receiptId,agent:item.agent,recipe:item.recipe,
+  schemaVersion:'leax-owner-work-feedback/v2',
+  id:item.id,receiptType:item.kind,savedReceiptId:item.receiptId,agent:item.agent,recipe:item.recipe,scope:item.scope,businessName:item.businessName,
   relatedRecipes:JSON.parse(String(row.related_recipes||'[]')),rating:item.rating,weight:Number(row.weight),
   ownerReason:item.reason,source:'owner',createdAt:new Date(Number(item.createdAt)).toISOString()
  }));
  const manifest={
-  dataset:'LeaX owner work feedback',schemaVersion:'leax-owner-work-feedback/v1',generatedAt:new Date().toISOString(),
-  purpose:'Preference labels for LeaX permitted-work recipe ranking.',
+  dataset:'LeaX owner work feedback',schemaVersion:'leax-owner-work-feedback/v2',generatedAt:new Date().toISOString(),
+  purpose:'Owner preference labels separated into current-business lessons and explicitly shared cross-business workflow habits.',
   learningMethod:METHOD,isGeneralLanguageModelFineTuningData:false,
   exampleCount:active.length,excludedFeedbackCount:all.length-active.length,
-  privacy:'Contains owner-written feedback reasons and saved receipt identifiers only. It does not export stored credentials, message bodies, prompts, generated answers or source documents. Owner-written reason text is included and may contain details you typed; review it before uploading elsewhere.',
+  privacy:'Contains owner-written feedback reasons, saved receipt identifiers, business scope and business name. It does not export stored credentials, message bodies, prompts, generated answers or source documents. Owner-written reason text may contain details you typed; review it before uploading elsewhere.',
   examples:format==='json'?active:undefined
  };
  if(format==='json')return JSON.stringify(manifest,null,2)+'\n';
  if(format==='jsonl')return [JSON.stringify({recordType:'manifest',...manifest}),...active.map(example=>JSON.stringify({recordType:'feedback',...example}))].join('\n')+'\n';
- const fields=['schemaVersion','id','receiptType','savedReceiptId','agent','recipe','relatedRecipes','rating','weight','ownerReason','source','createdAt'];
+ const fields=['schemaVersion','id','receiptType','savedReceiptId','agent','recipe','scope','businessName','relatedRecipes','rating','weight','ownerReason','source','createdAt'];
  return [fields.map(csvCell).join(','),...active.map(example=>fields.map(field=>csvCell(field==='relatedRecipes'?JSON.stringify(example.relatedRecipes):example[field])).join(','))].join('\r\n')+'\r\n';
 }

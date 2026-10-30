@@ -1,3 +1,9 @@
+## Preview.29 — workflow feedback scope
+
+6 focused tests passed in `test/learning.test.ts` and `test/ai.test.ts` under Node 22.15 experimental type stripping. The new regression covers American Power-specific feedback staying out of another configured company’s AI context, explicitly shared process habits appearing across company scopes, and shared feedback leaving company work-ranking weights unchanged. Changed JS and TypeScript files passed syntax checks.
+
+`npm run build:app` did not complete locally because the checkout has no installed `esbuild` package. The GitHub Windows release workflow remains the packaging check. The full test suite and Render deployment were not verified in this step.
+
 ## Preview.28 — adaptive workflow learning and CCL shell
 
 Focused validation: 5 tests passed in test/learning.test.ts and test/ai.test.ts using Node 22.15 with experimental type stripping. They verify persisted eligible-work ranking, inclusion of same-agent owner feedback in future AI grounding, and role isolation. JavaScript and TypeScript syntax checks passed; CRLF-aware git diff check passed.
