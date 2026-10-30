@@ -1,4 +1,10 @@
-## Preview.31 remaining work
+## Preview.32 remaining work
+
+- AI meetings let you speak a question and send its recognized text to selected agents. Replies require a real local model or paired desktop worker. There is no automatic free hosted AI. Browser/device voices vary, and real Poly hardware is not connected. Human call guests need a scheduled in-app meeting; invitations and per-person office permissions are not implemented.
+- The Distribution Center no longer displays unrelated office agents as factory operators. There are no product-specific production assignments in the current workflows, so factory operators and proof-sheet movement may be absent. Saved proofs remain digital files; no physical manufacturing or fulfillment is happening.
+- Product files are deterministic editable SVG templates, not generated AI illustrations. Store projects do not connect Etsy/eBay/Amazon or POD providers, and no live EverBee analytics feed is connected.
+- CCL’s prototype directory still includes proposed integrations that are not implemented. A real embedded LeaX AI Browser, arbitrary logged-in-site automation, and the marketplace, work-order, bid, calendar, banking and marketing adapters remain outstanding. Never display prototype connected claims for a provider without an authorized, working adapter.
+- Preview.32 browser E2E, production package, Render deployment and Windows installation have not yet been verified.
 
 - Embedded LeaX AI Browser is not implemented. Current CCL browser view hands pages to the device browser; the installed native launcher also opens a browser window for the local office. Neither provides a separate in-app profile or arbitrary authenticated-site automation.
 - The hosted web app does not have a free AI model automatically provisioned. Online use needs a user-authorized, running paired desktop worker; only that worker’s verified local model is used.

@@ -3,7 +3,7 @@ const el=(tag,value)=>{const node=document.createElement(tag);if(value!==undefin
 let active=null;
 const present=detail=>window.dispatchEvent(new CustomEvent('hq-meeting-presentation',{detail:{source:'call',...detail}}));
 
-export function initCalls(options){api=options.api;window.hqCalls={open:callForm,leave:()=>active?.close()};}
+export function initCalls(options){api=options.api;window.hqCalls={open:callForm,leave:()=>active?.close(),focus:()=>{if(!active)return;active.dialog.tabIndex=-1;active.dialog.focus();active.dialog.scrollIntoView({block:'nearest'});}};}
 function callForm(meeting){
  if(window.hqActiveAIMeeting){window.hqPopup.open({title:'Finish the current agent meeting first',intro:'Leave the AI meeting before opening a live human call on the same room display.',readable:false});return;}
  if(active){active.dialog.focus();return;}
@@ -37,18 +37,17 @@ async function beginCall(meeting,name,camera,iceServers){
   const post=(path,body)=>api('calls/'+path,{meetingId:state.meetingId,peerId:state.peerId,...body});
   const presentation=(enter=false)=>{
    if(state.closed)return;
-   const peers=[...state.peers.entries()],connected=peers.filter(([,entry])=>entry.pc.connectionState==='connected');
-   const chosen=connected.find(([id])=>id===state.selectedPeerId)||connected[0];
-   let title=meeting.title,screenStatus='Waiting for another participant to join',lines=['No remote audio or camera is connected yet.'],video=null;
-   if(chosen){const [id,entry]=chosen;state.selectedPeerId=id;title=entry.name||'Meeting participant';const tracks=entry.remote.srcObject?.getVideoTracks?.()||[],hasCamera=tracks.some(track=>track.readyState==='live'&&!track.muted),hasAudio=(entry.remote.srcObject?.getAudioTracks?.()||[]).some(track=>track.readyState==='live'&&!track.muted);video=hasCamera?entry.remote:null;screenStatus=hasCamera?'Live participant camera':hasAudio?'Live audio · Camera not shared':'Participant connected · Media not available';lines=hasCamera?[]:[hasAudio?title+' is connected by audio.':'Waiting for '+title+' to share media.'];}
-   else if(peers.some(([,p])=>p.pc.connectionState==='failed')){screenStatus='Media connection failed';lines=['Check your STUN/TURN settings, or use the saved meeting-service link.'];}
-   else if(peers.length){screenStatus='Connecting browser media';lines=['Waiting for a verified media connection.'];}
-   const signature=JSON.stringify({id:state.selectedPeerId,title,status:screenStatus,video:!!video,videoReady:video?.readyState||0,playing:!!video&&!video.paused,videoWidth:video?.videoWidth||0,lines});
-   status.textContent=screenStatus+'. '+(state.sceneAvailable?'The room display shows the selected participant.':'Use camera previews while the room loads or when 3D is unavailable.');
-   for(const [id,entry]of peers)entry.select.setAttribute('aria-pressed',String(chosen?.[0]===id));
-   if(enter||signature!==state.presentationSignature){state.presentationSignature=signature;present({active:true,sessionId:state.peerId,title,status:screenStatus,lines,video,enter});}
-  };
-  const sceneChanged=event=>{const detail=event.detail||{};if(detail.source!=='call'||detail.sessionId!==state.peerId)return;state.sceneAvailable=detail.available===true;panel.dataset.sceneAvailable=String(state.sceneAvailable);if(!state.sceneKnown&&!state.previewsUserChoice)previews.open=!state.sceneAvailable;state.sceneKnown=true;if(detail.reason)status.textContent=detail.reason;else presentation();};
+   const peers=[...state.peers.entries()],connected=peers.filter(([,entry])=>entry.pc.connectionState==='connected'),focused=connected.find(([id])=>id===state.selectedPeerId)||null;
+   const visiblePeers=focused?[focused]:connected;
+   const videos=[],audioNames=[];
+   for(const [id,entry]of visiblePeers){const tracks=entry.remote.srcObject?.getVideoTracks?.()||[],audio=entry.remote.srcObject?.getAudioTracks?.()||[],hasCamera=tracks.some(track=>track.readyState==='live'&&!track.muted),hasAudio=audio.some(track=>track.readyState==='live'&&!track.muted);if(hasCamera)videos.push({id,name:entry.name||'Participant',video:entry.remote});else if(hasAudio)audioNames.push(entry.name||'Participant');}
+   let screenStatus=videos.length?videos.length+' participant'+(videos.length===1?'':'s')+' on room display':audioNames.length?'Live audio · Camera not shared':'Waiting for another participant to join',lines=videos.length?[]:audioNames.length?[audioNames.join(', ')+' connected by audio.']:['No remote audio or camera is connected yet.'];
+   if(peers.some(([,entry])=>entry.pc.connectionState==='failed')&&!connected.length){screenStatus='Media connection failed';lines=['Check your STUN/TURN settings, or use the saved meeting-service link.'];}else if(peers.length&&!connected.length){screenStatus='Connecting browser media';lines=['Waiting for a verified media connection.'];}
+   const signature=JSON.stringify({focused:focused?.[0]||null,participants:videos.map(item=>[item.id,item.name,item.video.readyState,item.video.videoWidth,item.video.videoHeight,!item.video.paused]),status:screenStatus,lines});
+   status.textContent=screenStatus+'. '+(state.sceneAvailable?'The room display shows the connected participant gallery.':'Use camera previews while the room loads or when 3D is unavailable.');
+   for(const [id,entry]of peers){entry.select.textContent=state.selectedPeerId===id?'Show all participants':'Focus this participant';entry.select.setAttribute('aria-pressed',String(state.selectedPeerId===id));}
+   if(enter||signature!==state.presentationSignature){state.presentationSignature=signature;present({active:true,sessionId:state.peerId,title:meeting.title,status:screenStatus,lines,videos,video:null,enter});}
+  };  const sceneChanged=event=>{const detail=event.detail||{};if(detail.source!=='call'||detail.sessionId!==state.peerId)return;state.sceneAvailable=detail.available===true;panel.dataset.sceneAvailable=String(state.sceneAvailable);if(!state.sceneKnown&&!state.previewsUserChoice)previews.open=!state.sceneAvailable;state.sceneKnown=true;if(detail.reason)status.textContent=detail.reason;else presentation();};
   window.addEventListener('hq-meeting-scene-state',sceneChanged);summary.addEventListener('click',()=>{state.previewsUserChoice=true;});
   const close=()=>{if(state.closed)return;state.closed=true;clearTimeout(state.timer);window.removeEventListener('hq-meeting-scene-state',sceneChanged);window.removeEventListener('pagehide',close);for(const entry of state.peers.values())entry.pc.close();for(const track of media.getTracks())track.stop();void post('leave',{}).catch(()=>{});present({active:false,sessionId:state.peerId});panel.remove();active=null;window.hqActiveCall=null;};
   state.close=close;leave.onclick=close;window.addEventListener('pagehide',close,{once:true});
@@ -60,7 +59,7 @@ async function beginCall(meeting,name,camera,iceServers){
    if(state.peers.has(id))return state.peers.get(id);
    const pc=new RTCPeerConnection({iceServers}),remote=el('video'),caption=el('p',otherName||'Participant'),wrap=el('div'),select=el('button','Show on room screen');wrap.className='call-person';remote.autoplay=true;remote.playsInline=true;remote.controls=true;wrap.append(remote,caption,select);videos.append(wrap);
    const entry={pc,wrap,remote,pending:[],select,name:otherName||'Participant'};state.peers.set(id,entry);
-   select.onclick=()=>{state.selectedPeerId=id;presentation();};
+   select.onclick=()=>{state.selectedPeerId=state.selectedPeerId===id?null:id;presentation();};
    for(const track of media.getTracks())pc.addTrack(track,media);
    remote.addEventListener('loadeddata',()=>presentation());remote.addEventListener('playing',()=>presentation());
    pc.ontrack=event=>{if(event.streams[0])remote.srcObject=event.streams[0];else{if(!remote.srcObject)remote.srcObject=new MediaStream();remote.srcObject.addTrack(event.track);}event.track.addEventListener('mute',()=>presentation());event.track.addEventListener('unmute',()=>presentation());event.track.addEventListener('ended',()=>presentation());void remote.play().catch(async()=>{enableAudio.hidden=false;remote.muted=true;try{await remote.play();}catch{previews.open=true;}presentation();});presentation();};

@@ -4,7 +4,9 @@ let generation=0,current=null,selectedVoiceURI=null;
 function engine(){return typeof globalThis.SpeechSynthesisUtterance==='function'&&globalThis.speechSynthesis?globalThis.speechSynthesis:null;}
 function localVoices(){try{return (engine()?.getVoices()||[]).filter(v=>v.localService===true&&/^en(?:[-_]|$)/i.test(v.lang||''));}catch{return [];}}
 function voiceScore(voice){return (/natural|enhanced|premium|neural/i.test(voice.name)?100:0)+(/^en[-_]US$/i.test(voice.lang)?15:0)+(voice.default?5:0);}
-function chooseVoice(voices,preferred){return voices.find(v=>v.voiceURI===preferred)||[...voices].sort((a,b)=>voiceScore(b)-voiceScore(a))[0];}
+function orderedVoices(voices){return [...voices].sort((a,b)=>voiceScore(b)-voiceScore(a)||String(a.voiceURI).localeCompare(String(b.voiceURI)));}
+function chooseVoice(voices,preferred){return voices.find(v=>v.voiceURI===preferred)||orderedVoices(voices)[0];}
+function chooseAgentVoice(voices,index){const ordered=orderedVoices(voices);return ordered.length?ordered[Math.abs(Number(index)||0)%ordered.length]:null;}
 export function getSpeechOptions(){
  const supported=!!engine(),voices=localVoices(),voice=chooseVoice(voices,selectedVoiceURI);
  return {supported,available:voices.length>0,voices:voices.map(v=>({voiceURI:v.voiceURI,name:v.name,lang:v.lang,local:true})),selectedVoiceURI:voice?.voiceURI||null,message:!supported?'Read-aloud is not supported in this browser. The written instructions are still available.':!voices.length?'No installed English voice is ready in this browser. Read to me will check again.':'Uses an installed device voice. Its sound depends on the voices available on your computer.'};
@@ -50,7 +52,7 @@ export async function readToMe(value,options={}){
  const text=spokenText(value);if(!text){const message='Open a short explanation or note to read aloud.';notify(target,'unavailable',message);return {started:false,status:'unavailable',message};}
  const token=generation;current=target;notify(target,'preparing','Preparing your device voice…');await awaitVoices(synth);
  if(token!==generation||current!==target)return {started:false,status:'stopped',message:'Reading stopped.'};
- const voice=chooseVoice(localVoices(),options.voiceURI||selectedVoiceURI);
+ const available=localVoices(),voice=Number.isSafeInteger(options.voiceIndex)?chooseAgentVoice(available,options.voiceIndex):chooseVoice(available,options.voiceURI||selectedVoiceURI);
  if(!voice){current=null;const message='This browser has no installed English read-aloud voice. Try your device’s usual browser, or use the written steps.';notify(target,'unavailable',message);return {started:false,status:'unavailable',message};}
  selectedVoiceURI=voice.voiceURI;const chunks=chunksFor(text);const rate=Number.isFinite(options.rate)?Math.min(1.15,Math.max(.85,options.rate)):1;
  function finish(status,message){if(token!==generation||current!==target)return;current=null;generation++;clearTimers(target);try{synth.cancel();}catch{}notify(target,status,message);}

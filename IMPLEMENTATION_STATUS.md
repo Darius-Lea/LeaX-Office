@@ -1,4 +1,12 @@
-## Preview.31 — model privacy and AI meeting attendance
+## Preview.32 — meeting room and Distribution Center status
+
+The meeting remote opens from the tabletop controller and wall display. The display can be powered on before an AI or human call. Live browser-call video updates the wall gallery as frames arrive. AI meetings can include up to 26 selected agents; the default selection is the full roster. The mic feature transcribes speech to text and sends that text to agents; it does not stream raw audio to AI. Replies can use distinct installed local English voices when available. AI inference still requires a configured local model or paired desktop worker, and no Poly device is connected.
+
+The Distribution Center separates company-wide AI assignments from floor operators. An avatar appears on the floor only with a saved product-specific assignment; this version does not create those assignments. Network failures show plain-language guidance and a retry action. Existing SVG files remain saved digital proofs.
+
+Preview.32 verification: focused operations, meeting-limit and distribution-projection tests passed. Full selected test and browser/build checks are limited by the local Node 22.15/Windows sandbox, missing Playwright/esbuild dependencies and a failing store-preparation test. CI and Render status remain unverified.
+
+Still outstanding: image-generation backend, automatic POD/marketplace provider connections, live EverBee trend data, real embedded browser, free always-on hosted AI, human invitations/permissions, and an actual factory/fulfillment workflow.
 
 - Desktop opens first; CCL has the full “Control Center Leaus (CCL)” label and a soft suggestion glow. Opportunities and inbox navigation are hidden while the desktop surface is active. Store Workspace is presented as part of LeaX Office Pro. “Researching” saved opportunities are shown as “Needs qualification.”
 - LeaX sends each inference to one selected local model or explicitly paired worker. Cloud-tagged Ollama models are hidden and blocked, including legacy queued work and paired-worker requests. The underlying other Ollama chat models are not called by LeaX.

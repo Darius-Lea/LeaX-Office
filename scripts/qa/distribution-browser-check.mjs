@@ -105,8 +105,8 @@ try{
  check(scene.locationStyle==='distribution-center'&&scene.sceneId==='distribution-warehouse'&&scene.referenceLayout===true,'The selected location is not the supplied warehouse layout');
  check(JSON.stringify([...scene.productsVisible].sort())===JSON.stringify(productIds),'Warehouse displays sample or unrelated products');
  check(scene.productProofs.every(p=>p.loaded&&products.some(real=>real.id===p.id&&real.revision===p.revision&&real.previewUrl===p.previewUrl)),'Warehouse proof texture metadata does not match saved files');
- check(scene.workerIds.length>0&&scene.workerIds.every(id=>workerIds.has(String(id))),'Warehouse contains invented workers');
- check(scene.working.every(id=>snapshot.distribution.workers.some(w=>String(w.id)===String(id)&&w.status==='Working')),'Warehouse reports unrecorded running work');
+ check(scene.workerIds.length===0&&scene.working.length===0,'Headquarters AI employees without production assignments were shown as factory workers');
+ check(snapshot.distribution.workers.every(w=>w.productionAssignment===false),'A company AI agent was falsely labeled as a production operator');
  const canvas=page.locator('.distribution-renderer-surface canvas');
  const size=await canvas.boundingBox();check(size&&size.width>500&&size.height>300,'Warehouse canvas is hidden or lacks full scene dimensions');
  const cameraButtons=page.locator('#distribution-view-controls');await cameraButtons.waitFor({state:'visible'});
@@ -144,10 +144,10 @@ try{
  await cameraButtons.getByRole('button',{name:'First person',exact:true}).click();
  await waitForWarehouseFrame(page,'explore');
  await page.screenshot({path:join(folder,'distribution-warehouse-first-person.png')});
- await page.evaluate(id=>window.hqDistribution.inspectWorker(id),scene.workerIds[0]);
+ await page.evaluate(id=>window.hqDistribution.inspectWorker(id),snapshot.distribution.workers[0].id);
  await page.locator('#focused-dialog').waitFor({state:'visible'});
- const worker=snapshot.distribution.workers.find(w=>String(w.id)===String(scene.workerIds[0]));
- check((await page.locator('#focused-dialog').innerText()).includes(worker.name),'Worker inspection shows a different person');
+ const worker=snapshot.distribution.workers[0];
+ const workerCopy=await page.locator('#focused-dialog').innerText();check(workerCopy.includes(worker.name)&&workerCopy.includes('AI teammate')&&workerCopy.includes('not a person working at this machine'),'Company AI employee was not clearly distinguished from a physical factory operator');
  await page.locator('#focused-close').click();
  await page.evaluate(id=>window.hqDistribution.inspectProduct(id),products[0].id);
  const inspected=page.locator('#focused-dialog .distribution-inspection img');

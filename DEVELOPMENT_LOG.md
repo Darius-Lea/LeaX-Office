@@ -1,4 +1,12 @@
-## 2026-10-30 — preview.31: model privacy, desktop start and full-team meetings
+## 2026-10-30 — preview.32: usable meeting room and truthful production roster
+
+The meeting room remote now opens from the tabletop controller or wall display and can power the display on before a meeting. Live human-call video is redrawn into the wall gallery as new frames arrive. AI meetings invite all selected agents by default and support up to 26 seats. The meeting microphone uses browser speech recognition and sends the recognized text to selected agents; agent replies use distinct installed local English voices when the device has them. This is not a Poly hardware integration, does not stream raw mic audio to an AI model, and voice quality depends on browser/device support.
+
+The Distribution Center no longer puts all Headquarters employees on the factory floor. The floor will show an AI employee only when a product-specific production assignment is saved. There is no production-task producer in this preview, so the scene may show no floor operators or moving proof sheets. Company AI status stays accessible in the Distribution Center workspace. Worker details translate network/model failures into plain language and offer the available saved-assignment retry.
+
+Validation: operations error-copy test passed; AI meeting capacity and real-inference gating tests passed; distribution projection test passed; changed JS/TS syntax and git diff check passed. An attempted multi-file test run was not clean under local Node 22.15 on Windows: Windows temp-file rename returned EPERM, a paired-worker fixture then could not start, and the existing distribution store-preparation test raised a nested SQLite transaction error. The project requires Node 24.19+, no Playwright package or esbuild is installed in this checkout, so the end-to-end meeting browser check and local production build were not run. GitHub Actions and Render deployment are not yet verified for preview.32.
+
+Product artwork still uses parameterized editable SVG templates rather than AI image generation. No Printful/Printify, Etsy, eBay, Amazon or EverBee provider feed is connected. CCL prototype provider badges do not establish live integrations. Those remain subsequent work.
 
 The LeaX Office Pro desktop opens first and labels CCL as a suggested subsidiary app; Store Workspace is named as part of LeaX Office Pro. Desktop view keeps workspace navigation out of the desktop surface. Saved opportunity status reads “Needs qualification,” not active research. CCL’s browser remains clearly disclosed as a public web handoff; a true embedded engine is still a separate native implementation.
 

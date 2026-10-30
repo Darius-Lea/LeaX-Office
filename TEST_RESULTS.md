@@ -1,4 +1,6 @@
-## Preview.31 validation status — 2026-10-30
+## Preview.32 validation status — 2026-10-30
+
+Three focused test runs passed: operations error-copy, meeting roster limit and inference gating, and distribution projection. Changed JS/TS syntax and git diff check passed. The wider selected test run was inconclusive on Node 22.15/Windows because of sandbox EPERM during private-vault rename, dependent paired-worker setup failures, and an existing nested-transaction failure in store preparation. The package requires Node 24.19+. No local Playwright or esbuild dependency is installed, so browser E2E and local production build were not run here. GitHub Actions, Render deployment and owner-device install are pending.
 
 Changed JS/TS syntax and diff checks passed. No test suite or local production build was run. GitHub Actions run 41000790533 built and published the Windows installer successfully. Render /api/version reports preview.31; /download/windows returned an installer whose SHA-256 matched the published checksum. No owner-device install, browser-engine test or end-to-end meeting animation check was run.
 
