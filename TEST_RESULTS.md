@@ -1,3 +1,7 @@
+## 2026-10-30 — preview.45 launcher validation
+
+The new HTTP test passed: /embed and its stylesheet return successfully, Google Sites framing is allowed on the public launcher, sign-in links open with noopener/noreferrer, no password form is embedded, private office framing remains denied and private state still requires authentication. Standalone production build passed with the new assets. Existing preview.44 regression results remain historical; no new guest meeting/tour implementation is claimed. Live Render/Google Sites verification remains unavailable. Unfinished guest code is preserved on a separate branch and excluded from main.
+
 ## 2026-10-30 — preview.44 actual validation
 
 `NODE_USE_ENV_PROXY=1 npm test`: 186 passed, zero failed/cancelled/skipped/todo on Node 24.19.0/Linux. Direct focused runs additionally executed the offline-access, access-gate HTTP, password-recovery, company-phone/platform access, marketing workflow and updater assertions. They cover six-day offline restart allowance/eight-day lockout, background reconnect, online revocation, encrypted session/lease storage, reset expiry/replay/session invalidation without suspension bypass, role/privacy/call signaling separation, completed model handoffs and installer checksum/format/host/size rejection. These fixtures do not prove live model quality or a real Windows installer launch.

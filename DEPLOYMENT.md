@@ -1,3 +1,9 @@
+## Google Sites launcher - preview.45
+
+In Google Sites choose Insert > Embed > By URL and paste https://leax-office.onrender.com/embed, then resize the block and publish the site. The Render service must first deploy preview.45. The launcher opens sign-in/the office in a new tab; full private-app iframe embedding is not implemented. Third-party cookies can block embedded sign-in. Public launcher framing does not expose private data or relax framing on the private office.
+
+Embedding does not hide Render from network inspection or make the app unhackable. A future custom domain changes the visible address; server authentication, permissions and secure hosting still provide protection. This workspace cannot directly edit the owner's Google Sites page, and its current network policy prevents live Render verification.
+
 # Run and recover
 
 Preview.6 adds authenticated opportunity creation/editing/results, verified managed backups and paged research history. GET `/api/state` accepts zero-based `recordPage`, `taskPage` and literal `historyQuery`; it retains active work alongside the selected task page. Old records are not deleted. Database exports stream a consistent checked copy and remove their request staging after completion or disconnect. Automatic backups run as local maintenance independently of the business clock, with seven-copy managed retention. Same-host backups do not make an ephemeral Render filesystem durable.

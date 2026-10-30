@@ -1,3 +1,9 @@
+## Preview.45 — Google Sites launcher, 2026-10-30
+
+Completed a responsive public /embed launcher with account/join, private-office and Windows download links. Google Sites/googleusercontent framing is allowed only for this public launcher; founder pages retain frame-ancestors none and authentication. Sign-in opens a new tab to avoid third-party-cookie failures. Embedding does not conceal Render, prevent hacking or hide client artifacts. Actual Google Sites editing and live Render deployment are not verified.
+
+Guest office/video/streaming foundations are preserved separately on codex/live-guest-office-in-progress (4e82ba4), explicitly unfinished and not deployed on main. Auto Poster remains disconnected. User requested a working push before usage returns November 4; preview.45 ships the completed launcher without the unfinished live-session code.
+
 ## Preview.44 — distinct marketing campus, connected/offline access and company phone, 2026-10-30
 
 Implemented a dedicated two-story marketing campus with an open central atrium/railings, creator/data/SEO labs, creative studio access, restored existing miner showpiece and decorative programmable matter. Bounded trend/SEO checks hand actual source evidence through completed analyst/strategy/creator runs to owner review. Auto Post connection is deferred by the owner; its repository has not been changed or connected.

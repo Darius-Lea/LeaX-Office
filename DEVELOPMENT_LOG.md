@@ -1,3 +1,7 @@
+## 2026-10-30 — finish and preserve work before usage reset
+
+Saved unfinished guest session, viewpoint/visitor and streaming-answer foundations to codex/live-guest-office-in-progress, separate from the stable main release. Completed preview.45 Google Sites public launcher and verified HTTP/CSP behavior: embeddable public content, new-tab secure sign-in, protected private office and unchanged authentication. Production build passed. No Google Sites page was edited and no hosting concealment/security guarantee is claimed. Auto Poster remains untouched/disconnected. Full guest meeting/tour behavior and release coordination remain continuation work.
+
 ## 2026-10-30 — preview.44 marketing/access release
 
 Continued the existing checkout without resetting prior preview.43 work. Built the separate atrium campus and reused the prior miner/morphing-matter geometry through a dedicated installation module. Added online background access checks with encrypted credentials/last verified decision, seven-day offline work across restarts, server/client/native-browser setup-lobby enforcement, and shared-service proxying to the canonical host. The owner explicitly changed the temporary five-minute draft to one week; the final policy is seven days with no access-code override.
