@@ -1,4 +1,4 @@
-import {isAdditionalLocalModel,additionalModels,runLocalInference} from './local-engines.ts';
+import {isAdditionalLocalModel,isOllamaCloudModel,additionalModels,runLocalInference} from './local-engines.ts';
 import {commerceState} from './commerce.ts';
 import {availableAIWorker} from './ai-routing.ts';
 import {profileState} from './business-profile.ts';
@@ -54,10 +54,11 @@ async function installedModels(fetcher:typeof fetch){
  const response=await fetcher(OLLAMA+'/api/tags',{signal:AbortSignal.timeout(2000),redirect:'error'});
  const data=await boundedJSON(response,500000);
  if(!Array.isArray(data.models)||data.models.length>500)throw Error('Ollama model list has an unexpected format');
- return data.models.map((model:any)=>{
+ const models=data.models.map((model:any)=>{
   if(typeof model?.name!=='string'||!model.name.trim()||model.name.length>256)throw Error('Ollama model list has an invalid name');
   return {name:model.name,size:typeof model.size==='number'&&Number.isFinite(model.size)?model.size:null};
  });
+ return models.filter((model:any)=>!isOllamaCloudModel(model.name));
 }
 export function agentRuns(){
  recoverStale();return db.prepare('SELECT * FROM ai_runs ORDER BY created DESC,id DESC LIMIT 30').all().map((run:any)=>({...run,toolEvents:toolEvents(run.id)}));
@@ -67,12 +68,13 @@ export async function aiStatus(fetcher:typeof fetch=fetch){
  const recommendedModel=hardware.totalMemory<8*1024**3?'Use a small 1B–3B quantized model; CPU inference may be slow.':hardware.totalMemory<16*1024**3?'Start with a 3B–4B quantized model; leave memory for the operating system.':'Start with a quantized 7B–8B model; larger models need a separate hardware assessment.';
  let models:{name:string,size:number|null}[]=[];let available=false;let error:string|null=null;
  try{models=isAdditionalLocalModel(setting('ollama_model'))?await additionalModels(setting('ollama_model'),fetcher):await installedModels(fetcher);available=true;}catch(cause){error='Local AI setup required: '+String(cause).slice(0,300);}
- const configuredModel=setting('ollama_model')||null;
+ const rawConfiguredModel=setting('ollama_model')||null,configuredModel=rawConfiguredModel&&!isOllamaCloudModel(rawConfiguredModel)?rawConfiguredModel:null;
  const setupRequired=!available||!configuredModel||!models.some(model=>model.name===configuredModel);
  const paired=availableAIWorker();return {available:available||!!paired,localAvailable:available,configuredModel:configuredModel||(paired?paired.model:null),models,hardware,recommendedModel,setupRequired:setupRequired&&!paired,error:paired?null:error,installation:setting('ollama_install_status')?JSON.parse(setting('ollama_install_status')):null,runs:agentRuns(),managedSetup:setting('managed_ai_setup')?JSON.parse(setting('managed_ai_setup')):null,pairedWorker:availableAIWorker(),scope:'Inference runs on this server machine. A hosted server cannot use the browser computer\'s localhost model.'};
 }
 export async function configureModel(name:string,fetcher:typeof fetch=fetch){
  if(typeof name!=='string'||!name.trim()||name.length>256)throw Error('Choose an installed model');
+ if(isOllamaCloudModel(name))throw Error('Cloud-tagged Ollama models are blocked. Choose a model that runs locally on this computer.');
  const models=isAdditionalLocalModel(name)?await additionalModels(name,fetcher):await installedModels(fetcher);
  if(!models.some(model=>model.name===name))throw Error('Setup required: selected model is not installed in this local Ollama instance');
  setSetting('ollama_model',name);audit('ai','Owner selected installed local model '+name);return {model:name};
@@ -81,7 +83,7 @@ export function queueAgent(agent:string,prompt:string,contextTask?:string){
  if(typeof agent!=='string'||!db.prepare('SELECT id FROM employees WHERE id=?').get(agent))throw Error('Select an existing employee');
  if(typeof prompt!=='string'||!prompt.trim()||prompt.length>6000)throw Error('Enter an assignment of 1–6000 characters');
  if(contextTask!==undefined&&(typeof contextTask!=='string'||!db.prepare('SELECT id FROM tasks WHERE id=?').get(contextTask)))throw Error('Select an existing research task for the AI context');
- const paired=availableAIWorker(),model=paired?'paired:'+paired.device_id:setting('ollama_model');if(!model)throw Error('Setup required: connect local AI or enable a verified paired desktop worker first');
+ const paired=availableAIWorker(),model=paired?'paired:'+paired.device_id:setting('ollama_model');if(!model)throw Error('Setup required: connect local AI or enable a verified paired desktop worker first');if((paired&&isOllamaCloudModel(paired.model))||(!paired&&isOllamaCloudModel(model)))throw Error('Cloud-tagged Ollama models are blocked. Choose a model that runs locally on this computer.');
  const id=randomUUID(),now=Date.now();
  db.prepare("INSERT INTO ai_runs(id,agent,prompt,status,model,created,updated,context_task) VALUES(?,?,?,'Queued',?,?,?,?)").run(id,agent,prompt.trim(),model,now,now,contextTask||null);
  audit('ai:'+id,'Owner queued local-model assignment for '+agent);return id;
@@ -91,7 +93,7 @@ export function retryAgent(id:string){
  const row=db.prepare('SELECT * FROM ai_runs WHERE id=?').get(id) as any;
  if(!row||row.status!=='Blocked')throw Error('Only blocked AI assignments may be retried');
  if(row.attempts>=ATTEMPTS)throw Error('Retry limit reached; resolve the cause before creating a new assignment');
- const worker=availableAIWorker(),model=worker?'paired:'+worker.device_id:setting('ollama_model');if(!model)throw Error('Setup required: select a local model or reconnect a verified paired desktop before retrying');
+ const worker=availableAIWorker(),model=worker?'paired:'+worker.device_id:setting('ollama_model');if(!model)throw Error('Setup required: select a local model or reconnect a verified paired desktop before retrying');if((worker&&isOllamaCloudModel(worker.model))||(!worker&&isOllamaCloudModel(model)))throw Error('Cloud-tagged Ollama models are blocked. Choose a model that runs locally on this computer.');
  db.prepare("UPDATE ai_runs SET status='Queued',model=?,error=NULL,updated=? WHERE id=? AND status='Blocked'").run(model,Date.now(),id);
  audit('ai:'+id,'Owner requested bounded inference retry');
 }
@@ -146,6 +148,7 @@ export async function processAgent(fetcher:typeof fetch=fetch){
   }catch(error){db.exec('ROLLBACK');throw error;}
   if(!run)return false;
   try{
+   if(isOllamaCloudModel(run.model))throw Error('Cloud-tagged Ollama models are blocked. Select a model that runs locally on this computer.');
    const employee=db.prepare('SELECT name,role FROM employees WHERE id=?').get(run.agent) as any;
    if(!employee)throw Error('Assigned employee no longer exists');
    const models=isAdditionalLocalModel(run.model)?await additionalModels(run.model,fetcher):await installedModels(fetcher);

@@ -1,3 +1,7 @@
+## Preview.31 validation status — 2026-10-29
+
+No test suite was run for this increment. Planned syntax checks cover changed JS/TS. No production build, Render deployment, Windows installation, browser-engine test or end-to-end meeting animation check is claimed.
+
 ## Preview.30 packaging repair
 
 Preview.29's Windows installer workflow failed in `build-production.mjs`: esbuild reported a syntax error at the end of `public/app.js`, caused by malformed carriage returns introduced during the UI edit. The source was normalized, and the release-note separator was corrected. Preview.30's GitHub installer build is pending; it must pass before publication. The focused 6 learning/AI tests and changed-file syntax checks had passed before packaging. The local build still cannot run without installed `esbuild`.

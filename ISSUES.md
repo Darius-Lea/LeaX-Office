@@ -1,3 +1,9 @@
+## Preview.31 remaining work
+
+- Embedded LeaX AI Browser is not implemented. Current CCL browser view hands pages to the device browser; the installed native launcher also opens a browser window for the local office. Neither provides a separate in-app profile or arbitrary authenticated-site automation.
+- The hosted web app does not have a free AI model automatically provisioned. Online use needs a user-authorized, running paired desktop worker; only that worker’s verified local model is used.
+- Preview.31 source changes have only had syntax checks; the production installer, hosted deployment, browser engine and end-to-end meeting animation still need verification.
+
 ## Preview.30 packaging status
 
 - Preview.29 has no published installer: GitHub Actions failed while transforming `public/app.js`. Preview.30 contains corrected line endings and release metadata; its Windows build must pass before the download is available.

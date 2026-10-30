@@ -1,3 +1,11 @@
+## Preview.31 — model privacy and AI meeting attendance
+
+- Desktop opens first; CCL has the full “Control Center Leaus (CCL)” label and a soft suggestion glow. Opportunities and inbox navigation are hidden while the desktop surface is active. Store Workspace is presented as part of LeaX Office Pro. “Researching” saved opportunities are shown as “Needs qualification.”
+- LeaX sends each inference to one selected local model or explicitly paired worker. Cloud-tagged Ollama models are hidden and blocked, including legacy queued work and paired-worker requests. The underlying other Ollama chat models are not called by LeaX.
+- AI meetings invite all current agents by default and support up to ten attendees; avatars can walk to seats.
+- Browser is still a disclosed handoff preview. The current app does not include a real embedded/private browser engine. Web-hosted free AI still requires an explicitly paired desktop worker; an always-available free hosted model is not configured.
+- The hosted installer/update link is not verified from this workspace. Preview.31 requires packaging, deployment and user-device verification.
+
 ## Preview.30 — packaging repair in progress
 
 Preview.29's GitHub Windows packaging job failed while transforming `public/app.js`, so no installer was published for .29. The malformed source line endings and release-note separator have been corrected, and .30 is being built. Workflow learning scope remains as described above; .30 is not ready for download until GitHub Actions verifies the installer.

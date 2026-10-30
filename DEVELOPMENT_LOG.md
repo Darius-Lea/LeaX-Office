@@ -1,3 +1,11 @@
+## 2026-10-29 — preview.31: model privacy, desktop start and full-team meetings
+
+The LeaX Office Pro desktop opens first and labels CCL as a suggested subsidiary app; Store Workspace is named as part of LeaX Office Pro. Desktop view keeps workspace navigation out of the desktop surface. Saved opportunity status reads “Needs qualification,” not active research. CCL’s browser remains clearly disclosed as a public web handoff; a true embedded engine is still a separate native implementation.
+
+Only the selected local model or explicitly paired desktop worker receives an inference. Cloud-tagged Ollama models are hidden and are rejected in queue, retry, server execution, paired-worker registration and local worker inference paths. Meetings invite all current agents by default (up to ten), whose avatars walk to seats in the boardroom.
+
+Validation: syntax checks and diff review only; no test suite, production build, Render deployment or Windows run was performed for this increment. The app version is preview.31.
+
 ## 2026-10-29 — preview.30: installer build repair
 
 The preview.29 GitHub Windows installer build exposed malformed carriage returns in `public/app.js`; the local production build could not run because `esbuild` was absent. Corrected the app source line endings and release-note separator, then bumped the app to preview.30 so the corrected installer build is distinct. The Windows workflow must succeed before a new setup file is published.
