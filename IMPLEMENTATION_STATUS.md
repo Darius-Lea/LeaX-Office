@@ -1,3 +1,19 @@
+## Preview.44 — distinct marketing campus, connected/offline access and company phone, 2026-10-30
+
+Implemented a dedicated two-story marketing campus with an open central atrium/railings, creator/data/SEO labs, creative studio access, restored existing miner showpiece and decorative programmable matter. Bounded trend/SEO checks hand actual source evidence through completed analyst/strategy/creator runs to owner review. Auto Post connection is deferred by the owner; its repository has not been changed or connected.
+
+Added hosted suspension/revocation/restoration, setup-lobby restrictions, security observations/rate-limit holds, owner-issued expiring password-reset links, company numbers/directory/privacy approval, business messages, coworker paging and persistent audio controls. New Windows installations renew access in the background and retain a seven-day offline allowance across restarts; confirmed revocation overrides that allowance. The future access-code override is absent. Original source is excluded from customer packaging, without claiming absolute client-code secrecy.
+
+Update prompts/settings now support explicitly approved verified installer downloading/launching on Windows. Live Windows installation, public deployment, guest camera/AI permission meetings, automatic email recovery, automatic threat/terms classification and paid billing remain unverified or unfinished. See docs/MARKETING-ACCESS-RELEASE.md and TEST_RESULTS.md for exact scope.
+
+## Preview.43 — office-first browser and shared collaboration rooms, 2026-10-30
+
+Office starts with the computer closed; the computer opens its desktop. Direct browser shortcut, desktop Chromium tabs/new-tab shortcuts, web page-view tabs and a movable floating assistant with typed conversation, optional voice, mute and Stop are implemented. Stop aborts local inference and prevents late model/tool continuation. Signed-in browser access remains scoped to the existing explicit lead/site permissions; tab changes clear the native grant.
+
+Added separate username/password collaboration accounts, per-account random digital office addresses, one-use expiring invitations, server-enforced owner/co-owner/coworker/visitor membership, revocation, five-second live presence, saved room conversation and the existing real 3D office/meeting room. These rooms do not share private founder business data or synchronize avatar walking. Accounts have no email verification/password recovery yet. All participants must connect to the same durable HTTPS host. See docs/SHARED-OFFICES.md for actual setup and boundaries.
+
+Source two-browser workflow and real headless Electron tab checks passed. Production validation/results are recorded in TEST_RESULTS.md. Not deployed by this task; no Windows installer/device check, real model inference, speech hardware check or public cross-network visit is claimed.
+
 ## Preview.42 — Windows browser installation repair, 2026-10-30
 
 Fixed the owner's “Archive entry exceeds size limit” installation failure. The Windows Chromium executable is 249,798,656 bytes, exceeding the old 157,286,400-byte per-file extraction cap. Only the application payload's exact browser/electron.exe path now allows up to 512 MiB; other files and the Node download retain 150 MiB limits. All setup archives also have a 1 GiB expanded-total cap and 1000-entry cap, preflight path/duplicate/symlink checks, cancellable streaming, exact extracted-size/CRC checks and unchanged manifest verification. Existing office data and browser profiles are outside version staging and are not deleted.

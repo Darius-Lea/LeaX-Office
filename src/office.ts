@@ -1,3 +1,5 @@
+import {onlineAccess} from './online-access.ts';
+import {marketingPulse} from './marketing-workflow.ts';
 import {pollAIWorker} from './ai-relay.ts';
 import {commercePreparationPulse} from './commerce.ts';
 import {pollSync,isPairedCopy,initializeSync} from './sync.ts';
@@ -43,6 +45,7 @@ export async function pulse(fetcher:typeof fetch=fetch){
  const notices=solicitationState();if(!notices.checkedAt||Date.now()-notices.checkedAt>=21600000||(notices.keyConfigured&&['Setup required','Ready'].includes(notices.status)))void searchSolicitations(setting('standing_goal')).catch(()=>console.error('Current-notice search needs attention; inspect source status'));
  const funding=fundingState();if(funding.profile.services&&funding.profile.entityType!=='unknown'&&(!funding.checkedAt||Date.now()-funding.checkedAt>=86400000))void searchFunding().catch(()=>console.error('Funding source needs attention; no grant odds were assumed'));
  void processAgent().catch(error=>console.error('AI worker:',String(error)));
+ if(!onlineAccess.allowed())return false;
  if(busy)return false;
  busy=true;
  try{managerPatrol();const worked=await tick(fetcher);const teamWorked=setting('clock')==='in'?teamPulse():false;
@@ -66,6 +69,6 @@ export async function pulse(fetcher:typeof fetch=fetch){
 }
 export function startOffice(){
  initializeSync();
- const timer=setInterval(()=>{void pollAIWorker();try{commercePreparationPulse()}catch{}void pollSync();void pollMail();void maintainBackups().catch(()=>console.error('Automatic backup needs attention; inspect Data protection in the office.'));pulse().catch(error=>console.error('Office worker failure:',String(error)));},1000);
+ const timer=setInterval(()=>{if(!onlineAccess.allowed())return;void marketingPulse().catch(()=>{});void pollAIWorker();try{commercePreparationPulse()}catch{}void pollSync();void pollMail();void maintainBackups().catch(()=>console.error('Automatic backup needs attention; inspect Data protection in the office.'));pulse().catch(error=>console.error('Office worker failure:',String(error)));},1000);
  timer.unref();return timer;
 }

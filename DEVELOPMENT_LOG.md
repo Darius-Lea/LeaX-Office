@@ -1,3 +1,19 @@
+## 2026-10-30 — preview.44 marketing/access release
+
+Continued the existing checkout without resetting prior preview.43 work. Built the separate atrium campus and reused the prior miner/morphing-matter geometry through a dedicated installation module. Added online background access checks with encrypted credentials/last verified decision, seven-day offline work across restarts, server/client/native-browser setup-lobby enforcement, and shared-service proxying to the canonical host. The owner explicitly changed the temporary five-minute draft to one week; the final policy is seven days with no access-code override.
+
+Added platform access administration, terms/security observations, rate-limit holds, private one-use reset links, company directory/numbers/privacy approvals, request-first audio calls/paging and safe installer update flow. Internet reconnection is automatic while the local service runs; no new Windows startup registration or paid service was enabled. All real owner data is retained.
+
+Found Auto-Poster-AI through the public repository listing and checked out a clean copy. The owner then explicitly postponed integration; no Auto Poster source/configuration was modified, connected, run or published. Its office station remains deferred.
+
+Cloud browsers gathered only TCP ICE candidates: the existing meeting regression and a minimal independent probe reproduced the direct-media failure. Obtained a signature/checksum-verified Debian coturn package and dependencies in /tmp, without installing a system service; an authenticated loopback-only TCP relay then enabled actual two-browser audio. It is a test fixture, not production relay hosting. No external messages or real user media were sent. Final verification is recorded in TEST_RESULTS.md.
+
+## 2026-10-30 — resume LeaX-Office after workspace reconnection
+
+Confirmed managed workspace running/connected and existing HTTPS Git access. Cloned the existing LeaX-Office repository alongside Mother-AI; did not recreate the project or touch owner data. Implemented preview.43 office-first startup, direct browser navigation, real native tabs/new-tab shortcuts and the floating assistant, retaining consented browser tool boundaries. Added isolated collaboration accounts/rooms, addresses, role-checked one-use invitations, live presence, messages and room visuals. Role changes revoke obsolete invitations; shared sessions cannot unlock founder APIs. Preserved original line endings outside edited lines.
+
+Installed locked dependencies. Electron's first download failed because its native fetch did not automatically use the managed proxy; NODE_USE_ENV_PROXY=1 restored verified downloading. Source Chromium and actual headless Electron checks passed; final suite/package results are in TEST_RESULTS.md. No paid service, external message, live data migration or website deployment was performed. Public host access was blocked by the current proxy policy; saved its domain addition in the draft, not applied/published. See docs/SHARED-OFFICES.md for the remaining public deployment and real-device acceptance flow.
+
 ## Preview.42 — Windows browser installation repair, 2026-10-30
 
 Fixed the owner's “Archive entry exceeds size limit” installation failure. The Windows Chromium executable is 249,798,656 bytes, exceeding the old 157,286,400-byte per-file extraction cap. Only the application payload's exact browser/electron.exe path now allows up to 512 MiB; other files and the Node download retain 150 MiB limits. All setup archives also have a 1 GiB expanded-total cap and 1000-entry cap, preflight path/duplicate/symlink checks, cancellable streaming, exact extracted-size/CRC checks and unchanged manifest verification. Existing office data and browser profiles are outside version staging and are not deleted.

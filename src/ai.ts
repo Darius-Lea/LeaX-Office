@@ -137,6 +137,13 @@ export function grounding(agent:string,contextTask:string|null){
  return JSON.stringify(context);
 }
 let processing=false;
+const runControllers=new Map<string,AbortController>();
+export function stopAgentRun(id:string){
+ const result=db.prepare("UPDATE ai_runs SET status='Blocked',error='Stopped by owner',updated=? WHERE id=? AND status IN ('Queued','Running')").run(Date.now(),id);
+ runControllers.get(id)?.abort();
+ return {stopped:result.changes>0};
+}
+export function agentRunDetail(id:string){const run=db.prepare('SELECT id,status,output,error FROM ai_runs WHERE id=?').get(id);if(!run)throw Error('AI request not found');return run;}
 export async function processAgent(fetcher:typeof fetch=fetch){
  if(processing)return false;
  processing=true;let run:any;
@@ -148,6 +155,9 @@ export async function processAgent(fetcher:typeof fetch=fetch){
    db.exec('COMMIT');
   }catch(error){db.exec('ROLLBACK');throw error;}
   if(!run)return false;
+  const controller=new AbortController();runControllers.set(run.id,controller);
+  const ensureActive=()=>{if(controller.signal.aborted||!(db.prepare("SELECT id FROM ai_runs WHERE id=? AND status='Running'").get(run.id)))throw Error('Stopped by owner');};
+  const activeFetch:typeof fetch=(url,options={})=>fetcher(url,{...options,signal:AbortSignal.any([controller.signal,...(options.signal?[options.signal]:[])])});
   try{
    if(isOllamaCloudModel(run.model))throw Error('Cloud-tagged Ollama models are blocked. Select a model that runs locally on this computer.');
    const employee=db.prepare('SELECT name,role FROM employees WHERE id=?').get(run.agent) as any;
@@ -160,10 +170,12 @@ When the owner explicitly asks for published contact details for saved companies
    const messages:any[]=[{role:'system',content:system},{role:'user',content:run.prompt}];
    let result:any;let output='';let calls=0;
    for(let round=0;round<4;round++){
+    ensureActive();
     db.prepare("UPDATE ai_runs SET updated=? WHERE id=? AND status='Running'").run(Date.now(),run.id);
-    if(isAdditionalLocalModel(run.model))result=await runLocalInference(run.model,messages,fetcher,undefined,AGENT_TOOLS);else{
-    const response=await fetcher(OLLAMA+'/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:run.model,stream:false,think:false,messages,tools:AGENT_TOOLS,options:{temperature:run.prompt.startsWith('Internal AI work meeting:')?0.32:0.2,num_predict:run.prompt.startsWith('Internal AI work meeting:')?150:1500,num_ctx:8192},keep_alive:'2m'}),signal:AbortSignal.timeout(120000),redirect:'error'});
+    if(isAdditionalLocalModel(run.model))result=await runLocalInference(run.model,messages,activeFetch,undefined,AGENT_TOOLS);else{
+    const response=await activeFetch(OLLAMA+'/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:run.model,stream:false,think:false,messages,tools:AGENT_TOOLS,options:{temperature:run.prompt.startsWith('Internal AI work meeting:')?0.32:0.2,num_predict:run.prompt.startsWith('Internal AI work meeting:')?150:1500,num_ctx:8192},keep_alive:'2m'}),signal:AbortSignal.timeout(120000),redirect:'error'});
     result=await boundedJSON(response,200000);}
+    ensureActive();
     if(result.done===false)throw Error('Model returned no completed text output');
     const requests=result.message?.tool_calls;
     if(requests?.length){
@@ -173,6 +185,7 @@ When the owner explicitly asks for published contact details for saved companies
       const request=requests[index];const name=request?.function?.name;let args=request?.function?.arguments;
       if(typeof args==='string')args=JSON.parse(args);
       db.prepare("UPDATE ai_runs SET updated=? WHERE id=? AND status='Running'").run(Date.now(),run.id);
+      ensureActive();
       const event=await executeAgentTool({...run,attempts:run.attempts+1},round,index,name,args||{});
       db.prepare("UPDATE ai_runs SET updated=? WHERE id=? AND status='Running'").run(Date.now(),run.id);
       calls++;messages.push({role:'tool',tool_name:name,content:JSON.stringify(event)});
@@ -201,7 +214,7 @@ When the owner explicitly asks for published contact details for saved companies
    audit('ai:'+run.id,'Local model assignment blocked; no completed inference claimed');
   }
   return true;
- }finally{processing=false;}
+ }finally{if(run)runControllers.delete(run.id);processing=false;}
 }
 
 let installationBusy=false;

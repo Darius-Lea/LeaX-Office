@@ -10,6 +10,10 @@ $('#clear-close').addEventListener('click', async () => {
   await window.leaxBrowser.clearAndClose();
 });
 window.leaxBrowser.onState(state => {
+  $('#new-tab').hidden=!state.newTab;
+  const tabbar=$('#tabs');tabbar.replaceChildren();
+  for(const tab of state.tabs||[]){const group=document.createElement('span'),select=document.createElement('button'),close=document.createElement('button');select.textContent=tab.title;select.setAttribute('aria-pressed',String(tab.active));select.onclick=()=>window.leaxBrowser.selectTab(tab.id);close.textContent='×';close.setAttribute('aria-label','Close '+tab.title);close.onclick=()=>window.leaxBrowser.closeTab(tab.id);group.append(select,close);tabbar.append(group);}
+  const add=document.createElement('button');add.textContent='+ New tab';add.onclick=()=>window.leaxBrowser.newTab();tabbar.append(add);
   if (state.url && document.activeElement !== address) address.value = state.url;
 title.textContent = state.title || '';
   const aiAccess = $('#ai-access');
@@ -35,3 +39,8 @@ title.textContent = state.title || '';
   $('#forward').disabled = !state.canGoForward;
 });
 address.addEventListener('focus', () => address.select());
+
+$('#ai-access').onclick=()=>window.leaxBrowser.stopAI();
+$('#extensions').onclick=()=>window.leaxBrowser.extensions();
+const favorites=[['Proton Mail','https://mail.proton.me/'],['DuckDuckGo','https://duckduckgo.com/'],['Investigation • Bellingcat','https://www.bellingcat.com/'],['Investigation • ICANN Lookup','https://lookup.icann.org/'],['AI news • MIT','https://www.technologyreview.com/topic/artificial-intelligence/'],['Business news • Reuters','https://www.reuters.com/business/']];
+for(const [label,url]of favorites){const button=document.createElement('button');button.textContent=label;button.onclick=()=>window.leaxBrowser.navigate(url);$('#favorites').append(button);}

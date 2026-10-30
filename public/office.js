@@ -6,15 +6,18 @@ const message=document.createElement('p');message.className='office-render-messa
 let renderer=null,loading=false,rendererLoad=null,latestState=null,latestInspect=null;
 let clericalDesignKey='';
 let mainRenderer=null,distributionRenderer=null,distributionLoad=null,meetingRoomOpen=false,sceneEnabled=true,sceneDisposed=false;
+let marketingRenderer=null,marketingSurface=null,marketingLoad=null,marketingEnabled=null;
 let mainSurface=null,distributionSurface=null,mainEnabled=null,distributionEnabled=null;
-function enableScene(scene,value,which){if(!scene)return;if(which==='main'){if(mainEnabled===value)return;mainEnabled=value;}else{if(distributionEnabled===value)return;distributionEnabled=value;}scene.setEnabled(value);}
+function enableScene(scene,value,which){if(!scene)return;if(which==='main'){if(mainEnabled===value)return;mainEnabled=value;}else if(which==='marketing'){if(marketingEnabled===value)return;marketingEnabled=value;}else{if(distributionEnabled===value)return;distributionEnabled=value;}scene.setEnabled(value);}
 function usesDistribution(){return latestState?.campus?.activeOffice==='sales'&&!meetingRoomOpen&&!!distributionRenderer;}
-function selectedRenderer(){return usesDistribution()?distributionRenderer:mainRenderer;}
+function usesMarketing(){return latestState?.campus?.activeOffice==='marketing'&&!!marketingRenderer;}
+function selectedRenderer(){return usesMarketing()?marketingRenderer:usesDistribution()?distributionRenderer:mainRenderer;}
 function syncSceneSelection(){
  if(!mainRenderer)return;
  const wantsFactory=latestState?.campus?.activeOffice==='sales'&&!meetingRoomOpen,factory=usesDistribution(),visible=sceneEnabled&&document.body.dataset.view==='3d';
- if(mainSurface)mainSurface.hidden=wantsFactory;if(distributionSurface)distributionSurface.hidden=!factory;
- enableScene(mainRenderer,visible&&!wantsFactory,'main');enableScene(distributionRenderer,visible&&factory,'distribution');
+ const wantsMarketing=latestState?.campus?.activeOffice==='marketing';if(marketingSurface)marketingSurface.hidden=!wantsMarketing;
+ if(mainSurface)mainSurface.hidden=wantsFactory||wantsMarketing;if(distributionSurface)distributionSurface.hidden=!factory;
+ enableScene(mainRenderer,visible&&!wantsFactory&&!wantsMarketing,'main');enableScene(marketingRenderer,visible&&wantsMarketing,'marketing');enableScene(distributionRenderer,visible&&factory,'distribution');
  distributionViewControls.hidden=latestState?.campus?.activeOffice!=='sales'||meetingRoomOpen||!visible;
  const state=selectedRenderer()?.getExploreState?.();
  for(const button of distributionViewControls.querySelectorAll('button'))button.setAttribute('aria-pressed',String((state?.cameraMode==='orbit'?'overview':state?.cameraMode==='third-person'?'third-person':'first-person')===button.dataset.distributionView));
@@ -30,17 +33,18 @@ async function ensureDistribution(){
  distributionRenderer.update(latestState);syncSceneSelection();return distributionRenderer;
  }catch(error){console.error('Distribution Center rendering is unavailable:',error);message.textContent='The Distribution Center floor could not load. Your saved work remains available in the clerical view.';distributionSurface?.remove();distributionSurface=null;distributionEnabled=null;setOfficeView('2d');return null;}finally{distributionLoad=null;}})();return distributionLoad;
 }
+async function ensureMarketing(){if(marketingRenderer)return marketingRenderer;if(marketingLoad)return marketingLoad;if(sceneDisposed)return null;marketingLoad=(async()=>{try{const {createMarketing3D}=await import('/marketing-scene.js');if(sceneDisposed)return null;marketingSurface=document.createElement('div');marketingSurface.className='office-renderer-surface marketing-renderer-surface';webglHost.append(marketingSurface);marketingRenderer=createMarketing3D(marketingSurface,{onOwner:()=>window.hqMarketing?.open?.(),onExploreMode:(active,state)=>{if(usesMarketing()){exploreMode(active,state);}}});marketingRenderer.update(latestState);syncSceneSelection();return marketingRenderer;}catch(error){console.error('Marketing campus unavailable',error);message.textContent='Marketing campus rendering is unavailable. Saved work is still accessible.';setOfficeView('2d');return null;}finally{marketingLoad=null;}})();return marketingLoad;}
 function createRendererFacade(){
  return {
- update(state){mainRenderer.update(state);distributionRenderer?.update(state);if(state.campus?.activeOffice==='sales')void ensureDistribution();syncSceneSelection();},
+ update(state){mainRenderer.update(state);distributionRenderer?.update(state);marketingRenderer?.update(state);if(state.campus?.activeOffice==='marketing')void ensureMarketing();if(state.campus?.activeOffice==='sales')void ensureDistribution();syncSceneSelection();},
  setEnabled(value){sceneEnabled=!!value;syncSceneSelection();},
  enterExplore(){return selectedRenderer()?.enterExplore();},exitExplore(){return selectedRenderer()?.exitExplore();},
  getExploreState(){return selectedRenderer()?.getExploreState();},moveExplore(...args){return selectedRenderer()?.moveExplore(...args);},lookExplore(...args){return selectedRenderer()?.lookExplore(...args);},setExploreInput(...args){return selectedRenderer()?.setExploreInput(...args);},
- enterMeetingRoom(){if(latestState?.officeDesign?.design?.meeting===false)return;if(meetingRoomOpen)return;for(const direction of ['forward','backward','left','right'])distributionRenderer?.setExploreInput(direction,false);meetingRoomOpen=true;syncSceneSelection();mainRenderer.enterMeetingRoom();},
- exitMeetingRoom(){if(!meetingRoomOpen)return;mainRenderer.exitMeetingRoom();meetingRoomOpen=false;syncSceneSelection();},
- setMeetingPresentation(value){mainRenderer.setMeetingPresentation(value);},getMeetingPresentationState(){return {...mainRenderer.getMeetingPresentationState(),cameraMode:meetingRoomOpen?'meeting':selectedRenderer()?.getExploreState()?.cameraMode||'orbit'};},
+ enterMeetingRoom(){if(latestState?.officeDesign?.design?.meeting===false)return;if(meetingRoomOpen)return;for(const direction of ['forward','backward','left','right'])distributionRenderer?.setExploreInput(direction,false);meetingRoomOpen=true;syncSceneSelection();(usesMarketing()?marketingRenderer:mainRenderer).enterMeetingRoom();},
+ exitMeetingRoom(){if(!meetingRoomOpen)return;(usesMarketing()?marketingRenderer:mainRenderer).exitMeetingRoom();meetingRoomOpen=false;syncSceneSelection();},
+ setMeetingPresentation(value){(usesMarketing()?marketingRenderer:mainRenderer).setMeetingPresentation(value);},getMeetingPresentationState(){return {...(usesMarketing()?marketingRenderer:mainRenderer).getMeetingPresentationState(),cameraMode:meetingRoomOpen?'meeting':selectedRenderer()?.getExploreState()?.cameraMode||'orbit'};},
  resetCamera(){selectedRenderer()?.resetCamera();},setAngle(value){selectedRenderer()?.setAngle(value);},
- dispose(){sceneDisposed=true;mainRenderer?.dispose();distributionRenderer?.dispose();mainSurface?.remove();distributionSurface?.remove();mainRenderer=distributionRenderer=renderer=null;}
+ dispose(){sceneDisposed=true;mainRenderer?.dispose();distributionRenderer?.dispose();marketingRenderer?.dispose();marketingSurface?.remove();marketingRenderer=null;mainSurface?.remove();distributionSurface?.remove();mainRenderer=distributionRenderer=renderer=null;}
  };
 }
 let activeMeetingPresentation=null,meetingPresentationVersion=0,meetingReturnView=null;
@@ -89,16 +93,16 @@ function applyClericalDesign(){
  room.style.borderColor=themed?(walls[design.wall]||walls.sage):'';room.style.background=themed?(floors[design.floor]||floors.oak):'';
 }
 async function ensure3D(){
- if(sceneDisposed)return null;if(renderer){if(latestState?.campus?.activeOffice==='sales')await ensureDistribution();syncSceneSelection();return renderer;}if(!latestState||document.body.dataset.view!=='3d')return renderer;
+ if(sceneDisposed)return null;if(renderer){if(latestState?.campus?.activeOffice==='sales')await ensureDistribution();if(latestState?.campus?.activeOffice==='marketing')await ensureMarketing();syncSceneSelection();return renderer;}if(!latestState||document.body.dataset.view!=='3d')return renderer;
  if(rendererLoad)return rendererLoad;
  loading=true;message.textContent='Loading your 3D office…';
  rendererLoad=(async()=>{try{
  const {createOffice3D}=await import('/office3d.js');if(sceneDisposed)return null;
  mainSurface=document.createElement('div');mainSurface.className='office-renderer-surface';webglHost.append(mainSurface);
- mainRenderer=createOffice3D(mainSurface,{onEmployee:id=>latestInspect?.(id),onOwner:(pane)=>{document.querySelector('#owner-computer').click();if(pane==='packets')document.querySelector('[data-pane=packets]').click();},onExploreMode:(active,state)=>{if(!usesDistribution()&&!meetingRoomOpen)exploreMode(active,state);},onMeetingMode:active=>{if(active){meetingRoomOpen=true;}else if(meetingRoomOpen){meetingRoomOpen=false;}syncSceneSelection();}});
+ mainRenderer=createOffice3D(mainSurface,{onEmployee:id=>latestInspect?.(id),onOwner:(pane)=>{document.querySelector('#owner-computer').click();if(pane==='packets')document.querySelector('[data-pane=packets]').click();},onExploreMode:(active,state)=>{if(!usesDistribution()&&!usesMarketing()&&!meetingRoomOpen)exploreMode(active,state);},onMeetingMode:active=>{if(active){meetingRoomOpen=true;}else if(meetingRoomOpen){meetingRoomOpen=false;}syncSceneSelection();}});
  renderer=createRendererFacade();
  viewport.classList.add('webgl-ready');webglHost.hidden=document.body.dataset.view!=='3d';
- renderer.update(latestState);if(latestState.campus?.activeOffice==='sales')await ensureDistribution();renderer.setEnabled(document.body.dataset.view==='3d');
+ renderer.update(latestState);if(latestState.campus?.activeOffice==='sales')await ensureDistribution();if(latestState.campus?.activeOffice==='marketing')await ensureMarketing();renderer.setEnabled(document.body.dataset.view==='3d');
  message.textContent='Drag to look around · Scroll or pinch to zoom · Click your computer, a desk or the printer.';
  return renderer;
  }catch(error){

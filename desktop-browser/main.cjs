@@ -34,7 +34,48 @@ function normalizedAddress(raw) {
 
 let mainWindow;
 let chromeView;
+let accessHeld=false;
+let accessLobbyView;
+let accessTimer;
+let robotView;
+let robotExpanded=false;
+let robotPosition=null;
+function layoutRobot(){if(!robotView||!mainWindow||mainWindow.isDestroyed())return;const [w,h]=mainWindow.getContentSize(),width=robotExpanded?370:160,height=robotExpanded?560:70;const pos=robotPosition||{x:w-width-20,y:h-height-20};const x=Math.max(0,Math.min(w-width,pos.x)),y=Math.max(136,Math.min(h-height,pos.y));robotView.setBounds({x,y,width,height});robotPosition={x,y};}
+
 let pageView;
+const tabs = new Map();
+let nextTabId = 1;
+let activeTabId = null;
+function layoutViews() {
+ if (!mainWindow || mainWindow.isDestroyed()) return;
+ if(accessLobbyView){const [w,h]=mainWindow.getContentSize();accessLobbyView.setBounds({x:0,y:0,width:w,height:h});accessLobbyView.setVisible(accessHeld);}
+
+ layoutRobot();
+ const [width,height]=mainWindow.getContentSize();
+ chromeView.setBounds({x:0,y:0,width,height:pageView ? 136 : height});
+ for (const [id,view] of tabs) {view.setVisible(!accessHeld&&id===activeTabId);view.setBounds({x:0,y:136,width,height:Math.max(100,height-136)});}
+}
+function selectTab(id) {
+ if (!tabs.has(id)) throw Error('This tab is closed');
+ if (activeTabId!==id) {activeGrant=null;aiActing=false;}
+ activeTabId=id;pageView=tabs.get(id);pageTitle=pageView.webContents.getTitle()||'New tab';layoutViews();sendState();
+}
+function createTab(target) {
+ if(tabs.size>=32) throw Error('Close a tab before opening another (32 tab limit)');
+ const view=new WebContentsView({webPreferences:{session:browserSession,contextIsolation:true,nodeIntegration:false,sandbox:true,webSecurity:true,allowRunningInsecureContent:false,devTools:true}});
+ const id=String(nextTabId++);tabs.set(id,view);mainWindow.contentView.addChildView(view);mainWindow.contentView.removeChildView(chromeView);mainWindow.contentView.addChildView(chromeView);if(robotView){mainWindow.contentView.removeChildView(robotView);mainWindow.contentView.addChildView(robotView);}if(accessLobbyView){mainWindow.contentView.removeChildView(accessLobbyView);mainWindow.contentView.addChildView(accessLobbyView);}
+ view.webContents.on('before-input-event',(event,input)=>{if(input.type==='keyDown'&&(input.key==='F12'||input.control&&input.shift&&input.key.toLowerCase()==='i')){event.preventDefault();view.webContents.toggleDevTools();}});
+ view.webContents.setWindowOpenHandler(({url})=>{if(isAllowedWebUrl(url))createTab(url);return {action:'deny'};});
+ for(const event of ['will-navigate','will-redirect'])view.webContents.on(event,(e,url)=>{if(!isAllowedWebUrl(url))e.preventDefault();});
+ for(const event of ['did-start-loading','did-stop-loading','did-navigate','did-navigate-in-page','page-title-updated'])view.webContents.on(event,()=>{if(pageView===view)pageTitle=view.webContents.getTitle()||'New tab';sendState();});
+ selectTab(id);
+ if(target)view.webContents.loadURL(normalizedAddress(target)).catch(()=>{pageStatus='Page failed to load. Check the connection or address.';sendState();});
+ return id;
+}
+function closeTab(id) {
+ const view=tabs.get(id);if(!view)return;tabs.delete(id);mainWindow.contentView.removeChildView(view);view.webContents.close();
+ if(activeTabId===id){activeGrant=null;aiActing=false;const last=[...tabs.keys()].pop();if(last)selectTab(last);else{activeTabId=null;pageView=null;pageTitle='New tab';layoutViews();}}sendState();
+}
 let browserSession;
 let extensionManager;
 let pageTitle = 'New tab';
@@ -42,12 +83,14 @@ let pageStatus = 'Sign-ins stay saved on this device';
 let bridgeServer;
 let activeGrant = null;
 let aiActing = false;
-const launchTarget = process.env.LEAX_BROWSER_TARGET || 'https://duckduckgo.com/';
+const launchTarget = process.env.LEAX_BROWSER_TARGET || '';
 
 function sendState() {
   if (!chromeView || chromeView.webContents.isDestroyed()) return;
   chromeView.webContents.send('leax:state', {
     url: pageView?.webContents.getURL() || '',
+    tabs:[...tabs].map(([id,view])=>({id,title:view.webContents.getTitle()||'New tab',active:id===activeTabId})),
+    newTab:!pageView,
     title: pageTitle,
     status: pageStatus,
     canGoBack: !!pageView?.webContents.canGoBack(),
@@ -56,6 +99,7 @@ function sendState() {
     extensions: extensionManager ? extensionManager.list() : [],
     aiAccess: activeGrant && activeGrant.expiresAt>Date.now() ? {origin:activeGrant.origin,scopes:activeGrant.scopes,expiresAt:activeGrant.expiresAt,remainingSeconds:Math.ceil((activeGrant.expiresAt-Date.now())/1000),recordId:activeGrant.recordId} : null,
     aiActing,
+    accessHeld,
   });
 }
 
@@ -158,7 +202,7 @@ function isAllowedWebUrl(raw) {
 }
 
 function assertChromeSender(event) {
-  if (!chromeView || event.sender !== chromeView.webContents || event.senderFrame !== event.sender.mainFrame) {
+  if (!chromeView || ![chromeView.webContents,robotView?.webContents].includes(event.sender) || event.senderFrame !== event.sender.mainFrame) {
     throw new Error('This browser action did not come from the LeaX toolbar.');
   }
 }
@@ -203,76 +247,48 @@ app.whenReady().then(async () => {
     contextIsolation: true, nodeIntegration: false, sandbox: true,
     webSecurity: true, allowRunningInsecureContent: false
   }});
-  pageView = new WebContentsView({webPreferences: {
-    session: browserSession,
-    contextIsolation: true, nodeIntegration: false, sandbox: true,
-    webSecurity: true, allowRunningInsecureContent: false,
-    devTools: true
-  }});
-  mainWindow.contentView.addChildView(pageView);
   mainWindow.contentView.addChildView(chromeView);
-  const layout = () => {
-    if (!mainWindow || mainWindow.isDestroyed()) return;
-    const [width, height] = mainWindow.getContentSize();
-    chromeView.setBounds({x:0, y:0, width, height:70});
-    pageView.setBounds({x:0, y:70, width, height:Math.max(100,height-70)});
-  };
-  mainWindow.on('resize', layout);
-  layout();
-
-  chromeView.webContents.setWindowOpenHandler(() => ({action:'deny'}));
-  chromeView.webContents.on('will-navigate', (event, url) => {
-    if (!url.startsWith('file:')) event.preventDefault();
-  });
-  chromeView.webContents.loadFile(path.join(__dirname, 'chrome.html'));
-
-  pageView.webContents.setWindowOpenHandler(({url}) => {
-    if (isAllowedWebUrl(url)) pageView.webContents.loadURL(url).catch(() => {});
-    return {action:'deny'};
-  });
-  pageView.webContents.on('will-navigate', (event, url) => {
-    if (!isAllowedWebUrl(url)) {
-      event.preventDefault();
-      pageStatus = 'Blocked a non-web address';
-      sendState();
-    }
-  });
-  pageView.webContents.on('will-redirect', (event, url) => {
-    if (!isAllowedWebUrl(url)) {
-      event.preventDefault();
-      pageStatus = 'Blocked a non-web redirect';
-      sendState();
-    }
-  });
-  pageView.webContents.on('did-start-loading', () => { pageStatus = 'Loading…'; sendState(); });
-  pageView.webContents.on('did-stop-loading', () => { pageStatus = 'Sign-ins stay saved on this device'; sendState(); });
-  pageView.webContents.on('did-navigate', (_event, url) => { pageStatus = 'Sign-ins stay saved on this device'; sendState(); });
-  pageView.webContents.on('did-navigate-in-page', (_event, url) => { sendState(); });
-  pageView.webContents.on('page-title-updated', (_event, title) => { pageTitle = String(title || 'Web page').slice(0,200); sendState(); });
-  pageView.webContents.on('before-input-event', (event, input) => {
-    if (input.type === 'keyDown' && (input.key === 'F12' || (input.control && input.shift && input.key.toLowerCase() === 'i'))) {
-      event.preventDefault();
-      pageView.webContents.toggleDevTools();
-    }
-  });
-
+  mainWindow.on('resize',layoutViews);
+  layoutViews();
+  chromeView.webContents.setWindowOpenHandler(()=>({action:'deny'}));
+  chromeView.webContents.on('will-navigate',event=>event.preventDefault());
+  await chromeView.webContents.loadFile(path.join(__dirname,'chrome.html'));
+  robotView=new WebContentsView({webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true,webSecurity:true}});
+  mainWindow.contentView.addChildView(robotView);layoutRobot();
+  robotView.webContents.setWindowOpenHandler(()=>({action:'deny'}));
+  robotView.webContents.on('will-navigate',event=>event.preventDefault());
+  await robotView.webContents.loadFile(path.join(__dirname,'robot.html'));
+  if(process.env.LEAX_BROWSER_BRIDGE_TOKEN){
+    accessLobbyView=new WebContentsView({webPreferences:{session:browserSession,contextIsolation:true,nodeIntegration:false,sandbox:true,webSecurity:true}});
+    mainWindow.contentView.addChildView(accessLobbyView);accessLobbyView.webContents.setWindowOpenHandler(()=>({action:'deny'}));accessLobbyView.webContents.on('will-navigate',(event,url)=>{if(!url.startsWith('http://127.0.0.1:4310/'))event.preventDefault();});
+    accessHeld=true;layoutViews();await accessLobbyView.webContents.loadURL('http://127.0.0.1:4310/').catch(()=>{});
+    const checkAccess=async()=>{if(!mainWindow||mainWindow.isDestroyed())return;try{const r=await fetch('http://127.0.0.1:4310/api/online/status',{redirect:'error',signal:AbortSignal.timeout(5000)});if(!r.ok)throw Error('Office access check unavailable');const value=await r.json();accessHeld=value.required===true&&value.allowed!==true;}catch{accessHeld=true;}if(accessHeld){activeGrant=null;aiActing=false;}layoutViews();robotView.setVisible(!accessHeld);chromeView.setVisible(!accessHeld);sendState();accessTimer=setTimeout(checkAccess,5000);};void checkAccess();
+  }
+  ipcMain.handle('leax:robot-size',(event,expanded)=>{assertChromeSender(event);robotExpanded=expanded===true;layoutRobot();return true;});
+  ipcMain.handle('leax:robot-move',(event,x,y)=>{assertChromeSender(event);if(!Number.isFinite(x)||!Number.isFinite(y))return;robotPosition.x+=Math.max(-200,Math.min(200,x));robotPosition.y+=Math.max(-200,Math.min(200,y));layoutRobot();});
+  ipcMain.handle('leax:assistant',async(event,body)=>{assertChromeSender(event);if(!body||!['ask','status','stop'].includes(body.action))throw Error('Invalid assistant action');const token=process.env.LEAX_BROWSER_BRIDGE_TOKEN||'';const response=await fetch('http://127.0.0.1:4310/api/browser-bridge/assistant',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({action:body.action,id:String(body.id||'').slice(0,100),prompt:String(body.prompt||'').slice(0,4000)}),signal:AbortSignal.timeout(10000),redirect:'error'});const result=await response.json();if(!response.ok)throw Error(result.error||'Assistant unavailable');return result;});
+  ipcMain.handle('leax:tab-new',(event)=>{assertChromeSender(event);activeGrant=null;aiActing=false;activeTabId=null;pageView=null;for(const view of tabs.values())view.setVisible(false);pageTitle='New tab';layoutViews();sendState();return true;});
+  ipcMain.handle('leax:tab-select',(event,id)=>{assertChromeSender(event);selectTab(String(id));return true;});
+  ipcMain.handle('leax:tab-close',(event,id)=>{assertChromeSender(event);closeTab(String(id));return true;});
   ipcMain.handle('leax:navigate', (event, value) => {
     assertChromeSender(event);
+    if(accessHeld)throw Error('Reconnect your account in the setup lobby');
     const target = normalizedAddress(value);
     pageStatus = 'Loading…'; sendState();
+    if(!pageView){createTab(target);return true;}
     return pageView.webContents.loadURL(target).then(() => true);
   });
   ipcMain.handle('leax:history', (event, direction) => {
     assertChromeSender(event);
-    if (direction === 'back' && pageView.webContents.canGoBack()) pageView.webContents.goBack();
-    else if (direction === 'forward' && pageView.webContents.canGoForward()) pageView.webContents.goForward();
+    if (direction === 'back' && pageView?.webContents.canGoBack()) pageView.webContents.goBack();
+    else if (direction === 'forward' && pageView?.webContents.canGoForward()) pageView.webContents.goForward();
     sendState(); return true;
   });
   ipcMain.handle('leax:reload', event => {
-    assertChromeSender(event); pageView.webContents.reload(); return true;
+    assertChromeSender(event); pageView?.webContents.reload(); return true;
   });
   ipcMain.handle('leax:devtools', event => {
-    assertChromeSender(event); pageView.webContents.toggleDevTools(); return true;
+    assertChromeSender(event); pageView?.webContents.toggleDevTools(); return true;
   });
   ipcMain.handle('leax:ai-stop', async event => {
     assertChromeSender(event); activeGrant=null; aiActing=false; sendState();
@@ -292,15 +308,12 @@ app.whenReady().then(async () => {
   });
   startBridgeServer();
   await extensionManager.loadSaved();
-  pageView.webContents.loadURL(normalizedAddress(launchTarget)).catch(error => {
-    pageStatus = 'Page failed to load · check the address or connection';
-    pageTitle = 'Unable to open page';
-    sendState();
-  });
+  if(launchTarget&&launchTarget!=='https://duckduckgo.com/#leax-new-tab')createTab(launchTarget);
   mainWindow.on('closed', () => {
     activeGrant = null;
+    clearTimeout(accessTimer);
     try { bridgeServer?.close(); } catch {}
-    for (const view of [chromeView, pageView]) {
+    for (const view of [chromeView, robotView, accessLobbyView, ...tabs.values()]) {
       try { if (view && !view.webContents.isDestroyed()) view.webContents.close(); } catch {}
     }
     app.quit();

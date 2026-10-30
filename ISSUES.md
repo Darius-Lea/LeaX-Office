@@ -1,3 +1,17 @@
+## Preview.44 readiness limits
+
+This is not yet certified market-ready. The public host/new Windows installer, durable account storage, actual device update/reconnect behavior, production TURN access and customer account security need release validation. Password reset currently uses owner-issued private links, not automated email. Shared company-record editing, outside-app guest camera links, whole-screen guest avatar views and owner-permission-before-agent-to-guest speech remain unfinished. Faster live AI/voice is not established by shorter polling.
+
+New Windows installations reconnect in the background, permit seven days of offline work after successful verification (including restarts), and lock until reconnection after that week. Revocation received online takes effect immediately. Future offline access codes, commercial billing and tamper-resistant licensing are not implemented. Already-installed older versions need updating to acquire the gate. No absolute source-secrecy guarantee is made for software running on a customer's own device.
+
+The marketing campus preserves the creative studio, original miner showpiece/status and decorative programmable matter. Actual mining/payouts and automatic video clipping/posting are not connected. The owner explicitly postponed Auto Poster integration. See docs/MARKETING-ACCESS-RELEASE.md for all remaining gaps.
+
+## Preview.43 shared-office deployment and device checks
+
+- Local source and production-room behavior is tested, but the public website must be updated and backed by durable SQLite storage before inviting a real colleague. This cloud's proxy denied the existing host; its domain was added to the editable environment network draft, which is not a live policy update.
+- Collaboration rooms share presence and conversation only. Founder business data remains separate; full tenant-scoped business-workspace collaboration is still outstanding. Email verification/password recovery and a public customer security review remain outstanding.
+- Actual Windows installer/protocol handoff, real speech recognition/device audio, real selected-model/browser workflows and a public desktop-to-website visit remain unverified. Headless Linux Electron and synthetic inference assertions do not establish those outcomes.
+
 ## Preview.42 installer repair
 
 The browser-enabled package exceeded the installer's older 150 MiB per-entry cap. Fixed with a scoped 512 MiB allowance for browser/electron.exe plus full payload extraction tests during packaging. The fresh versioned preview.42 installer is required; reopening an older downloaded executable cannot contain this repair. Do not delete office data to work around the old failure. Actual Windows GUI retry remains to be confirmed by the owner.

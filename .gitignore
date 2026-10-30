@@ -30,3 +30,7 @@ dist/
 .storefront-master.key
 .storefront-access.encrypted
 .storefront-*.tmp
+
+.online-master.key
+.online-account.encrypted
+.online-account.encrypted.*.tmp

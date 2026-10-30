@@ -1879,3 +1879,17 @@ My highest priorities are:
 9. Expansion into a commercial SaaS platform.
 
 Begin implementation now.
+
+
+## Owner continuation - 2026-10-30
+
+Monetization & Marketing must use a distinct two-story atrium campus, preserving creative studio/social/TV/internet marketing work, Bitcoin-design miner station with honest real status, and decorative programmable matter. Auto Post connection is deferred: owner will connect it later.
+
+Installed offices must automatically reconnect and check hosted permissions while the service runs. Preserve offline work for one week after the last successful access check, including restarts. Lock to the setup lobby after the week until reconnection. Access-code override will be decided later. Online revocation/suspension must apply immediately. Future customer packages exclude original source; future payment/access enforcement belongs on the server.
+
+Customer workflows still requested: easy accounts/invites/password recovery; co-owner/coworker collaboration; persistent paging/audio; business directory with unique app numbers and founder-approved name hiding; guest camera meeting links/full-screen room display; closer AI seating and fast low-latency model/speech; agent asks owner permission before speaking to a remote guest and understands yes/go ahead; remote guests hear approved AI audio. Update prompt and settings entry should run an approved in-place update preserving data. Never call these complete without functional validation.
+
+
+### Next phase after preview.44 push - owner request
+
+Temporary secure passwordless guest links for mobile-friendly office walkthroughs, showings, interviews and investor demonstrations. Guests should appear in the live office, see what the host clicks, follow or walk independently, test explicitly permitted features, and travel together between offices. No account password should be needed for a limited guest session. Implement scoped/time-limited/revocable guest capabilities rather than exposing owner data. The owner explicitly asked to push the current updates before starting this phase. Not implemented in preview.44.

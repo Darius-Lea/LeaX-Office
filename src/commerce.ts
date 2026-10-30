@@ -11,7 +11,7 @@ export const COMMERCE_PLATFORMS=[
  {id:'facebook',name:'Facebook Marketplace',sellerUrl:'https://www.facebook.com/marketplace/',docsUrl:'https://www.facebook.com/business/help',status:'Manual preparation',detail:'Use the supported tools available to your account. No general Marketplace publishing or shipping connection is claimed here.'},
  {id:'own-store',name:'Your own store',sellerUrl:'',docsUrl:'',status:'Not connected',detail:'Prepare and export owner-reviewed content. A real store, payment and fulfillment connection must be configured separately.'},
 ] as const;
-export const MARKETING_CHANNELS=[{id:'website',name:'Website copy'},{id:'social',name:'Social post'},{id:'email',name:'Outreach draft'},{id:'google-business',name:'Google Business draft'},{id:'video-script',name:'Video script'},{id:'ad',name:'Ad-ready draft'}] as const;
+export const MARKETING_CHANNELS=[{id:'website',name:'Website copy'},{id:'social',name:'Social post'},{id:'email',name:'Outreach draft'},{id:'google-business',name:'Google Business draft'},{id:'video-script',name:'Video / TV script'},{id:'ad',name:'Ad-ready draft'}] as const;
 const KINDS=['product','listing','campaign','order','design','analytics'] as const;
 type Kind=typeof KINDS[number];
 const FULFILLMENT=['self','print-on-demand','amazon-fba','dropship','digital','not-decided'];

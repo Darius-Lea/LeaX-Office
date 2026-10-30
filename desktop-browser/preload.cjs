@@ -1,5 +1,11 @@
 const {contextBridge, ipcRenderer} = require('electron');
 contextBridge.exposeInMainWorld('leaxBrowser', Object.freeze({
+  assistant: body => ipcRenderer.invoke('leax:assistant',body),
+  robotSize: expanded => ipcRenderer.invoke('leax:robot-size',expanded),
+  robotMove: (x,y) => ipcRenderer.invoke('leax:robot-move',x,y),
+  newTab: () => ipcRenderer.invoke('leax:tab-new'),
+  selectTab: id => ipcRenderer.invoke('leax:tab-select',String(id)),
+  closeTab: id => ipcRenderer.invoke('leax:tab-close',String(id)),
   navigate: address => ipcRenderer.invoke('leax:navigate', String(address || '')),
   history: direction => ipcRenderer.invoke('leax:history', direction),
   reload: () => ipcRenderer.invoke('leax:reload'),

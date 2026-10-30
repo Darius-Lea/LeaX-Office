@@ -28,7 +28,7 @@ function navigate(target,id){
 }
 export function initControlCenter(options){
  ({api,refresh,openComputer}=options);frame=$('#ccl-app-frame');if(!frame)return;
- window.hqControlCenter={showView,exit:()=>openComputer('desktop'),openBrowser:()=>{openComputer('control-center');setTimeout(()=>showView('browser'),0);}};
+ window.hqControlCenter={showView,exit:()=>openComputer('desktop'),openBrowser:()=>{if(latestState?.browserAccess?.available)location.href='leaxoffice://browser?url=https%3A%2F%2Fduckduckgo.com%2F%23leax-new-tab';else window.open('/browser','leax-browser','noopener');}};
  window.addEventListener('message',event=>{if(event.origin!==location.origin||event.source!==frame.contentWindow)return;const data=event.data||{};
  if(data.type==='ccl:ready'){deliver();if(pendingView)showView(pendingView)}
  if(data.type==='ccl:desktop'){pendingView=null;openComputer('desktop')}

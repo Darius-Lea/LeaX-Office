@@ -22,7 +22,7 @@ const electronDist=join(root,'node_modules/electron/dist');
 try{await readdir(electronDist)}catch{const electronCache=join(root,'node_modules/.cache/electron');await mkdir(electronCache,{recursive:true});execFileSync(process.execPath,[electronInstall],{cwd:root,stdio:'inherit',env:{...process.env,electron_config_cache:electronCache,TEMP:electronCache,TMP:electronCache}})}
 await cp(electronDist,join(output,'browser'),{recursive:true});
 const browserApp=join(output,'browser/resources/app');await mkdir(browserApp,{recursive:true});
-for(const name of ['main.cjs','preload.cjs','extensions.cjs','chrome.html','chrome.css','chrome.js','package.json'])await cp(join(root,'desktop-browser',name),join(browserApp,name));
+for(const name of ['main.cjs','preload.cjs','extensions.cjs','chrome.html','chrome.css','chrome.js','robot.html','robot.css','robot.js','package.json'])await cp(join(root,'desktop-browser',name),join(browserApp,name));
 await put('browser/LEAX-BROWSER-NOTICES.txt','LeaX AI Browser bundles Electron 45.1.0 and Chromium. Electron and Chromium license texts are provided as browser/LICENSE and browser/resources/LICENSES.chromium.html.');
 const vendors={
  'three.module.js':'build/three.module.js','three.core.js':'build/three.core.js',

@@ -649,11 +649,11 @@ func startOffice(wantShortcut bool) error {
 	environment := []string{}
 	for _, value := range os.Environ() {
 		key := strings.ToUpper(strings.SplitN(value, "=", 2)[0])
-		if key != "HOST" && key != "PORT" && key != "HQ_DATA_DIR" && key != "HQ_SETUP_CODE" && key != "RENDER" && key != "PUBLIC_ORIGIN" && key != "RENDER_EXTERNAL_URL" && key != "NODE_OPTIONS" && key != "SAM_API_KEY" && key != "HQ_INSTALLER_PATH" && key != "HQ_OLLAMA_PORT" && key != "HQ_BROWSER_BRIDGE_TOKEN" {
+		if key != "HOST" && key != "PORT" && key != "HQ_DATA_DIR" && key != "HQ_SETUP_CODE" && key != "RENDER" && key != "PUBLIC_ORIGIN" && key != "RENDER_EXTERNAL_URL" && key != "NODE_OPTIONS" && key != "SAM_API_KEY" && key != "HQ_INSTALLER_PATH" && key != "HQ_OLLAMA_PORT" && key != "HQ_BROWSER_BRIDGE_TOKEN" && key != "HQ_REQUIRE_ONLINE_ACCESS" && key != "HQ_ACCESS_ORIGIN" {
 			environment = append(environment, value)
 		}
 	}
-	environment = append(environment, "HOST=127.0.0.1", "PORT=4310", "HQ_DATA_DIR="+filepath.Join(root, "data"), "HQ_SETUP_CODE="+code, "HQ_INSTALLER_PATH="+self, "HQ_OLLAMA_PORT="+managedAIPort, "HQ_BROWSER_BRIDGE_TOKEN="+bridgeToken)
+	environment = append(environment, "HOST=127.0.0.1", "PORT=4310", "HQ_DATA_DIR="+filepath.Join(root, "data"), "HQ_SETUP_CODE="+code, "HQ_INSTALLER_PATH="+self, "HQ_OLLAMA_PORT="+managedAIPort, "HQ_BROWSER_BRIDGE_TOKEN="+bridgeToken, "HQ_REQUIRE_ONLINE_ACCESS=1", "HQ_ACCESS_ORIGIN=https://leax-office.onrender.com")
 	if protected, e := os.ReadFile(filepath.Join(root, "sam-native.dpapi")); e == nil {
 		key, e := unseal(string(protected))
 		if e != nil {

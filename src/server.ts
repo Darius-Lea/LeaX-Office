@@ -1,3 +1,11 @@
+import {issuePasswordReset} from './password-recovery.ts';
+import {onlineAccess} from './online-access.ts';
+import {appUpdater,installAppUpdate} from './app-updater.ts';
+import {marketingState,saveMarketing,runMarketingCheck,advanceMarketing} from './marketing-workflow.ts';
+import {companyVisibilityRequests,approveCompanyVisibility} from './shared-phone.ts';
+import {platformState,setUserAccess,platformSettings,reviewSecurity,quarantineRateLimit} from './platform-access.ts';
+import {sharedUser} from './shared-offices.ts';
+import {sharedOfficeRequest} from './shared-offices.ts';
 import {storeGuideState,storeGuideDetail,saveStoreGuideProgress} from './store-guide.ts';
 import {storefrontState,saveStorefrontConnection,disconnectStorefrontConnection,verifyStorefront,saveStorefrontPolicy,prepareStorefrontPublication,publishStorefrontListing,reconcileStorefrontPublication,recoverInterruptedStorefronts} from './storefronts.ts';
 import {distributionState,distributionProof,distributionProofHTML,distributionJobPrepHTML} from './distribution.ts';
@@ -44,7 +52,7 @@ import {db,directory,setup,login,authenticated,enqueue,snapshot,audit,clock,sett
 import {solicitationState,searchSolicitations,normalizeSearchCriteria} from './solicitations.ts';
 import {contactState,researchContacts} from './contacts.ts';
 import {draftState,prepareContactDraft,prepareNoticeDraft,reviewDraft,composerLink} from './drafts.ts';
-import {OLLAMA,aiStatus,configureModel,queueAgent,processAgent,retryAgent,agentRuns,installRecommendedModel} from './ai.ts';
+import {stopAgentRun,agentRunDetail,OLLAMA,aiStatus,configureModel,queueAgent,processAgent,retryAgent,agentRuns,installRecommendedModel} from './ai.ts';
 import {awardAdvice} from './advice.ts';
 import {managerState} from './manager.ts';
 import {ROLE_CHARTERS} from './roles.ts';
@@ -73,28 +81,56 @@ const attempts=new Map<string,{count:number,time:number}>();
 function managedAISetupState(){
  try{const value=JSON.parse(setting('managed_ai_setup')||'null');if(!value||!['Preparing','Needs-attention','Paused','Completed'].includes(value.status))return null;return {status:value.status,checkedAt:Number(value.checkedAt)||null,inferenceVerified:value.status==='Completed'&&value.inferenceVerified===true};}catch{return null;}
 }
+const browserAssistantRuns=new Set<string>();
+async function browserAssistant(body:any,localOnly=false){
+ if(body.action==='ask'){
+  const id=queueAgent('Einstein',body.prompt,undefined,localOnly);browserAssistantRuns.add(id);
+  if(browserAssistantRuns.size>200)browserAssistantRuns.delete(browserAssistantRuns.values().next().value);
+  void processAgent().catch(()=>{});return {id};
+ }
+ if(typeof body.id!=='string'||!browserAssistantRuns.has(body.id))throw Error('Choose a request from this browser session');
+ if(body.action==='stop'){const result=stopAgentRun(body.id);await stopBrowserAccess();return result;}
+ if(body.action==='status'){void processAgent().catch(()=>{});return agentRunDetail(body.id);}
+ throw Error('Unknown assistant action');
+}
+onlineAccess.onHold(()=>{const runs=db.prepare("SELECT id FROM ai_runs WHERE status IN ('Queued','Running')").all();for(const run of runs)stopAgentRun(String(run.id));void stopBrowserAccess().catch(()=>{});});
+onlineAccess.start();
 const server=createServer(async(req,res)=>{
- const cclFrame=(req.url||'').split('?')[0]==='/ccl-app.html';res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; frame-src 'self'"+(cclFrame?" https:":"")+"; frame-ancestors "+(cclFrame?"'self'":"'none'"));res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Cache-Control','no-store');
+ const cclFrame=['/ccl-app.html','/browser'].includes((req.url||'').split('?')[0]);res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; frame-src 'self'"+(cclFrame?" https:":"")+"; frame-ancestors "+(cclFrame?"'self'":"'none'"));res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Cache-Control','no-store');
  const send=(status:number,data:any)=>{res.writeHead(status,{'Content-Type':'application/json'});res.end(JSON.stringify(data));};
  try{
  const url=new URL(req.url||'/',`http://127.0.0.1:${port}`);
  if(req.method==='GET'&&url.pathname==='/api/version')return send(200,versionInfo());
- if(['GET','HEAD'].includes(req.method||'') && ['/', '/download','/download.css','/download.js','/ccl-app.html','/ccl-app.css','/ccl-app.js','/app.js','/business.js','/mail.js','/sync.js','/calls.js','/campus.js','/commerce.js','/ai-meetings.js','/mining.js','/updates.js','/local-engines.js','/stores.js','/distribution.js','/distribution.css','/distribution-scene.js','/store-connections.js','/store-connections.css','/rollouts.js','/control-center.js','/control-center.css','/approval-attention.js','/speech.js','/office.js','/office3d.js','/style.css','/report.css','/report.js'].includes(url.pathname)){const file=url.pathname==='/'?'index.html':url.pathname==='/download'?'download.html':url.pathname.slice(1);res.setHeader('Content-Type',file.endsWith('html')?'text/html':file.endsWith('js')?'text/javascript':'text/css');res.end(req.method==='HEAD'?undefined:file==='index.html'?readFileSync(new URL('../public/'+file,import.meta.url),'utf8').replace('__HQ_APP_VERSION__',versionInfo().version):readFileSync(new URL('../public/'+file,import.meta.url)));return;}
+ if(['GET','HEAD'].includes(req.method||'') && ['/', '/offices', '/offices.js','/offices.css','/shared-phone.js','/platform-admin.js','/browser','/browser.js','/browser.css','/robot.js', '/download','/download.css','/download.js','/ccl-app.html','/ccl-app.css','/ccl-app.js','/app.js','/business.js','/mail.js','/sync.js','/calls.js','/campus.js','/commerce.js','/ai-meetings.js','/mining.js','/updates.js','/local-engines.js','/stores.js','/distribution.js','/distribution.css','/distribution-scene.js','/store-connections.js','/store-connections.css','/rollouts.js','/control-center.js','/control-center.css','/approval-attention.js','/speech.js','/office.js','/online-client.js','/office3d.js','/marketing-scene.js','/marketing-installations.js','/marketing-workflow.js','/style.css','/report.css','/report.js'].includes(url.pathname)){const file=url.pathname==='/'?'index.html':url.pathname==='/download'?'download.html':url.pathname==='/offices'?'offices.html':url.pathname==='/browser'?'browser.html':url.pathname.slice(1);res.setHeader('Content-Type',file.endsWith('html')?'text/html':file.endsWith('js')?'text/javascript':'text/css');res.end(req.method==='HEAD'?undefined:file==='index.html'?readFileSync(new URL('../public/'+file,import.meta.url),'utf8').replace('__HQ_APP_VERSION__',versionInfo().version):readFileSync(new URL('../public/'+file,import.meta.url)));return;}
  if(req.method==='GET'&&['/vendor/three.module.js','/vendor/three.core.js'].includes(url.pathname)){res.setHeader('Content-Type','text/javascript');res.setHeader('Cache-Control','public, max-age=86400');res.end(vendorFile(url.pathname.split('/').pop()!,'build/'+url.pathname.split('/').pop()));return;}
  if(req.method==='GET'&&['/vendor/FontLoader.js','/vendor/TextGeometry.js','/vendor/office-font.json'].includes(url.pathname)){const paths:Record<string,string>={'/vendor/FontLoader.js':'loaders/FontLoader.js','/vendor/TextGeometry.js':'geometries/TextGeometry.js','/vendor/office-font.json':'../fonts/helvetiker_regular.typeface.json'};const raw=vendorFile(url.pathname.split('/').pop()!,'examples/jsm/'+paths[url.pathname]).toString('utf8');res.setHeader('Content-Type',url.pathname.endsWith('json')?'application/json':'text/javascript');res.end(raw.replace(/from 'three'/g,"from '/vendor/three.module.js'"));return;}
  if(['GET','HEAD'].includes(req.method||'')&&['/download/windows','/download/windows.sha256'].includes(url.pathname)){serveWindowsDownload(req,res,process.env.HQ_INSTALLER_PATH||new URL('../downloads/AI-Headquarters-Setup.exe',import.meta.url),url.pathname.endsWith('.sha256'));return;}
  if(req.method==='GET' && url.pathname==='/api/status'){const ai=managedAISetupState();return send(200,{product:'ai-headquarters',setupRequired:!db.prepare('SELECT id FROM founder').get(),aiReady:(ai?.inferenceVerified===true&&!!setting('ollama_model'))||!!availableAIWorker(),...(!publicBinding&&ai?.inferenceVerified===true?{aiModel:setting('ollama_model')||null}:{})});}
  const localPort=(server.address() as any)?.port||port;
  const allowedOrigins=publicBinding?[publicOrigin]:[`http://127.0.0.1:${localPort}`,`http://localhost:${localPort}`,...(publicOrigin?[publicOrigin]:[])];
- if(req.method==='POST' && !allowedOrigins.includes(req.headers.origin)&&!(!req.headers.origin&&['/api/sync/pair','/api/sync/exchange','/api/ai-worker/heartbeat','/api/ai-worker/claim','/api/ai-worker/complete','/api/browser-bridge/stop-native'].includes(url.pathname)))return send(403,{error:'Invalid origin'});
+ if(req.method==='POST' && !allowedOrigins.includes(req.headers.origin)&&!(!req.headers.origin&&['/api/sync/pair','/api/sync/exchange','/api/ai-worker/heartbeat','/api/ai-worker/claim','/api/ai-worker/complete','/api/browser-bridge/stop-native','/api/browser-bridge/assistant'].includes(url.pathname)))return send(403,{error:'Invalid origin'});
  let body:any={};if(req.method==='POST'){let raw='';for await(const part of req){raw+=part;if(raw.length>(url.pathname==='/api/sync/exchange'?3000000:url.pathname==='/api/ai-worker/complete'?40000:url.pathname==='/api/commerce/campaigns/save'?40000:url.pathname==='/api/mail/configure'?65536:url.pathname==='/api/business/profile'?32768:16384))return send(413,{error:'Request too large'});}body=JSON.parse(raw||'{}');}
+ if(req.method==='GET'&&url.pathname==='/api/online/status')return send(200,onlineAccess.state());
+ if(req.method==='POST'&&url.pathname==='/api/online/connect')return send(200,await onlineAccess.connect(body));
+ if(req.method==='POST'&&url.pathname==='/api/online/reconnect')return send(200,await onlineAccess.check());
+ if(!onlineAccess.allowed()&&!['/api/login','/api/setup'].includes(url.pathname))return send(403,{error:'Online account access is required. Return to the setup lobby.',online:onlineAccess.state()});
+ if(onlineAccess.state().required&&url.pathname.startsWith('/api/shared/')){const result=await onlineAccess.proxy(url.pathname.slice('/api/shared/'.length),req.method||'GET',body);return send(result.status,result.data);}
+ if(url.pathname.startsWith('/api/shared/')){
+  const sharedToken=(req.headers.cookie||'').split(';').map(v=>v.trim()).find(v=>v.startsWith('lx_shared='))?.slice(10)||'';
+  try{const result=sharedOfficeRequest(url.pathname.slice('/api/shared/'.length),req.method||'GET',body,sharedToken,req.socket.remoteAddress||'local');
+   if(result.token!==undefined)res.setHeader('Set-Cookie',`lx_shared=${result.token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${result.token?604800:0}${publicOrigin?'; Secure':''}`);
+   return send(result.status||200,result.data);
+  }catch(error){if(error.status===429){const user=sharedUser(sharedToken);if(user)quarantineRateLimit(user.id);}
+   return send(error.status||400,{error:String(error.message||error),...(error.access?{access:error.access}:{})});}
+ }
  if(req.method==='POST'&&url.pathname==='/api/sync/pair')return send(200,acceptPair(body));
  if(req.method==='POST'&&url.pathname==='/api/sync/exchange'){if(!syncAuthorized(req.headers.authorization))return send(401,{error:'Device pairing required'});return send(200,exchange(body));}
  if(req.method==='POST'&&['/api/ai-worker/heartbeat','/api/ai-worker/claim','/api/ai-worker/complete'].includes(url.pathname)){if(!syncAuthorized(req.headers.authorization))return send(401,{error:'Current device pairing required'});if(url.pathname.endsWith('/heartbeat'))return send(200,workerHeartbeat(req.headers.authorization,body));if(url.pathname.endsWith('/claim'))return send(200,claimAIWork(req.headers.authorization));return send(200,completeAIWork(req.headers.authorization,body));}
- if(req.method==='POST'&&url.pathname==='/api/browser-bridge/stop-native'){
+ if(req.method==='POST'&&['/api/browser-bridge/stop-native','/api/browser-bridge/assistant'].includes(url.pathname)){
   const expected=process.env.HQ_BROWSER_BRIDGE_TOKEN||'',supplied=String(req.headers.authorization||'').replace(/^Bearer\s+/i,'');
   if(process.env.RENDER==='true'||!expected||supplied.length!==expected.length||!['127.0.0.1','::1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress||''))return send(401,{error:'Local browser permission check failed'});
   if(!timingSafeEqual(Buffer.from(supplied),Buffer.from(expected)))return send(401,{error:'Local browser permission check failed'});
+  if(url.pathname.endsWith('/assistant'))return send(200,await browserAssistant(body,true));
   return send(200,await stopBrowserAccess());
  } if(['/api/setup','/api/login'].includes(url.pathname)&&req.method==='POST'){
  const key=req.socket.remoteAddress||'local';const a=attempts.get(key);if(a && Date.now()-a.time<60000 && a.count>=10)return send(429,{error:'Try again in one minute'});attempts.set(key,{count:a&&Date.now()-a.time<60000?a.count+1:1,time:a?.time&&Date.now()-a.time<60000?a.time:Date.now()});
@@ -103,6 +139,18 @@ const server=createServer(async(req,res)=>{
  const token=login(body.password);if(!token)return send(401,{error:'Invalid credentials'});res.setHeader('Set-Cookie',`hq_session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800${publicOrigin?'; Secure':''}`);return send(200,{ok:true});}
  const token=(req.headers.cookie||'').split('; ').find(v=>v.startsWith('hq_session='))?.slice(11)||'';
  if(!authenticated(token))return send(401,{error:'Sign in required'});
+ if(req.method==='GET'&&url.pathname==='/api/updates/install-status')return send(200,appUpdater.state());
+ if(req.method==='POST'&&url.pathname==='/api/updates/install')return send(202,await installAppUpdate(body));
+ if(req.method==='GET'&&url.pathname==='/api/marketing')return send(200,marketingState());
+ if(req.method==='POST'&&url.pathname==='/api/marketing/configure')return send(200,saveMarketing(body));
+ if(req.method==='POST'&&url.pathname==='/api/marketing/check')return send(200,await runMarketingCheck());
+ if(req.method==='POST'&&url.pathname==='/api/marketing/advance')return send(200,{advanced:advanceMarketing(),...marketingState()});
+ if(req.method==='GET'&&url.pathname==='/api/platform')return send(200,{...platformState(),visibilityRequests:companyVisibilityRequests()});
+ if(req.method==='POST'&&url.pathname==='/api/platform/visibility')return send(200,approveCompanyVisibility(body));
+ if(req.method==='POST'&&url.pathname==='/api/platform/reset-password'){const reset=issuePasswordReset(body.userId);return send(201,{...reset,url:(publicOrigin||'http://127.0.0.1:'+localPort)+'/offices#reset='+reset.token});}
+ if(req.method==='POST'&&url.pathname==='/api/platform/access')return send(200,setUserAccess(body));
+ if(req.method==='POST'&&url.pathname==='/api/platform/settings')return send(200,platformSettings(body));
+ if(req.method==='POST'&&url.pathname==='/api/platform/review')return send(200,reviewSecurity(body));
  if(req.method==='GET'&&url.pathname.startsWith('/api/reports/')){const html=assignmentReport(decodeURIComponent(url.pathname.slice('/api/reports/'.length)),url.searchParams.get('download')==='1');res.setHeader('Content-Type','text/html; charset=utf-8');if(url.searchParams.get('download')==='1')res.setHeader('Content-Disposition','attachment; filename="Assignment-packet.html"');res.end(html);return;}
  if(req.method==='GET'&&url.pathname==='/api/download/windows'){serveWindowsDownload(req,res,process.env.HQ_INSTALLER_PATH||new URL('../downloads/AI-Headquarters-Setup.exe',import.meta.url),false);return;}
  if(req.method==='GET'&&url.pathname==='/api/state'){
@@ -188,6 +236,8 @@ const server=createServer(async(req,res)=>{
  const path=url.pathname.slice('/api/briefings/'.length);
  if(path.endsWith('/print')){const download=url.searchParams.get('download')==='1';res.setHeader('Content-Type','text/html; charset=utf-8');if(download)res.setHeader('Content-Disposition','attachment; filename="Lead-briefing.html"');res.end(leadBriefingReport(decodeURIComponent(path.slice(0,-6)),download));return;}
  return send(200,leadBriefing(decodeURIComponent(path)));}
+ if(req.method==='POST'&&url.pathname==='/api/browser-assistant')return send(200,await browserAssistant(body));
+ if(req.method==='GET'&&url.pathname==='/api/browser-launch')return send(200,{native:browserAccessState().available});
  if(req.method==='GET'&&url.pathname==='/api/browser-access')return send(200,browserAccessState());
  if(req.method==='POST'&&url.pathname==='/api/browser-access/request')return send(201,requestBrowserAccess(body.recordId,body.origin,body.purpose,body.scopes,body.minutes));
 if(req.method==='POST'&&url.pathname==='/api/browser-access/grant'){
