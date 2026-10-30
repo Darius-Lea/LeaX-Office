@@ -9,7 +9,7 @@ import {commerceState,commerceDetail,saveProduct,saveListing,saveCampaign,saveOr
 import {createAIInvitation,invitationJobStatus} from './commerce-design-ai.ts';
 import {relayState,workerHeartbeat,claimAIWork,completeAIWork,enableLocalAIWorker} from './ai-relay.ts';
 import {availableAIWorker} from './ai-routing.ts';
-import {aiMeetingState,aiMeetingDetail,createAIMeeting,askAIMeeting,closeAIMeeting} from './ai-meetings.ts';
+import {aiMeetingState,aiMeetingDetail,createAIMeeting,inviteAIMeeting,askAIMeeting,closeAIMeeting} from './ai-meetings.ts';
 import {miningState,checkMiningStatus} from './mining-status.ts';
 import {joinCall,pollCall,signalCall,leaveCall} from './calls.ts';
 import {initializeSync,syncState,createPairCode,acceptPair,syncAuthorized,exchange,connectSync,runSync,disconnectSync,revokeSyncDevice,resolveSyncConflict} from './sync.ts';
@@ -22,6 +22,7 @@ import {serveDatabaseExport} from './transfers.ts';
 import {serveWindowsDownload} from './download.ts';
 import {operationsState} from './operations.ts';
 import {learningState,recordWorkFeedback,collectLearningEvidence,learningDataset} from './learning.ts';
+import {submitAIQualityFeedback,aiQualityDataset,aiQualityState} from './ai-quality.ts';
 import {planWork,workPlannerState} from './work-planner.ts';
 import {leadBriefing} from './briefings.ts';
 import {queueLeadResearch,processLeadResearch,leadResearchState} from './lead-research.ts';
@@ -72,7 +73,7 @@ function managedAISetupState(){
  try{const value=JSON.parse(setting('managed_ai_setup')||'null');if(!value||!['Preparing','Needs-attention','Paused','Completed'].includes(value.status))return null;return {status:value.status,checkedAt:Number(value.checkedAt)||null,inferenceVerified:value.status==='Completed'&&value.inferenceVerified===true};}catch{return null;}
 }
 const server=createServer(async(req,res)=>{
- const cclFrame=(req.url||'').split('?')[0]==='/ccl-app.html';res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; frame-src 'self'; frame-ancestors "+(cclFrame?"'self'":"'none'"));res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Cache-Control','no-store');
+ const cclFrame=(req.url||'').split('?')[0]==='/ccl-app.html';res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; frame-src 'self'"+(cclFrame?" https:":"")+"; frame-ancestors "+(cclFrame?"'self'":"'none'"));res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Cache-Control','no-store');
  const send=(status:number,data:any)=>{res.writeHead(status,{'Content-Type':'application/json'});res.end(JSON.stringify(data));};
  try{
  const url=new URL(req.url||'/',`http://127.0.0.1:${port}`);
@@ -99,7 +100,7 @@ const server=createServer(async(req,res)=>{
  if(req.method==='GET'&&url.pathname.startsWith('/api/reports/')){const html=assignmentReport(decodeURIComponent(url.pathname.slice('/api/reports/'.length)),url.searchParams.get('download')==='1');res.setHeader('Content-Type','text/html; charset=utf-8');if(url.searchParams.get('download')==='1')res.setHeader('Content-Disposition','attachment; filename="Assignment-packet.html"');res.end(html);return;}
  if(req.method==='GET'&&url.pathname==='/api/download/windows'){res.setHeader('Content-Type','application/vnd.microsoft.portable-executable');res.setHeader('Content-Disposition','attachment; filename="AI-Headquarters-Setup.exe"');res.end(readFileSync(process.env.HQ_INSTALLER_PATH||new URL('../downloads/AI-Headquarters-Setup.exe',import.meta.url)));return;}
  if(req.method==='GET'&&url.pathname==='/api/state'){
- const state=snapshot({recordPage:Number(url.searchParams.get('recordPage')||0),taskPage:Number(url.searchParams.get('taskPage')||0),query:url.searchParams.get('historyQuery')||''}),workPlan=workPlannerState(),learning=learningState(),deals=dealState(),stores=storesState(),commerce=commerceState(),business=businessState(),operations=operationsState({plan:workPlan,learning});return send(200,{...state,rollouts:rolloutState(),backups:backupState(),appVersion:versionInfo().version,updates:updateStatus(),localEngines:localEngineState(),stores,campus:campusState(),commerce,aiRelay:relayState(),aiMeetings:aiMeetingState(),mining:miningState(),business,mail:mailState(),sync:syncState(),deals,workPlan,learning,operations,distribution:distributionState({clock:state.clock,stores,commerce,business,operations}),storefronts:storefrontState(),storeGuide:storeGuideState(),managedAISetup:managedAISetupState(),leadResearch:leadResearchState(),businessGuide:businessGuide(Date.now(),deals),officeDesign:getOfficeDesign(),businessProfile:profileState(),accountability:accountabilityState(),outcomes:outcomeState(),funding:fundingState(),pricing:pricingState(),opportunities:state.opportunities.map(record=>({...record,advice:awardAdvice(record,state.company.name)})),...teamState(),roleCharters:ROLE_CHARTERS,manager:managerState(),aiRuns:agentRuns(),aiConfigured:!!setting('ollama_model')||!!availableAIWorker(),contactResearch:contactState(),drafts:draftState(),solicitations:solicitationState()});}
+ const state=snapshot({recordPage:Number(url.searchParams.get('recordPage')||0),taskPage:Number(url.searchParams.get('taskPage')||0),query:url.searchParams.get('historyQuery')||''}),workPlan=workPlannerState(),learning={...learningState(),aiQuality:aiQualityState()},deals=dealState(),stores=storesState(),commerce=commerceState(),business=businessState(),operations=operationsState({plan:workPlan,learning});return send(200,{...state,rollouts:rolloutState(),backups:backupState(),appVersion:versionInfo().version,updates:updateStatus(),localEngines:localEngineState(),stores,campus:campusState(),commerce,aiRelay:relayState(),aiMeetings:aiMeetingState(),mining:miningState(),business,mail:mailState(),sync:syncState(),deals,workPlan,learning,operations,distribution:distributionState({clock:state.clock,stores,commerce,business,operations}),storefronts:storefrontState(),storeGuide:storeGuideState(),managedAISetup:managedAISetupState(),leadResearch:leadResearchState(),businessGuide:businessGuide(Date.now(),deals),officeDesign:getOfficeDesign(),businessProfile:profileState(),accountability:accountabilityState(),outcomes:outcomeState(),funding:fundingState(),pricing:pricingState(),opportunities:state.opportunities.map(record=>({...record,advice:awardAdvice(record,state.company.name)})),...teamState(),roleCharters:ROLE_CHARTERS,manager:managerState(),aiRuns:agentRuns(),aiConfigured:!!setting('ollama_model')||!!availableAIWorker(),contactResearch:contactState(),drafts:draftState(),solicitations:solicitationState()});}
  if(req.method==='GET'&&url.pathname.startsWith('/api/store-guide/'))return send(200,storeGuideDetail(decodeURIComponent(url.pathname.slice('/api/store-guide/'.length))));
  if(req.method==='POST'&&url.pathname==='/api/store-guide/progress')return send(200,saveStoreGuideProgress(body));
  if(req.method==='GET'&&url.pathname==='/api/storefronts')return send(200,storefrontState());
@@ -143,6 +144,7 @@ const server=createServer(async(req,res)=>{
  if(req.method==='POST'&&url.pathname==='/api/campus/cancel')return send(200,cancelCampusTravel(body));
  if(req.method==='POST'&&url.pathname==='/api/ai-worker/configure')return send(200,await enableLocalAIWorker(body));
  if(req.method==='POST'&&url.pathname==='/api/ai-meetings/create')return send(201,createAIMeeting(body));
+ if(req.method==='POST'&&url.pathname==='/api/ai-meetings/invite')return send(200,inviteAIMeeting(body));
  if(req.method==='POST'&&url.pathname==='/api/ai-meetings/ask')return send(202,askAIMeeting(body));
  if(req.method==='POST'&&url.pathname==='/api/ai-meetings/close')return send(200,closeAIMeeting(body));
  if(req.method==='GET'&&url.pathname.startsWith('/api/ai-meetings/'))return send(200,aiMeetingDetail(decodeURIComponent(url.pathname.slice('/api/ai-meetings/'.length))));
@@ -165,7 +167,9 @@ const server=createServer(async(req,res)=>{
   res.setHeader('Content-Type',format==='csv'?'text/csv; charset=utf-8':'application/'+(format==='jsonl'?'x-ndjson':'json')+'; charset=utf-8');
   res.setHeader('Content-Disposition','attachment; filename="leax-owner-work-feedback.'+suffix+'"');res.setHeader('Cache-Control','private, no-store');res.setHeader('X-Content-Type-Options','nosniff');res.end(content);return;
  }
- if(req.method==='GET'&&url.pathname==='/api/learning/state')return send(200,learningState());
+ if(req.method==='GET'&&url.pathname==='/api/learning/state')return send(200,{...learningState(),aiQuality:aiQualityState()});
+ if(req.method==='POST'&&url.pathname==='/api/ai/quality-feedback')return send(200,submitAIQualityFeedback(body));
+ if(req.method==='GET'&&url.pathname==='/api/ai/quality-dataset'){const format=url.searchParams.get('format')||'jsonl';if(!['json','jsonl','csv'].includes(format))return send(400,{error:'Choose JSON, JSONL or CSV'});const content=aiQualityDataset(format as 'json'|'jsonl'|'csv');res.setHeader('Content-Type',format==='csv'?'text/csv; charset=utf-8':format==='jsonl'?'application/x-ndjson; charset=utf-8':'application/json; charset=utf-8');res.setHeader('Content-Disposition','attachment; filename="leax-ai-quality-dataset.'+format+'"');res.setHeader('Cache-Control','private, no-store');res.setHeader('X-Content-Type-Options','nosniff');res.end(content);return;}
  if(req.method==='POST'&&url.pathname==='/api/backups/create')return send(201,await createManagedBackup());
  if(req.method==='POST'&&url.pathname==='/api/deals/create')return send(201,createDeal(body));
  if(req.method==='POST'&&url.pathname==='/api/deals/update')return send(200,updateDeal(body));

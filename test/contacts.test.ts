@@ -22,7 +22,11 @@ test('robots restrictions and contact extraction keep provenance without guessin
  const contacts=extractContacts('<script>fake@script.com</script><style>.a{email:fake@style.com}</style><a href="mailto:vendors@fixture-company.com?subject=Hello">Vendor services</a><p>info&#64;fixture-company.com</p><a href="tel:+1-212-555-0100">Telephone</a><p>vendors@fixture-company.com</p><img src="icon@2x.png">','https://example.org/contact');
  assert.equal(contacts.length,3);assert.equal(contacts[0].value,'vendors@fixture-company.com');assert.match(contacts[0].roleHint,/Possible/);assert.equal(contacts[0].sourceUrl,'https://example.org/contact');assert.match(contacts[0].verification,/unverified/);assert.ok(!contacts.some(c=>c.value.includes('script.com')));assert.ok(contacts.some(c=>c.type==='phone'));
 });
-test('bounded source fetch persists actual published results, cooldown and failures',async()=>{
+test('company-matched published JSON-LD identifies an explicitly linked contact without guessing authority',()=>{
+ const source='<script type="application/ld+json">{"@context":"https://schema.org","@type":"Person","name":"Alex Example","jobTitle":"Vendor Manager","worksFor":{"@type":"Organization","name":"Fixture Company"},"email":"alex@example.org","telephone":"+1-212-555-0100"}</script><a href="mailto:alex@example.org">Alex Example</a><a href="tel:+1-212-555-0100">Call Alex</a>';
+ const matched=extractContacts(source,'https://example.org/team','Fixture Company');assert.equal(matched.length,2);assert.equal(matched[0].personName,'Alex Example');assert.equal(matched[0].jobTitle,'Vendor Manager');assert.match(matched[0].verification,/unverified/);assert.match(matched[0].roleHint,/decision authority remain unverified/);
+ const mismatched=extractContacts(source,'https://example.org/team','Another Company');assert.ok(mismatched.every(contact=>!contact.personName&&!contact.jobTitle));
+});test('bounded source fetch persists actual published results, cooldown and failures',async()=>{
  try{
  let calls:string[]=[];
  const fake=async(url:URL,kind:'robots'|'page')=>{calls.push(url.href);return kind==='robots'?{status:200,headers:{'content-type':'text/plain'},body:'User-agent: *\nDisallow: /private'}:{status:200,headers:{'content-type':'text/html'},body:'<a href="mailto:procurement@fixture-company.com">Procurement</a>'};};

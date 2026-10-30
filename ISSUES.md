@@ -1,3 +1,26 @@
+## Preview.38 remaining limits
+
+- This is a web-app page viewer, not a full standalone browser engine. Many websites set headers that block iframe embedding, third-party sign-in cookies may be unavailable, and those pages need the full browser-tab fallback.
+- Agents search public indexed pages via one public search provider and read at most five matching pages per query. This is not the entire internet, private login access or automatic account operation.
+- Extension/native browser integration for logged-in sites would need a separate signed, user-installed desktop/extension component, explicit permissions and visible per-action approval. No such component is included here.
+## Preview.37 remaining limits
+
+- Training-ready means the example has the captured context and owner review required for export. It is not a claim that the answer is factually perfect; inspect examples for sensitive or incorrect business data before using them.
+- This release only prepares clean training files. It does not provide a Colab notebook, train weights, or connect an externally trained model.
+## Preview.36 remaining limits
+
+- Meeting inference is sequential and still depends on the configured local model or paired worker. A small model can produce generic or incorrect prose; prompts and feedback cannot guarantee fast or human-natural conversation.
+- Contact lookups are bounded public-source checks. Sites can block access; a named manager, active need and authority are not guaranteed. No outreach is sent.
+- Thumbs feedback collects review labels; it does not automatically improve weights. A usable negative training example requires a correction. Exported records include real prompts/outputs, so the owner must inspect them before Colab upload. No export is automatically sent to Ollama, another chatbot or a cloud service.
+- No Colab notebook or fine-tuning run was completed in this release. Dataset format is provided; model/adapter training and benchmarked rollout remain owner-controlled.
+
+## Preview.35 remaining limits
+
+- Spoken meeting commands rely on browser speech-to-text and an active meeting; they do not stream audio directly to agents. Actual agent replies still need a configured local model/paired worker. Poly hardware and human guest video/permissions are not universally integrated.
+- Factory floor labels are aliases, while assignment records still come from the company AI team. No producer creates product-specific work assignments yet, so factory operators, physical assembly, moving real products, shipping and 24/7 activity cannot be claimed.
+- Lead research follows multiple bounded public search queries and linked company pages, but source blocking, missing public details, company identity confirmation and vendor-role verification remain real limitations. The app cannot guarantee a named person or phone for every company.
+- The in-app update screen offers the official Windows installer; installing over the existing app preserves data, but there is no silent hot-replacement of a running Windows application.
+- These changes have not yet been verified through hosted Render, Windows installer CI, manual browser interaction, or installation on the owner’s device.
 ## Preview.34 remaining commerce limits
 
 - Invitation output is an AI-directed editable SVG built by LeaX’s local renderer; it is not generative raster artwork or a complete drag-and-drop design canvas.

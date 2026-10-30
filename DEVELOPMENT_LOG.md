@@ -1,3 +1,28 @@
+## 2026-10-30 — preview.38: CCL in-app web view and AI public research
+
+CCL now displays public HTTPS pages inside its LeaX AI Browser workspace when websites permit embedding; a full browser tab remains available when a site blocks display or sign-in. The app does not proxy pages or bypass browser/site protections. AI agents can run source-linked public web searches and read up to five pages per query, subject to DNS, TLS, SSRF and robots checks. Tool results are kept with the agent run so citations can be checked. Agents do not gain access to user browser cookies or private logged-in accounts. Training exports keep their fresh-start rule: old feedback is excluded; only fresh feedback with captured context is included, and negative feedback requires a corrected answer.
+
+Validation: focused web-research, reference-validation, clean training-export, meeting-isolation and local inference tests passed 7/7; full Node 24 suite passed 176/176; production application bundle built with 43 files. Manual browser click-through remains pending.
+## 2026-10-30 — preview.37: clean-start AI training set
+
+Training downloads start a fresh collection at this release. Older feedback remains saved but is excluded. Downloads now contain only evidence-backed, uncontaminated owner-approved replies; a 👎 requires a corrected answer. Review-only feedback never enters JSONL, JSON or CSV training files. The Learning panel explains this in plain language and disables downloads until there is at least one eligible example. No data is uploaded and no model is trained.
+
+Validation: focused AI quality, meeting isolation and inference tests passed 3/3; full Node 24 suite passed 173/173; production application bundle built with 43 files.
+## 2026-10-30 — preview.36: cleaner meetings and owner-reviewed AI examples
+
+Meeting prompts no longer feed old refusal text or prior agent replies back as meeting history. Juliet receives a distinct, bounded public-contact research task when the owner explicitly asks for published contacts; other agents are prompted to contribute separate evidence and qualification checks. Meeting replies are capped, one-at-a-time inference queue status is visible, and the browser mic can remain enabled across turns with a clear speech-to-text privacy notice. Each saved reply can receive a thumbs-up or thumbs-down with an explanation; thumbs-down replies need an owner-written correction to enter supervised examples. Private JSONL, JSON and CSV exports include review metadata, exclude contaminated prompts from training examples, and never upload or train any model automatically. Public contact identity extraction now reads company-matched JSON-LD only when the person’s published email/phone also appears on that same page; authority remains unverified.
+
+Validation: targeted AI meeting, quality-export, contact-research and inference tests passed 7/7; full Node 24 suite passed 173/173 after routing test temp files through the writable workspace; production application bundle built with 43 files. GitHub workflow and Render rollout are pending.
+
+## 2026-10-30 — preview.35: meeting invites, floor names, and clearer lead briefs
+
+AI meetings now accept additional agents from an in-meeting roster picker or a browser-transcribed spoken request; the backend validates attendees and meeting revision, deduplicates them, and refuses invites to closed/stale meetings. The microphone transcribes speech to text. It is not an always-open audio call, and voices depend on browser/device support.
+
+The Distribution Center gives assigned floor avatars separate display names and opens the factory worker’s saved assignment detail. These are presentation aliases for existing LeaX AI employees, not a second employee system. No unassigned operator is invented; until production assignments are created from real product work, the floor may remain empty.
+
+The lead briefing starts with a plain next action, shows saved public contact details and their source, explains blocked/queued/checked search status and page counts, and separates historical award evidence from current demand. It does not fabricate contacts; blocked public search still requires retry or an owner-confirmed official site.
+
+Validation: full suite passed 171/171 under the managed Node 24 runtime; the production bundle built (43 files); changed JS/TS syntax checks passed. Manual browser interaction, Render deployment, Windows installer CI and owner-device install are pending.
 ## 2026-10-30 — preview.34: AI-directed invitation drafts in LeaX Studio and CCL
 
 Added an owner-initiated party-invitation workflow. A selected local model or verified paired local worker generates original copy and design direction; LeaX renders that specification into a 5×7 editable SVG. The CCL Studio can start a request, show the real saved preview, edit the wording/details, require explicit rights and print-layout checks, approve the exact revision, and download the SVG. The draft is not a raster image, store listing, supplier order, or POD fulfillment. Preview.34 also corrects the release-note syntax that caused the preview.33 Windows installer build to fail.

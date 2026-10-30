@@ -1,3 +1,31 @@
+## Preview.38 verification — 2026-10-30
+
+- Focused public-web search, source attribution, AI-quality export, AI inference and meeting-isolation tests — passed, 7/7.
+- Full test suite under managed Node 24 with workspace-local temporary files — passed, 176/176.
+- Production application bundle — passed, 43 files. Original source, business data, development documents and source maps excluded.
+- Manual browser click-through was not run; Playwright is not installed in this workspace.
+- GitHub workflow and Render deployment — pending.
+## Preview.37 verification — 2026-10-30
+
+- Focused AI quality, meeting isolation and local inference tests — passed, 3/3.
+- Full test suite under managed Node 24 with workspace-local temporary files — passed, 173/173.
+- Production application bundle — passed, 43 files. Original source, business data, development documents and source maps excluded.
+- GitHub workflow, Render deployment and manual browser click-through — pending.
+## Preview.36 verification — 2026-10-30
+
+- Focused tests for contact-source safety/JSON-LD, AI quality votes and exports, meeting context isolation, and local-model inference — passed, 7/7.
+- Changed JavaScript/TypeScript syntax checks — passed.
+- Full `npm test` under managed Node 24 with workspace-local temporary files — passed, 173/173. The default sandbox OS temp path produced Windows `EPERM` atomic-rename failures; rerunning from the writable workspace passed.
+- `npm run build:app -- --out dist-preview-036` — passed, 43 production files.
+- Windows installer CI, Render deployment and manual browser click-through — pending.
+
+## Preview.35 verification — 2026-10-30
+
+- Managed Node 24 `npm test` — passed, 171/171.
+- `npm run build:app -- --out dist-preview-035` — passed, 43 production files.
+- Changed public JavaScript and TypeScript syntax checks — passed.
+- Added meeting invite revision/attendee regression; clarified lead brief and printable report assertions; expanded lead-research test fixture for additional same-domain contact pages and 10 public search query types.
+- Render version, GitHub installer workflow, manual browser interaction, and owner-device installation — not yet checked.
 ## Preview.34 verification — 2026-10-30
 
 - `npm run build:app -- --out .\dist-preview-034` — passed; 43 production files bundled.

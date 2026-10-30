@@ -99,7 +99,7 @@ export async function processLeadResearch(transport:ContactTransport=publicReque
  const capture:ContactTransport=async(url,kind)=>{const response=await transport(url,kind);observed.set(kind+':'+url.href,response);return response;};
  db.prepare("UPDATE lead_research SET status='Running',message='Checking public company sources.',attempts=attempts+1,error=NULL WHERE record_id=?").run(current.recordId);
  function finish(status:Status,message:string,error:string|null=null){db.prepare('UPDATE lead_research SET website=?,status=?,message=?,contacts=?,pages=?,candidates=?,signals=?,location=?,checked_at=?,error=? WHERE record_id=?').run(website,status,message,JSON.stringify(contacts),JSON.stringify(pages),JSON.stringify(candidates),JSON.stringify(signals),location?JSON.stringify(location):null,Date.now(),error,current.recordId);audit('lead:'+current.recordId,'Contact research '+status.toLowerCase()+': '+pages.filter(p=>p.status==='Read').length+' source pages observed; no outreach sent');}
- async function read(url:string,kind:PageReceipt['kind']){try{const result=await readPublicPage(url,capture);pages.push({url:result.url,kind,status:'Read',checkedAt:Date.now()});return result;}catch(error){pages.push({url,kind,status:'Blocked',checkedAt:Date.now(),error:String(error)});throw error;}}
+ async function read(url:string,kind:PageReceipt['kind']){try{const result=await readPublicPage(url,capture,current.company);pages.push({url:result.url,kind,status:'Read',checkedAt:Date.now()});return result;}catch(error){pages.push({url,kind,status:'Blocked',checkedAt:Date.now(),error:String(error)});throw error;}}
  try{
   let homepage:Awaited<ReturnType<typeof readPublicPage>>|null=null;
   if(!website){

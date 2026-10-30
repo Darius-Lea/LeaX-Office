@@ -26,7 +26,7 @@ async function ensureDistribution(){
  distributionLoad=(async()=>{try{
  const {createDistribution3D}=await import('/distribution-scene.js');if(sceneDisposed)return null;
  distributionSurface=document.createElement('div');distributionSurface.className='office-renderer-surface distribution-renderer-surface';distributionSurface.hidden=true;webglHost.append(distributionSurface);
- distributionRenderer=createDistribution3D(distributionSurface,{onEmployee:id=>latestInspect?.(id),onOwner:()=>window.hqDistribution?.open(),onExploreMode:(active,state)=>{if(usesDistribution()){exploreMode(active,state);syncSceneSelection();}},onMeetingMode:()=>{}});
+ distributionRenderer=createDistribution3D(distributionSurface,{onEmployee:id=>window.hqDistribution?.inspectWorker(id),onOwner:()=>window.hqDistribution?.open(),onExploreMode:(active,state)=>{if(usesDistribution()){exploreMode(active,state);syncSceneSelection();}},onMeetingMode:()=>{}});
  distributionRenderer.update(latestState);syncSceneSelection();return distributionRenderer;
  }catch(error){console.error('Distribution Center rendering is unavailable:',error);message.textContent='The Distribution Center floor could not load. Your saved work remains available in the clerical view.';distributionSurface?.remove();distributionSurface=null;distributionEnabled=null;setOfficeView('2d');return null;}finally{distributionLoad=null;}})();return distributionLoad;
 }

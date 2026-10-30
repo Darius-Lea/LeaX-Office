@@ -1,3 +1,32 @@
+## Preview.38 — browser viewer and public web search
+
+- CCL now loads HTTPS pages into its LeaX AI Browser workspace when sites permit embedding. Search/address input, back/forward/reload, and full-browser-tab fallback are available.
+- Embedded pages use a sandbox. Some sites refuse embedding or sign-in; account login and compatibility are controlled by each site and browser.
+- Agents gained search_public_web: one public search query, up to five pages read, short excerpts saved with source URLs. HTTPS only, public-IP DNS validation, robots.txt, TLS and bounded response sizes apply.
+- Source evidence stays attached to the run and can be cited in its answer. Public-page content remains untrusted; no private browser session, account, send, bid or purchase access is granted.
+- The training dataset starts fresh and downloads only evidence-backed, owner-reviewed feedback examples. Zero feedback means zero training examples.
+## Preview.37 — fresh, clean AI training examples
+
+- Starts a new owner-feedback collection with this release. Older ratings remain saved for review but are excluded from training downloads.
+- Training files include only fresh, evidence-backed, uncontaminated replies. A 👎 enters training only with an owner-written corrected answer. Review-only feedback never appears as a training record.
+- The Learning page says in plain language what is included and disables downloads until a valid training example exists.
+- Training is not automatic. LeaX does not upload data or modify Ollama or another model; inspect confidential and customer data before manual Colab upload.
+## Preview.36 — meetings, lead contacts and training-data feedback
+
+- Fixed meeting history contamination by excluding meeting prompts and generic refusal replies from prior-advisory context. Agent prompts are shorter, role-specific, and Juliet gets the bounded public lead-contact tool for explicit owner requests.
+- The mic can remain on across turns, with browser speech-recognition disclosure, queued follow-up questions and clearer one-at-a-time processing status. Reply audio still depends on installed device voices and the selected model.
+- Saved replies can be rated 👍/👎 with a required explanation and an optional corrected answer. Owner-only JSONL/JSON/CSV export distinguishes usable examples from review-only feedback, marks contaminated prompts and excludes them from SFT/DPO.
+- Published named contacts are attributed only when source JSON-LD links the person to the matching company and the listed email or phone is also present on that page. This does not verify decision authority.
+- Feedback export is not model training. Data is not uploaded; manually review sensitive business/customer details before Colab. A 0.6B local model may still give weak generic replies; tune behavior only for measured tasks and retain retrieval for changing facts.
+
+## Preview.35 — meeting, factory labels and lead briefing
+
+- Meeting room: the owner can invite additional agents from the attendee picker or with a recognized spoken summons after the meeting opens. Speech recognition is browser speech-to-text; agent replies require a configured local inference route and device speech voices. It is not a live Poly Studio G62/audio integration or an external human conference system.
+- Distribution Center: assigned floor avatars use floor-specific display names and worker details open the saved assignment. The names are display aliases mapped to existing AI employees, not independent factory employees. No saved production assignment means no operator/activity is drawn; real production scheduling and 24/7 fulfillment are not implemented.
+- Lead briefs: the recommended next action appears first. Historical awards, published contact details, search progress/blocked counts and the owner’s action are separated and explained. A blocked lookup is not evidence no contact exists.
+- In-app desktop updates: the Updates screen checks for releases and opens the official installer download. Installing a newer Windows package over the current install preserves app data; it is not a silent or live update of a running process, and the owner must run the installer.
+
+Local verification: 171 tests passed, changed JS/TS syntax passed, and production bundle built with 43 files. Browser click-through, Render deployment, installer workflow and real owner-device installation remain pending.
 ## Preview.34 — invitation design workflow
 
 - CCL Studio and LeaX Office Studio can send an invitation brief only to the selected local model or verified paired worker. AI output is structured copy/art direction; the application renders an editable SVG locally.

@@ -5,13 +5,17 @@ function showView(view){pendingView=view;if(frame?.contentWindow){frame.contentW
 function focusCcl(){openComputer('control-center');}
 function navigate(target,id){
  switch(target){
- case 'research':openComputer('files');document.querySelector('[data-folder="research"]')?.click();requestAnimationFrame(()=>document.querySelector('#rollout-workspace')?.scrollIntoView({behavior:'smooth',block:'start'}));break;
+ case 'research':openComputer('files');document.querySelector('[data-folder="research"]')?.click();requestAnimationFrame(()=>document.querySelector('#opportunities')?.scrollIntoView({behavior:'smooth',block:'start'}));break;
+ case 'rollouts':openComputer('files');document.querySelector('[data-folder="research"]')?.click();requestAnimationFrame(()=>document.querySelector('#rollout-workspace')?.scrollIntoView({behavior:'smooth',block:'start'}));break;
+ case 'notices':openComputer('files');document.querySelector('[data-folder="research"]')?.click();requestAnimationFrame(()=>document.querySelector('#solicitation-records')?.scrollIntoView({behavior:'smooth',block:'start'}));break;
+ case 'drafts':openComputer('contacts');requestAnimationFrame(()=>document.querySelector('#email-drafts')?.scrollIntoView({behavior:'smooth',block:'start'}));break;
+ case 'receipts':openComputer('results');requestAnimationFrame(()=>document.querySelector('#outcome-summary')?.scrollIntoView({behavior:'smooth',block:'start'}));break;
  case 'pipeline':openComputer('pipeline');break;
  case 'pipeline-create':openComputer('pipeline');requestAnimationFrame(()=>document.querySelector('#deal-create')?.click());break;
  case 'deal':window.hqDeals?.open?.(id);break;
  case 'product':window.hqCommerce?.openRecord?.(id);break;
  case 'funding':openComputer('funding');break;
- case 'contacts':openComputer('contacts');break;
+ case 'contacts':openComputer('contacts');requestAnimationFrame(()=>document.querySelector('#contact-results')?.scrollIntoView({behavior:'smooth',block:'start'}));break;
  case 'inbox':openComputer('inbox');break;
  case 'connections':openComputer('connections');break;
  case 'models':document.querySelector('[data-pane="local-engines"]')?.click();break;

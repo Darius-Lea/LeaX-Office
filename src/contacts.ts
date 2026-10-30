@@ -5,7 +5,7 @@ import {randomUUID} from 'node:crypto';
 import {db,audit} from './store.ts';
 
 const LIMIT=512*1024;
-export type PublishedContact={type:'email'|'phone';value:string;sourceUrl:string;roleHint:string;verification:string};
+export type PublishedContact={type:'email'|'phone';value:string;sourceUrl:string;roleHint:string;verification:string;personName?:string;jobTitle?:string};
 type Response={status:number;headers:Record<string,string>;body:string};
 export type ContactTransport=(url:URL,kind:'robots'|'page')=>Promise<Response>;
 db.exec(`CREATE TABLE IF NOT EXISTS contact_research(id TEXT PRIMARY KEY,url TEXT UNIQUE NOT NULL,company TEXT NOT NULL,status TEXT NOT NULL,contacts TEXT NOT NULL,fetchedAt INTEGER NOT NULL,error TEXT);
@@ -79,7 +79,7 @@ export function robotsAllows(body:string,path:string):boolean{
  return !rules.length||rules[0].allow;
 }
 function unescapeText(text:string){return text.replace(/&#(x[0-9a-f]+|\d+);?/gi,(_,n)=>String.fromCodePoint(Math.min(0x10ffff,Number.parseInt(n.replace(/^x/i,''),/^x/i.test(n)?16:10)))).replace(/&commat;/gi,'@').replace(/&amp;/gi,'&');}
-export function extractContacts(html:string,sourceUrl:string):PublishedContact[]{
+export function extractContacts(html:string,sourceUrl:string,company=''):PublishedContact[]{
  const clean=unescapeText(html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,' ').replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi,' '));
  const entries:PublishedContact[]=[];const seen=new Set<string>();
  const add=(type:'email'|'phone',value:string)=>{
@@ -101,6 +101,9 @@ export function extractContacts(html:string,sourceUrl:string):PublishedContact[]
  for(const match of visible.matchAll(/(?:phone|telephone|tel\.?|call|office)\s*(?:us)?\s*[:·-]?\s*((?:\+\d{1,3}[ .-]?)?(?:\(\d{2,4}\)[ .-]?|\d{2,4}[ .-])\d{3,4}[ .-]\d{3,4})/gi)){
   const number=match[1];if(number.replace(/\D/g,'').length>=10&&number.replace(/\D/g,'').length<=15)add('phone',number);
  }
+ const normalizeCompany=(value:string)=>value.toLowerCase().normalize('NFKC').replace(/[^a-z0-9]+/g,' ').trim().split(' ').filter(word=>word&&!/^(llc|inc|incorporated|corporation|corp|limited|liability|company|co|ltd|plc)$/.test(word)).join(' ');
+ // JSON-LD is read from the original source because visible-text sanitization strips scripts to avoid mistaking JavaScript strings for contacts.
+ const targetCompany=normalizeCompany(company);for(const match of html.matchAll(/<script\b[^>]*type\s*=\s*['"]application\/ld\+json['"][^>]*>([\s\S]*?)<\/script>/gi)){if(match[1].length>65536)continue;try{const pending:any[]=[JSON.parse(match[1])];let checked=0;while(pending.length&&checked++<60){const node=pending.shift();if(Array.isArray(node)){pending.push(...node.slice(0,30));continue;}if(!node||typeof node!=='object')continue;if(Array.isArray(node['@graph']))pending.push(...node['@graph'].slice(0,30));const types=Array.isArray(node['@type'])?node['@type']:[node['@type']];if(!types.some((type:any)=>typeof type==='string'&&/(?:^|\/)Person$/i.test(type)))continue;const name=typeof node.name==='string'?node.name.trim().slice(0,120):'',jobTitle=typeof node.jobTitle==='string'?node.jobTitle.trim().slice(0,120):'',organization=typeof node.worksFor==='string'?node.worksFor:typeof node.worksFor?.name==='string'?node.worksFor.name:'';if(!name||!jobTitle||!organization||!targetCompany||normalizeCompany(organization)!==targetCompany)continue;const email=String(node.email||'').replace(/^mailto:/i,'').trim().toLowerCase(),phone=String(node.telephone||'').trim();for(const contact of entries){const emailMatches=contact.type==='email'&&email&&contact.value.toLowerCase()===email,phoneMatches=contact.type==='phone'&&phone&&contact.value.replace(/[^\d+]/g,'')===phone.replace(/[^\d+]/g,'');if(emailMatches||phoneMatches){contact.personName=name;contact.jobTitle=jobTitle;contact.roleHint='Published person and title on a company-matched source; contact responsibility and decision authority remain unverified';}}}}catch{}}
  return entries.sort((a,b)=>Number(b.roleHint.startsWith('Possible'))-Number(a.roleHint.startsWith('Possible'))).slice(0,20);
 }
 async function getRobots(origin:string,transport:ContactTransport){
@@ -122,7 +125,7 @@ function parseRow(row:any){return {...row,contacts:JSON.parse(row.contacts)};}
 export function contactState(){return db.prepare('SELECT * FROM contact_research ORDER BY fetchedAt DESC LIMIT 30').all().map(parseRow);}
 // Shared reader for bounded lead-source discovery. It returns observed HTML only
 // after the same robots, redirect, TLS/DNS and response checks as contact research.
-export async function readPublicPage(raw:string,transport:ContactTransport=publicRequest){
+export async function readPublicPage(raw:string,transport:ContactTransport=publicRequest,company=''){
  const initial=validatePublicUrl(raw),robots=await getRobots(initial.origin,transport);let current=initial;
  for(let redirects=0;redirects<=2;redirects++){
   if(!robotsAllows(robots,current.pathname+current.search))throw Error('robots.txt disallows this page; not fetched');
@@ -133,7 +136,7 @@ export async function readPublicPage(raw:string,transport:ContactTransport=publi
   }
   if(response.status!==200)throw Error('Public contact page unavailable (HTTP '+response.status+')');
   if(!response.headers['content-type']?.toLowerCase().includes('text/html'))throw Error('Contact source must be a public HTML page');
-  return {url:current.href,html:response.body,contacts:extractContacts(response.body,current.href)};
+  return {url:current.href,html:response.body,contacts:extractContacts(response.body,current.href,company)};
  }
  throw Error('Public source could not be read');
 }
@@ -147,7 +150,7 @@ export async function researchContacts(raw:string,company:string,transport:Conta
  if(prior)db.prepare('INSERT OR IGNORE INTO contact_research_history VALUES(?,?,?,?,?,?,?)').run(prior.id+':'+prior.fetchedAt,prior.url,prior.company,prior.status,prior.contacts,prior.fetchedAt,prior.error);
  db.prepare("INSERT INTO contact_research(id,url,company,status,contacts,fetchedAt,error) VALUES(?,?,?,'Running','[]',?,NULL) ON CONFLICT(url) DO UPDATE SET company=excluded.company,status='Running',contacts='[]',fetchedAt=excluded.fetchedAt,error=NULL").run(id,initial.href,company.trim(),fetchedAt);
  try{
-  const {contacts}=await readPublicPage(initial.href,transport);
+  const {contacts}=await readPublicPage(initial.href,transport,company);
   db.prepare("UPDATE contact_research SET status='Completed',contacts=?,error=NULL WHERE id=?").run(JSON.stringify(contacts),id);
   audit('contacts:'+id,'Public contact page read; '+contacts.length+' published entries saved, identity/deliverability unverified; no message sent');
  }catch(error){db.prepare("UPDATE contact_research SET status='Blocked',error=? WHERE id=?").run(String(error),id);audit('contacts:'+id,'Public contact research blocked; no contact details inferred');}
