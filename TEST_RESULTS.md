@@ -1,3 +1,9 @@
+## Preview.28 — adaptive workflow learning and CCL shell
+
+Focused validation: 5 tests passed in test/learning.test.ts and test/ai.test.ts using Node 22.15 with experimental type stripping. They verify persisted eligible-work ranking, inclusion of same-agent owner feedback in future AI grounding, and role isolation. JavaScript and TypeScript syntax checks passed; CRLF-aware git diff check passed.
+
+Full suite and installer packaging were not verified locally because the installed Node 22.15 is below the declared 24.19 minimum. The experimental full-suite run was inconclusive (114 passed, 35 failed, 2 cancelled); it hit unsupported Node sqlite APIs, missing dependencies and sandbox EPERM errors. GitHub Actions uses Node 24.22 for the installer build. Render deployment and a real Windows installation remain unverified.
+
 Deployment boundary for preview.21: the public Render version request was rejected by this environment's HTTPS CONNECT proxy with403. This does not establish Render deployment success or failure. Git push and package verification are separate evidence.
 
 ## Preview.21 — technology rollout research, 2026-10-29

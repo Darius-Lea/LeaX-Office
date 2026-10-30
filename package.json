@@ -1,6 +1,6 @@
 {
   "name": "ai-headquarters",
-  "version": "0.2.0-preview.26",
+  "version": "0.2.0-preview.28",
   "private": true,
   "type": "module",
   "scripts": {

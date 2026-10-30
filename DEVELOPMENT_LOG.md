@@ -1,3 +1,11 @@
+## 2026-10-29 — preview.28 adaptive workflow learning and desktop exit
+
+Owner corrections and rewards already updated the permitted-work ranking. This release also passes a bounded set of recent explicit preferences for the same employee into future agent requests. The selected business profile remains the factual grounding; preference text cannot grant permissions or authorize sending, spending, publication or computer control. Model weights are unchanged. Exports remain owner preference data in JSON, JSONL and CSV; no model receives training data automatically.
+
+CCL's X advertises “Exit CCL Software” on hover/focus and returns to LeaX Office Pro desktop. Desktop shortcuts launch current lead, AI team, store, meeting, browser and inbox screens; Return to Headquarters Office closes the desktop shell. Kali is visibly planned, not installed.
+
+Validation: 5 focused learning/AI tests passed on Node 22.15 with experimental type stripping. JavaScript/TypeScript syntax and whitespace checks passed. A valid full test run and installer build require the project Node 24.19+ runtime; GitHub Actions packaging is pending. Render and local Windows installation were not verified.
+
 ## 2026-10-29 — preview.21, rollout and installation-partner research
 
 Implemented the first owner priority as a separate durable, bounded public-source research pipeline and Research UI. Added six rotating lanes, explicit quoted provenance/publication uncertainty, source-published procurement and responsibility excerpts, actual email/phone listings, owner URL inspection, clock-in scheduling, durable cooldown/backoff/lease recovery, preserved source history and authenticated routes. No original full HTML is retained and no message/bid is sent. Saved remaining work in DELIVERY_PRIORITIES.md, beginning with reviewed bid preparation and temporary file review.

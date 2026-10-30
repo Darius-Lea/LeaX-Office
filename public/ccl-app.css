@@ -60,7 +60,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{color:var(--mt);font
 .brand{display:flex;gap:10px;align-items:center;padding:8px;border:0;background:transparent;color:var(--tx);text-align:left;border-radius:14px;cursor:pointer}
 .brand>span:last-child{line-height:1.35}.brand b{font-size:13px}.brand small{font-size:10px}
 .included-card{margin-top:auto!important}.included-title{margin:5px 0;font-weight:750}
-.mobile-close{display:none}.ccl-exit{font-size:19px!important;font-weight:800!important;padding:4px 12px!important}
+.mobile-close{display:none}.ccl-exit{position:relative;font-size:19px!important;font-weight:800!important;padding:4px 12px!important}.ccl-exit:hover::after,.ccl-exit:focus-visible::after{content:"Exit CCL Software";position:absolute;top:calc(100% + 8px);right:0;z-index:100;padding:7px 10px;border:1px solid var(--bd);border-radius:9px;background:var(--tx);color:var(--bg);font-size:10px;font-weight:700;white-space:nowrap;box-shadow:var(--sh);pointer-events:none}
 .nav-badge{margin-left:auto;display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 5px;border-radius:50px;background:#ef4444;color:white;font-size:10px;font-weight:800}
 .view-page{display:grid;gap:16px;animation:in .35s both}
 .section-intro{margin:4px 0 2px}.section-intro h2,.hero-card h2{font-size:26px;letter-spacing:-.03em;margin:1px 0 5px}

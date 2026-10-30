@@ -1,3 +1,8 @@
+## Preview.28 boundaries
+
+- Workflow learning is business-agnostic and scoped to the same owner workspace and employee. This version keeps one company profile per workspace; separate business profiles are not implemented. Feedback exports are preference labels; providers differ in fine-tuning format. No AI model is trained or sent data automatically.
+- AI browser/computer control and the requested green active-control highlight are not implemented. The existing local paired worker runs inference only; it does not click or type in websites. A real control worker must be paired locally and expose clear consent, scoped actions, a stop control and an auditable action receipt. Browser login does not grant agent access to a user's session.
+
 ## Preview.21 remaining gates — 2026-10-29
 
 The new bounded rollout research implementation and source-linked UI are separate from existing federal awards. A live default-transport probe in this cloud returned `getaddrinfo EAI_AGAIN html.duckduckgo.com`; no real rollout lead or verified hiring contact was collected. The shared public reader uses DNS-pinned HTTPS and cannot assume this proxy-only cloud supplies direct DNS/network access. Do not weaken TLS, robots or private-address controls to conceal that limitation. Hosted public search on Render remains unverified.

@@ -2,11 +2,11 @@ import {randomUUID} from 'node:crypto';
 import {db,audit} from './store.ts';
 import {termsFor,SOURCE,verifyFinding} from './research.ts';
 
-// This is a small online Bayesian bandit, not language-model fine tuning. The
-// posterior parameters below are changed by validated receipt/feedback examples
-// and are used to rank only work options the manager has already permitted.
-const METHOD='Online Bayesian work-priority bandit';
-const NOTICE='Learns which permitted work recipes produce useful saved output. Ratings update persistent selection parameters; they do not fine-tune Ollama, prove profitability or imply that software feels punishment. Waiting for sources, setup or approval is not a performance failure.';
+// Persistent workflow learning changes permitted-work rankings and supplies
+// bounded owner preferences to later same-agent inference. It does not change
+// the underlying language model's weights.
+const METHOD='LeaX adaptive workflow learning';
+const NOTICE='Validated saved outcomes and owner feedback update persistent work-priority preferences. Recent owner feedback for the same employee also guides later AI advisory requests. This adapts LeaX workflows; base model weights remain unchanged and are not fine-tuned, and it does not prove profitability or imply that software feels punishment. Waiting for sources, setup or approval is not a performance failure.';
 const PRIOR=1,OWNER_WEIGHT=3,AUTO_WEIGHT=.15,EXPLORATION=.12;
 type ReceiptKind='task'|'note'|'lead'|'ai'|'incident';
 type Rating='reward'|'correct';
@@ -90,6 +90,11 @@ export function rankWorkOptions<T extends {id:string;recipe:string;agent?:string
   return {...option,learning:{recipe:option.recipe,...score(parameter(option.recipe),model.examples)},_order:index};
  }).sort((a,b)=>b.learning.score-a.learning.score||a._order-b._order).map(({_order,...option})=>option as T&{learning:{recipe:string;mean:number;score:number;observations:number;positiveWeight:number;negativeWeight:number;updatedAt:number|null}});
 }
+export function ownerLearningGuidance(agent:string){
+ if(!employee(agent))return {method:'Recent owner feedback for this employee',examples:[]};
+ const rows=db.prepare('SELECT f.recipe,f.receipt_kind,f.rating,f.reason,f.created FROM learning_feedback f LEFT JOIN learning_exclusions x ON x.feedback_id=f.id WHERE f.agent=? AND f.source=? AND x.feedback_id IS NULL ORDER BY f.created DESC,f.id DESC LIMIT 4').all(agent,'owner') as any[];
+ return {method:'Recent explicit CEO feedback; operational preferences only',examples:rows.map(row=>({recipe:String(row.recipe).slice(0,180),workType:String(row.receipt_kind).slice(0,40),direction:row.rating==='correct'?'Correction requested':'Marked useful',preference:String(row.reason||'').replaceAll(String.fromCharCode(13),' ').replaceAll(String.fromCharCode(10),' ').slice(0,320),recordedAt:new Date(Number(row.created)).toISOString()}))};
+}
 function presentedFeedback(row:any){const excluded=!!db.prepare('SELECT feedback_id FROM learning_exclusions WHERE feedback_id=?').get(row.id);return {id:row.id,agent:row.agent,kind:row.receipt_kind,receiptId:row.receipt_id,recipe:row.recipe,rating:row.rating,reason:row.reason,source:row.source,createdAt:row.created,excluded,trainingStatus:excluded?'Excluded':'Active'}}
 function train(item:Receipt,rating:Rating,reason:string,source:Source,now:number){
  const old=db.prepare('SELECT * FROM learning_feedback WHERE receipt_kind=? AND receipt_id=? AND agent=? AND source=?').get(item.kind,item.id,item.agent,source) as any;
@@ -160,6 +165,7 @@ export function learningState(){
  if(hasTable('accountability_incidents'))for(const row of db.prepare("SELECT id FROM accountability_incidents WHERE status<>'Excused' ORDER BY created DESC LIMIT 20").all() as any[])candidates.push({kind:'incident',id:row.id});
  const eligibleReceipts=candidates.flatMap(candidate=>{try{const item=receipt(candidate.kind,candidate.id,candidate.agent);const previous=db.prepare("SELECT id,rating FROM learning_feedback WHERE receipt_kind=? AND receipt_id=? AND agent=? AND source='owner'").get(item.kind,item.id,item.agent) as any;return [{...item,canReward:item.canReward&&!previous,canCorrect:item.canCorrect&&!previous,feedback:previous||null}]}catch{return []}});
  return {method:METHOD,notice:NOTICE,version:model.version,trainedExamples:model.examples,updatedAt:model.updated,parameters,
+  futureAdvisoryGuidance:'Recent explicit owner feedback for the same employee is included in subsequent local AI requests. It influences workflow preferences only; base model weights are unchanged.',
   recentFeedback:(db.prepare('SELECT * FROM learning_feedback ORDER BY created DESC,id DESC LIMIT 40').all() as any[]).map(presentedFeedback),
   eligibleReceipts,pendingCorrections:pendingLearningCorrections(20,true),model:{version:model.version,samples:model.examples,updatedAt:model.updated},
   explanation:NOTICE,recipes:parameters.map(row=>({id:row.recipe,label:row.recipe,mean:row.mean,positive:row.positiveWeight,negative:row.negativeWeight}))};

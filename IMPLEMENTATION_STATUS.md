@@ -1,3 +1,9 @@
+## Preview.28 — adaptive workflow learning and LeaX Office Pro desktop
+
+Owner feedback now changes two app-level behaviors: it adjusts the ranking of permitted work recipes and supplies recent same-employee preferences to later AI requests. This lets the workflow adapt without changing any model weights. It is business-agnostic, while company facts and goals come from the current workspace; this version supports one company profile per workspace. JSON, JSONL and CSV downloads contain owner preference labels, not provider-ready fine-tuning payloads for every model. No model is trained or sent data automatically.
+
+CCL now has a clear Exit CCL Software hover label, returns to the LeaX Office Pro desktop, and the desktop shortcuts open existing LeaX Office workspaces. Kali remains a planned, unavailable app.
+
 ## Preview.21 — technology rollout research, 2026-10-29
 
 The Research workspace now starts with separate public technology-rollout and installation-partner research: retail, restaurants, nursing homes/healthcare, new builds/upgrades, partner programs and awarded contractors. It stores checked source excerpts, publication dates when stated, actual public contact listings, procurement links and published responsibility/contract-holder excerpts. No company, decision-maker, current demand, open job or contracting authority is inferred from a keyword or mailbox. The public-source worker is separate from federal-award evidence and does not insert private announcements as USAspending awards.
