@@ -71,7 +71,7 @@ function managedAISetupState(){
  try{const value=JSON.parse(setting('managed_ai_setup')||'null');if(!value||!['Preparing','Needs-attention','Paused','Completed'].includes(value.status))return null;return {status:value.status,checkedAt:Number(value.checkedAt)||null,inferenceVerified:value.status==='Completed'&&value.inferenceVerified===true};}catch{return null;}
 }
 const server=createServer(async(req,res)=>{
- const cclFrame=(req.url||'').split('?')[0]==='/ccl-app.html';res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; frame-src 'self' https:; frame-ancestors "+(cclFrame?"'self'":"'none'"));res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Cache-Control','no-store');
+ const cclFrame=(req.url||'').split('?')[0]==='/ccl-app.html';res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; frame-src 'self'; frame-ancestors "+(cclFrame?"'self'":"'none'"));res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Cache-Control','no-store');
  const send=(status:number,data:any)=>{res.writeHead(status,{'Content-Type':'application/json'});res.end(JSON.stringify(data));};
  try{
  const url=new URL(req.url||'/',`http://127.0.0.1:${port}`);
