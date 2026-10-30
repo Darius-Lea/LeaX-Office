@@ -1,4 +1,5 @@
 import {randomBytes,createHash} from 'node:crypto';
+import {guestMedia,pruneGuestMedia} from './guest-media.ts';
 import {db} from './store.ts';
 import {requireActive} from './platform-access.ts';
 const hash=(s:string)=>createHash('sha256').update(s).digest('hex');
@@ -9,7 +10,9 @@ CREATE TABLE IF NOT EXISTS guest_lobby_sessions(hash TEXT PRIMARY KEY,link_id TE
 function room(user:any,address:string){const row=db.prepare("SELECT r.id,r.name,m.role FROM shared_rooms r JOIN shared_members m ON m.room_id=r.id WHERE r.address=? AND m.user_id=?").get(address,user.id) as any;if(!row||!['owner','co-owner'].includes(row.role))throw fail('Only an owner or co-owner can manage guest links');return row;}
 export function manageGuests(action:string,method:string,body:any,user:any,now=Date.now()){
  const r=room(user,String(body.address||''));
- if(action==='list'&&method==='POST')return {links:db.prepare('SELECT l.id,l.expires,l.revoked,l.used,s.name,s.seen FROM guest_lobby_links l LEFT JOIN guest_lobby_sessions s ON s.link_id=l.id WHERE l.room_id=? AND l.expires>? ORDER BY l.expires DESC LIMIT 50').all(r.id,now)};
+ pruneGuestMedia(now);
+ if(action.startsWith('media-')){const call=db.prepare('SELECT 1 FROM guest_media_calls c JOIN guest_lobby_links l ON l.id=c.link_id WHERE c.id=? AND l.room_id=?').get(String(body.callId||''),r.id);if(!call)throw fail('Meeting not found',404);return guestMedia(action.slice(6),method,body,{user},now);}
+ if(action==='list'&&method==='POST')return {links:db.prepare('SELECT l.id,l.expires,l.revoked,l.used,s.name,s.seen,c.id AS callId,c.status AS callStatus FROM guest_lobby_links l LEFT JOIN guest_lobby_sessions s ON s.link_id=l.id LEFT JOIN guest_media_calls c ON c.link_id=l.id WHERE l.room_id=? AND l.expires>? ORDER BY l.expires DESC LIMIT 50').all(r.id,now)};
  if(action==='create'&&method==='POST'){
   const minutes=Number(body.minutes??60);if(!Number.isInteger(minutes)||minutes<5||minutes>240)throw fail('Choose 5–240 minutes',400);
   const count=db.prepare('SELECT count(*) AS n FROM guest_lobby_links WHERE room_id=? AND expires>? AND revoked=0').get(r.id,now) as any;if(count.n>=20)throw fail('Revoke an existing guest link first',429);
@@ -33,6 +36,7 @@ export function guestLobbyRequest(action:string,method:string,body:any,token:str
   return {data:{ok:true},token:capability};
  }
  if(action==='leave'&&method==='POST'){db.prepare('DELETE FROM guest_lobby_sessions WHERE hash=?').run(hash(token));return {data:{ok:true},token:''};}
+ if(action.startsWith('media-'))return {data:guestMedia(action.slice(6),method,body,{guestHash:hash(token)},now)};
  if(action==='state'&&method==='GET'){
   const row=db.prepare('SELECT s.name,l.creator,l.expires,r.name AS office FROM guest_lobby_sessions s JOIN guest_lobby_links l ON l.id=s.link_id JOIN shared_rooms r ON r.id=l.room_id JOIN shared_members m ON m.room_id=r.id AND m.user_id=l.creator WHERE s.hash=? AND l.expires>? AND l.revoked=0 AND m.role IN (\'owner\',\'co-owner\')').get(hash(token),now) as any;
   if(!row)throw fail('Guest access has ended. Ask your host for a new link.',410);requireActive(row.creator,now);

@@ -1,3 +1,12 @@
+## Preview.47 guest video/audio — 2026-10-30
+
+- Required `NODE_USE_ENV_PROXY=1 npm test`: 192 passed, zero failures/skips/cancellations/todos.
+- Direct `node test/guest-media.test.ts`: three actual tests passed for explicit host acceptance, guest/session isolation, wrong-role SDP rejection, retryable signal cursors, bound host browser session, malformed candidates, timeout, decline, revocation, expiry, suspension and short-lived TURN credentials. Direct guest-lobby tests also passed (two tests).
+- Real source and packaged `scripts/qa/guest-video-browser-check.mjs`: passed with independent Chromium clients and a 390×844 touch/mobile guest. Both received audio RTP and decoded video frames; actual video element rendered and remote audio track was live. Independent microphone mute/camera-off controls passed. Revoking the invitation closed both peer connections and ended every saved local capture track. No horizontal overflow or page JavaScript errors.
+- Test media used Chromium synthetic camera/microphone inputs with real WebRTC transport through the authenticated, temporary loopback coturn fixture (TCP), because this execution environment previously exposed only TCP ICE candidates. This does not measure real microphone quality, Internet latency or external network traversal. First media assertion raced video-element metadata despite received RTP/decoded frames; stream attachment was made idempotent and the check now waits for the actual rendered video dimensions. Source and packaged reruns passed.
+- Existing guest lobby browser regression passed after video addition. Production build: 145 files, preview.47. Whitespace check passed.
+- No production TURN relay was provisioned. Public Render deployment, physical phone cameras, Windows installer execution, native Electron media and cross-network performance remain unverified. Office-display integration, tours and agent speaking permission remain unfinished.
+
 ## Preview.46 guest lobby — 2026-10-30
 
 - Required full backend suite: `NODE_USE_ENV_PROXY=1 npm test` — 189 passed, zero failures/skips/cancellations/todos.

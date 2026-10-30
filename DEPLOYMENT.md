@@ -1,3 +1,7 @@
+## Guest video meetings - preview.47
+
+Deploy main for web, and install/update the Windows build from the same release. At /guest the guest requests a meeting and an owner/co-owner answers. Both need HTTPS and camera/microphone permission. Configure HQ_TURN_URL with HQ_TURN_SECRET, or HQ_TURN_USER and HQ_TURN_PASSWORD for an existing relay, for reliable restrictive-network traversal. No production TURN service is provisioned. The GitHub push triggers the existing Windows setup build; it does not prove Render has deployed. See docs/GUEST-LOBBY.md.
+
 ## Passwordless guest lobby - preview.46
 
 Deploy main to the same durable HTTPS service used by shared office accounts. Sign in at /offices and open Guest lobby invitations, or visit /guest. Invite links expire and are single-use. This is lobby access only; guest video and office tours are not included. See docs/GUEST-LOBBY.md. Live Render deployment is not verified.

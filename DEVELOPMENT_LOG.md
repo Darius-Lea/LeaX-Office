@@ -1,3 +1,7 @@
+## Preview.47 — passwordless guest video/audio meetings, 2026-10-30
+
+Added explicit guest request and host answer/decline, two-party WebRTC audio/video, optional camera, independent mute/camera controls, hang-up, remote playback/fullscreen and phone layout. Guest capability and answering host session isolate signaling; expiry/revocation/account holds or lost authorization stop media. Configurable TURN supports shared-secret short-lived credentials or an existing static relay. No production relay is provisioned. The same source serves web and packaged desktop; public Render deployment and actual Windows installation remain unverified. Office tours, room-display/agent reply integration and the Google Sites embed failure remain unfinished. Auto Poster remains disconnected. See docs/GUEST-LOBBY.md.
+
 ## Preview.46 — expiring passwordless guest lobby, 2026-10-30
 
 Completed one-use 5–240-minute guest lobby links, name-only mobile joining, separate HttpOnly guest sessions, owner/co-owner management and revocation. Expiry, creator suspension and loss of creator management membership deny guest requests. Guests cannot authenticate account/private APIs. See docs/GUEST-LOBBY.md for use and exact boundaries. Video, office tours, agent permission meetings and the reported Google Sites embed failure remain unfinished; public Render deployment is unverified. Auto Poster remains disconnected.
