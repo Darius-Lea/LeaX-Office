@@ -1,3 +1,9 @@
+## Preview.41 — owner-approved signed-in browser tasks
+
+- The Windows LeaX AI Browser can provide narrowly scoped page research to the selected local model (including local Ollama), only for one saved lead and one approved HTTPS site at a time. The owner selects permissions and an expiry, and the browser shows a green acting indicator.
+- The browser does not read form values, password inputs, browser cookies or saved credentials. Sign-in/security pages and pages with password inputs are blocked; recognized secret-like page text is filtered. A site could display a secret as ordinary text, which no universal filter can recognize reliably—owners should not grant access to pages that expose secrets.
+- A visible email or phone can be saved with its source page and remains labeled unverified until the owner confirms company identity and role. Sending or account edits require separately granted scope; purchase/order/bid and money movement controls are blocked.
+- The model can read filtered page text, open same-site links and scroll one bounded viewport up/down/left/right; browser work is pinned to the selected local model, not a paired worker/cloud model. It cannot switch browser tabs, click arbitrary coordinates or control Windows apps. Render cannot reach a local profile.
 ## Preview.40 — LeaX browser persistence, broom and custom extensions
 
 - Windows LeaX AI Browser uses a persistent profile under the protected local AIHeadquarters folder. Closing/reopening the browser retains supported site sign-ins and site storage.

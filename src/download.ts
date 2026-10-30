@@ -5,6 +5,11 @@ import type {IncomingMessage,ServerResponse} from 'node:http';
 let cached:{file:string;size:number;mtime:number;hash:string}|undefined;
 // One stable, resumable native file; no source archives or personal data.
 export function serveWindowsDownload(req:IncomingMessage,res:ServerResponse,file:string|URL,checksum=false){
+ if(process.env.RENDER==='true'){
+  const version=JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8')).version,prefix='0.2.0-preview.',sequence=typeof version==='string'&&version.startsWith(prefix)?Number(version.slice(prefix.length)):NaN;
+  if(!Number.isSafeInteger(sequence)||sequence<1){res.writeHead(503,{'Content-Type':'application/json'});res.end(req.method==='HEAD'?undefined:JSON.stringify({error:'The published Windows setup is temporarily unavailable.'}));return;}
+  const asset=checksum?'AI-Headquarters-Setup.exe.sha256':'AI-Headquarters-Setup.exe';res.writeHead(302,{Location:'https://github.com/Darius-Lea/LeaX-Office/releases/download/v'+version+'/'+asset,'Cache-Control':'no-store'});res.end();return;
+ }
  let stat;try{stat=statSync(file);if(!stat.isFile())throw Error('Not a file');}catch{
   res.writeHead(503,{'Content-Type':'application/json'});res.end(req.method==='HEAD'?undefined:JSON.stringify({error:'Windows setup is temporarily unavailable. Please retry after this deployment finishes.'}));return;
  }

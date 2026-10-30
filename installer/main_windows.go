@@ -216,6 +216,31 @@ func unseal(s string) (string, error) {
 	b, e = dpapi(b, true)
 	return string(b), e
 }
+func browserBridgeToken() (string, error) {
+	path := filepath.Join(root, "browser-bridge.dpapi")
+	if protected, err := os.ReadFile(path); err == nil {
+		token, err := unseal(strings.TrimSpace(string(protected)))
+		if err != nil || len(token) != 64 {
+			return "", errors.New("The private LeaX browser bridge key could not be unlocked")
+		}
+		return token, nil
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return "", err
+	}
+	bytes := make([]byte, 32)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	token := hex.EncodeToString(bytes)
+	protected, err := seal(token)
+	if err != nil {
+		return "", err
+	}
+	if err = os.WriteFile(path, []byte(protected), 0600); err != nil {
+		return "", err
+	}
+	return token, nil
+}
 func readState() state {
 	var s state
 	b, e := os.ReadFile(filepath.Join(root, "native-state.json"))
@@ -656,6 +681,10 @@ func startOffice(wantShortcut bool) error {
 		return e
 	}
 	code := hex.EncodeToString(codeBytes)
+	bridgeToken, e := browserBridgeToken()
+	if e != nil {
+		return fmt.Errorf("Could not protect the local browser bridge: %w", e)
+	}
 	encrypted, e := seal(code)
 	if e != nil {
 		return e
@@ -666,11 +695,11 @@ func startOffice(wantShortcut bool) error {
 	environment := []string{}
 	for _, value := range os.Environ() {
 		key := strings.ToUpper(strings.SplitN(value, "=", 2)[0])
-		if key != "HOST" && key != "PORT" && key != "HQ_DATA_DIR" && key != "HQ_SETUP_CODE" && key != "RENDER" && key != "PUBLIC_ORIGIN" && key != "RENDER_EXTERNAL_URL" && key != "NODE_OPTIONS" && key != "SAM_API_KEY" && key != "HQ_INSTALLER_PATH" && key != "HQ_OLLAMA_PORT" {
+		if key != "HOST" && key != "PORT" && key != "HQ_DATA_DIR" && key != "HQ_SETUP_CODE" && key != "RENDER" && key != "PUBLIC_ORIGIN" && key != "RENDER_EXTERNAL_URL" && key != "NODE_OPTIONS" && key != "SAM_API_KEY" && key != "HQ_INSTALLER_PATH" && key != "HQ_OLLAMA_PORT" && key != "HQ_BROWSER_BRIDGE_TOKEN" {
 			environment = append(environment, value)
 		}
 	}
-	environment = append(environment, "HOST=127.0.0.1", "PORT=4310", "HQ_DATA_DIR="+filepath.Join(root, "data"), "HQ_SETUP_CODE="+code, "HQ_INSTALLER_PATH="+self, "HQ_OLLAMA_PORT="+managedAIPort)
+	environment = append(environment, "HOST=127.0.0.1", "PORT=4310", "HQ_DATA_DIR="+filepath.Join(root, "data"), "HQ_SETUP_CODE="+code, "HQ_INSTALLER_PATH="+self, "HQ_OLLAMA_PORT="+managedAIPort, "HQ_BROWSER_BRIDGE_TOKEN="+bridgeToken)
 	if protected, e := os.ReadFile(filepath.Join(root, "sam-native.dpapi")); e == nil {
 		key, e := unseal(string(protected))
 		if e != nil {

@@ -26,6 +26,7 @@ import {submitAIQualityFeedback,aiQualityDataset,aiQualityState} from './ai-qual
 import {planWork,workPlannerState} from './work-planner.ts';
 import {leadBriefing} from './briefings.ts';
 import {queueLeadResearch,processLeadResearch,leadResearchState} from './lead-research.ts';
+import {browserAccessState,requestBrowserAccess,grantBrowserAccess,stopBrowserAccess} from './browser-access.ts';
 import {profileState,saveProfile,profileDocument} from './business-profile.ts';
 import {connectionState,saveSAMKey,restoreSavedConnections} from './connections.ts';
 import {accountabilityState,resolveIncident} from './accountability.ts';
@@ -36,7 +37,7 @@ import {businessGuide,saveReadiness} from './business-guide.ts';
 import {assignmentReport,leadBriefingReport} from './reports.ts';
 import {createServer} from 'node:http';
 import {readFileSync,existsSync} from 'node:fs';
-import {randomBytes} from 'node:crypto';
+import {randomBytes,timingSafeEqual} from 'node:crypto';
 import {backup} from 'node:sqlite';
 import {join} from 'node:path';
 import {db,directory,setup,login,authenticated,enqueue,snapshot,audit,clock,setting,setSetting,editTask} from './store.ts';
@@ -85,12 +86,17 @@ const server=createServer(async(req,res)=>{
  if(req.method==='GET' && url.pathname==='/api/status'){const ai=managedAISetupState();return send(200,{product:'ai-headquarters',setupRequired:!db.prepare('SELECT id FROM founder').get(),aiReady:(ai?.inferenceVerified===true&&!!setting('ollama_model'))||!!availableAIWorker(),...(!publicBinding&&ai?.inferenceVerified===true?{aiModel:setting('ollama_model')||null}:{})});}
  const localPort=(server.address() as any)?.port||port;
  const allowedOrigins=publicBinding?[publicOrigin]:[`http://127.0.0.1:${localPort}`,`http://localhost:${localPort}`,...(publicOrigin?[publicOrigin]:[])];
- if(req.method==='POST' && !allowedOrigins.includes(req.headers.origin)&&!(!req.headers.origin&&['/api/sync/pair','/api/sync/exchange','/api/ai-worker/heartbeat','/api/ai-worker/claim','/api/ai-worker/complete'].includes(url.pathname)))return send(403,{error:'Invalid origin'});
+ if(req.method==='POST' && !allowedOrigins.includes(req.headers.origin)&&!(!req.headers.origin&&['/api/sync/pair','/api/sync/exchange','/api/ai-worker/heartbeat','/api/ai-worker/claim','/api/ai-worker/complete','/api/browser-bridge/stop-native'].includes(url.pathname)))return send(403,{error:'Invalid origin'});
  let body:any={};if(req.method==='POST'){let raw='';for await(const part of req){raw+=part;if(raw.length>(url.pathname==='/api/sync/exchange'?3000000:url.pathname==='/api/ai-worker/complete'?40000:url.pathname==='/api/commerce/campaigns/save'?40000:url.pathname==='/api/mail/configure'?65536:url.pathname==='/api/business/profile'?32768:16384))return send(413,{error:'Request too large'});}body=JSON.parse(raw||'{}');}
  if(req.method==='POST'&&url.pathname==='/api/sync/pair')return send(200,acceptPair(body));
  if(req.method==='POST'&&url.pathname==='/api/sync/exchange'){if(!syncAuthorized(req.headers.authorization))return send(401,{error:'Device pairing required'});return send(200,exchange(body));}
  if(req.method==='POST'&&['/api/ai-worker/heartbeat','/api/ai-worker/claim','/api/ai-worker/complete'].includes(url.pathname)){if(!syncAuthorized(req.headers.authorization))return send(401,{error:'Current device pairing required'});if(url.pathname.endsWith('/heartbeat'))return send(200,workerHeartbeat(req.headers.authorization,body));if(url.pathname.endsWith('/claim'))return send(200,claimAIWork(req.headers.authorization));return send(200,completeAIWork(req.headers.authorization,body));}
- if(['/api/setup','/api/login'].includes(url.pathname)&&req.method==='POST'){
+ if(req.method==='POST'&&url.pathname==='/api/browser-bridge/stop-native'){
+  const expected=process.env.HQ_BROWSER_BRIDGE_TOKEN||'',supplied=String(req.headers.authorization||'').replace(/^Bearer\s+/i,'');
+  if(process.env.RENDER==='true'||!expected||supplied.length!==expected.length||!['127.0.0.1','::1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress||''))return send(401,{error:'Local browser permission check failed'});
+  if(!timingSafeEqual(Buffer.from(supplied),Buffer.from(expected)))return send(401,{error:'Local browser permission check failed'});
+  return send(200,await stopBrowserAccess());
+ } if(['/api/setup','/api/login'].includes(url.pathname)&&req.method==='POST'){
  const key=req.socket.remoteAddress||'local';const a=attempts.get(key);if(a && Date.now()-a.time<60000 && a.count>=10)return send(429,{error:'Try again in one minute'});attempts.set(key,{count:a&&Date.now()-a.time<60000?a.count+1:1,time:a?.time&&Date.now()-a.time<60000?a.time:Date.now()});
  if(typeof body.password!=='string' || body.password.length>1024)return send(400,{error:'Invalid password'});
  if(url.pathname==='/api/setup'){if(body.code!==bootstrap)return send(403,{error:'Invalid setup code'});setup(body.password);}
@@ -98,9 +104,9 @@ const server=createServer(async(req,res)=>{
  const token=(req.headers.cookie||'').split('; ').find(v=>v.startsWith('hq_session='))?.slice(11)||'';
  if(!authenticated(token))return send(401,{error:'Sign in required'});
  if(req.method==='GET'&&url.pathname.startsWith('/api/reports/')){const html=assignmentReport(decodeURIComponent(url.pathname.slice('/api/reports/'.length)),url.searchParams.get('download')==='1');res.setHeader('Content-Type','text/html; charset=utf-8');if(url.searchParams.get('download')==='1')res.setHeader('Content-Disposition','attachment; filename="Assignment-packet.html"');res.end(html);return;}
- if(req.method==='GET'&&url.pathname==='/api/download/windows'){res.setHeader('Content-Type','application/vnd.microsoft.portable-executable');res.setHeader('Content-Disposition','attachment; filename="AI-Headquarters-Setup.exe"');res.end(readFileSync(process.env.HQ_INSTALLER_PATH||new URL('../downloads/AI-Headquarters-Setup.exe',import.meta.url)));return;}
+ if(req.method==='GET'&&url.pathname==='/api/download/windows'){serveWindowsDownload(req,res,process.env.HQ_INSTALLER_PATH||new URL('../downloads/AI-Headquarters-Setup.exe',import.meta.url),false);return;}
  if(req.method==='GET'&&url.pathname==='/api/state'){
- const state=snapshot({recordPage:Number(url.searchParams.get('recordPage')||0),taskPage:Number(url.searchParams.get('taskPage')||0),query:url.searchParams.get('historyQuery')||''}),workPlan=workPlannerState(),learning={...learningState(),aiQuality:aiQualityState()},deals=dealState(),stores=storesState(),commerce=commerceState(),business=businessState(),operations=operationsState({plan:workPlan,learning});return send(200,{...state,rollouts:rolloutState(),backups:backupState(),appVersion:versionInfo().version,updates:updateStatus(),localEngines:localEngineState(),stores,campus:campusState(),commerce,aiRelay:relayState(),aiMeetings:aiMeetingState(),mining:miningState(),business,mail:mailState(),sync:syncState(),deals,workPlan,learning,operations,distribution:distributionState({clock:state.clock,stores,commerce,business,operations}),storefronts:storefrontState(),storeGuide:storeGuideState(),managedAISetup:managedAISetupState(),leadResearch:leadResearchState(),businessGuide:businessGuide(Date.now(),deals),officeDesign:getOfficeDesign(),businessProfile:profileState(),accountability:accountabilityState(),outcomes:outcomeState(),funding:fundingState(),pricing:pricingState(),opportunities:state.opportunities.map(record=>({...record,advice:awardAdvice(record,state.company.name)})),...teamState(),roleCharters:ROLE_CHARTERS,manager:managerState(),aiRuns:agentRuns(),aiConfigured:!!setting('ollama_model')||!!availableAIWorker(),contactResearch:contactState(),drafts:draftState(),solicitations:solicitationState()});}
+ const state=snapshot({recordPage:Number(url.searchParams.get('recordPage')||0),taskPage:Number(url.searchParams.get('taskPage')||0),query:url.searchParams.get('historyQuery')||''}),workPlan=workPlannerState(),learning={...learningState(),aiQuality:aiQualityState()},deals=dealState(),stores=storesState(),commerce=commerceState(),business=businessState(),operations=operationsState({plan:workPlan,learning});return send(200,{...state,rollouts:rolloutState(),backups:backupState(),appVersion:versionInfo().version,updates:updateStatus(),localEngines:localEngineState(),stores,campus:campusState(),commerce,aiRelay:relayState(),aiMeetings:aiMeetingState(),mining:miningState(),business,mail:mailState(),sync:syncState(),deals,workPlan,learning,operations,distribution:distributionState({clock:state.clock,stores,commerce,business,operations}),storefronts:storefrontState(),storeGuide:storeGuideState(),managedAISetup:managedAISetupState(),leadResearch:leadResearchState(),browserAccess:browserAccessState(),businessGuide:businessGuide(Date.now(),deals),officeDesign:getOfficeDesign(),businessProfile:profileState(),accountability:accountabilityState(),outcomes:outcomeState(),funding:fundingState(),pricing:pricingState(),opportunities:state.opportunities.map(record=>({...record,advice:awardAdvice(record,state.company.name)})),...teamState(),roleCharters:ROLE_CHARTERS,manager:managerState(),aiRuns:agentRuns(),aiConfigured:!!setting('ollama_model')||!!availableAIWorker(),contactResearch:contactState(),drafts:draftState(),solicitations:solicitationState()});}
  if(req.method==='GET'&&url.pathname.startsWith('/api/store-guide/'))return send(200,storeGuideDetail(decodeURIComponent(url.pathname.slice('/api/store-guide/'.length))));
  if(req.method==='POST'&&url.pathname==='/api/store-guide/progress')return send(200,saveStoreGuideProgress(body));
  if(req.method==='GET'&&url.pathname==='/api/storefronts')return send(200,storefrontState());
@@ -182,7 +188,15 @@ const server=createServer(async(req,res)=>{
  const path=url.pathname.slice('/api/briefings/'.length);
  if(path.endsWith('/print')){const download=url.searchParams.get('download')==='1';res.setHeader('Content-Type','text/html; charset=utf-8');if(download)res.setHeader('Content-Disposition','attachment; filename="Lead-briefing.html"');res.end(leadBriefingReport(decodeURIComponent(path.slice(0,-6)),download));return;}
  return send(200,leadBriefing(decodeURIComponent(path)));}
- if(req.method==='POST'&&url.pathname==='/api/leads/research'){
+ if(req.method==='GET'&&url.pathname==='/api/browser-access')return send(200,browserAccessState());
+ if(req.method==='POST'&&url.pathname==='/api/browser-access/request')return send(201,requestBrowserAccess(body.recordId,body.origin,body.purpose,body.scopes,body.minutes));
+if(req.method==='POST'&&url.pathname==='/api/browser-access/grant'){
+  const access=await grantBrowserAccess(body.id,body.scopes,body.minutes,body.confirmCompany===true);let runId:string;
+  try{runId=queueAgent('Juliet',`Continue lead research for ${access.company}, saved record ${access.recordId}. The owner approved this website ${access.origin} for up to ${Math.max(0,Math.ceil((Number(access.expiresAt)-Date.now())/60000))} minutes with these browser permissions: ${(access.grantedScopes||[]).join(', ')}. Use browser_read_page first. Continue through relevant contact/vendor pages on this same site, save only sourced contact details, and report what is still missing. Never inspect or fill passwords, credentials, tokens or payment secrets. Do not send a message or change account settings unless the owner explicitly included that scope and the task purpose asks for it.`,undefined,true);}catch(error){await stopBrowserAccess(access.id);throw error;}
+  if(setting('clock')==='in')void processAgent().catch(()=>console.error('Approved browser lead task needs attention'));
+  return send(200,{access,runId});
+ }
+ if(req.method==='POST'&&url.pathname==='/api/browser-access/stop')return send(200,await stopBrowserAccess(body.id)); if(req.method==='POST'&&url.pathname==='/api/leads/research'){
  const result=queueLeadResearch(body.recordId,{website:body.website,confirmCompany:body.confirmCompany});
  void processLeadResearch(undefined,body.recordId).catch(()=>console.error('Lead contact research needs attention; inspect its saved status'));
  return send(202,result);}

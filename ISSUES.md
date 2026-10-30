@@ -1,3 +1,9 @@
+## Preview.41 remaining limits
+
+- Page reading is confined to the local LeaX Chromium window, an owner-approved saved lead and one HTTPS website per timed grant. The selected local model receives filtered visible text only. Password/form values, cookies and saved browser credentials are not read; credential pages/password-field pages are blocked. Site-specific secrets rendered as ordinary page text may evade universal redaction, so never grant access to a page that displays secrets this way.
+- The browser agent cannot inspect browser storage or password-manager contents. It has fixed DOM read/navigation/form/button actions and bounded four-direction scrolling, not arbitrary script execution, browser tab switching, screen-coordinate clicks or whole-Windows app/mouse/keyboard control. External send/settings actions need their own grant; bids, purchases, payments, transfers and destructive account controls are blocked.
+- Hosted Render cannot reach a user’s signed-in local profile. Local Ollama must be installed/running; the project does not provision it automatically. Website layouts and anti-bot/site policies may prevent the approved task.
+- Installer is unsigned until signing credentials/policy are configured; actual Windows owner-device installation and end-to-end page interaction remain unverified.
 ## Preview.40 browser and device-control limits
 
 - LeaX AI Browser is bundled with the Windows app and saves sign-ins/site data in a local profile between launches. The 🧹 Clear data button asks first, then clears saved cookies, authentication cache, HTTP cache and site storage. Downloaded files and Windows/network/site logs are not removed.

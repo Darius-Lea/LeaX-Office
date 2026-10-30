@@ -1,3 +1,9 @@
+## Preview.41 browser validation — 2026-10-30
+
+- Node 24 syntax checks for the Electron browser main process, LeaX UI, agent tools and browser-access module — passed after the secret-page, action-label and scroll-tool edits.
+- Production application bundle — passed, 124 files including Chromium browser resources.
+- Automated test suites were not run in this turn.
+- The local Windows installer build was attempted but the Go linker ran out of available disk space; the previously committed installer was restored. GitHub Release asset, Render deployment, owner-device install, live signed-in page workflow and manual-stop behavior still need external confirmation.
 ## Preview.40 browser persistence and extension check — 2026-10-30
 
 - Node 24.19 syntax checks for the browser main process, extension manager, preload and toolbar — passed.

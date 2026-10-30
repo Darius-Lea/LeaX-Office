@@ -119,9 +119,13 @@ func runLeaXBrowser(target string) error {
 	if err = os.MkdirAll(profileRoot, 0700); err != nil {
 		return errors.New("Windows could not create the protected LeaX browser profile")
 	}
+	bridgeToken, err := browserBridgeToken()
+	if err != nil {
+		return fmt.Errorf("Could not unlock the local browser permission bridge: %w", err)
+	}
 	command := exec.Command(browserExe)
 	command.Dir = filepath.Join(appRoot, "browser")
-	command.Env = append(os.Environ(), "LEAX_BROWSER_PROFILE_DIR="+profileRoot, "LEAX_BROWSER_TARGET="+target)
+	command.Env = append(os.Environ(), "LEAX_BROWSER_PROFILE_DIR="+profileRoot, "LEAX_BROWSER_TARGET="+target, "LEAX_BROWSER_BRIDGE_TOKEN="+bridgeToken)
 	if err = command.Start(); err != nil {
 		return fmt.Errorf("LeaX AI Browser could not start: %w", err)
 	}

@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('leaxBrowser', Object.freeze({
   devtools: () => ipcRenderer.invoke('leax:devtools'),
   extensions: () => ipcRenderer.invoke('leax:extensions'),
   clearAndClose: () => ipcRenderer.invoke('leax:clear-close'),
+  stopAI: () => ipcRenderer.invoke('leax:ai-stop'),
   onState: callback => {
     const listener = (_event, state) => callback(state);
     ipcRenderer.on('leax:state', listener);

@@ -11,7 +11,22 @@ $('#clear-close').addEventListener('click', async () => {
 });
 window.leaxBrowser.onState(state => {
   if (state.url && document.activeElement !== address) address.value = state.url;
-  title.textContent = state.title || '';
+title.textContent = state.title || '';
+  const aiAccess = $('#ai-access');
+  const grant = state.aiAccess;
+  if (grant && Number(grant.expiresAt) > Date.now()) {
+    const minutes = Math.max(1, Math.ceil((Number(grant.expiresAt) - Date.now()) / 60000));
+    aiAccess.textContent = state.aiActing ? 'AI acting · STOP' : 'AI access on · '+minutes+'m · STOP';
+    aiAccess.title = 'Owner-approved access for '+grant.origin+'. Click to stop immediately.';
+    aiAccess.disabled = false;
+    aiAccess.classList.add('granted');
+  } else {
+    aiAccess.textContent = 'AI access: Off';
+    aiAccess.title = 'No active browser permission. Review the request in LeaX Office.';
+    aiAccess.disabled = true;
+    aiAccess.classList.remove('granted');
+  }
+  document.body.classList.toggle('ai-active',state.aiActing===true);
   const extensionCount = (state.extensions || []).length;
   status.textContent = (state.status || '') + (extensionCount ? ' · ' + extensionCount + ' browser extension' + (extensionCount === 1 ? '' : 's') + ' active' : '');
   $('#security').classList.toggle('insecure', !state.secure);
