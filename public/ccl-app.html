@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#070b14">
+  <title>Control Center Leaus · LeaX Office Pro</title>
+  <link rel="stylesheet" href="/ccl-app.css">
+  <script type="module" src="/ccl-app.js"></script>
+</head>
+<body>
+  <div class="bgf" aria-hidden="true"><i></i><i></i></div>
+  <div class="app">
+    <aside id="sb" aria-label="Control Center Leaus navigation">
+      <button class="btn gh sm mobile-close" id="close-menu" type="button">✕ Close menu</button>
+      <button class="brand" id="brand-home" type="button" aria-label="Control Center Leaus home">
+        <span class="lg" aria-hidden="true">C</span>
+        <span><b>Control Center Leaus</b><br><small>Subsidiary of LeaX Technologies</small></span>
+      </button>
+      <nav id="nav" aria-label="Control Center workspaces"></nav>
+      <p class="sidebar-label">LEARNING &amp; ACCESS</p>
+      <nav aria-label="Learning and access">
+        <button class="nv" data-view="agents" type="button"><span aria-hidden="true">✧</span>AI Agents <span class="nav-badge" id="agent-badge" hidden>0</span></button>
+        <button class="nv" data-view="learning" type="button"><span aria-hidden="true">⇧</span>Learning &amp; data</button>
+      </nav>
+      <div class="card p included-card">
+        <small><span class="dot"></span> Included with LeaX Office</small>
+        <div class="included-title">Founder workspace connected</div>
+        <small>Same saved office · no second sign-in</small>
+      </div>
+    </aside>
+    <div id="sc" aria-hidden="true"></div>
+    <main>
+      <header class="top">
+        <button class="btn gh sm" id="open-menu" type="button" aria-label="Open menu">☰</button>
+        <h1 id="h1">Home</h1>
+        <button class="btn gh sm" id="search-open" type="button" title="Find a workspace">⌘K&nbsp; Search</button>
+        <button class="btn gh sm" id="alerts-open" type="button" title="Open owner decisions" aria-label="Open owner decisions">♧ <b id="action-count">0</b></button>
+        <button class="btn gh sm" id="theme-toggle" type="button" title="Toggle light or dark theme" aria-label="Toggle light or dark theme">◐</button>
+        <button class="btn sm" id="new-opportunity" type="button">+ Opportunity</button>
+        <button class="btn gh sm ccl-exit" id="exit-ccl" type="button" title="Return to LeaX Office Pro desktop" aria-label="Close Control Center and return to desktop">×</button>
+      </header>
+      <div id="v" class="view" aria-live="polite"></div>
+    </main>
+  </div>
+  <div id="ov" role="presentation" aria-hidden="true"><section id="md" role="dialog" aria-modal="true" aria-label="Find a Control Center workspace"></section></div>
+  <div id="tt" aria-live="polite" aria-atomic="true"></div>
+</body>
+</html>

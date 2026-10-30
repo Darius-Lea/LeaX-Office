@@ -257,3 +257,26 @@ body[data-camera=explore] #distribution-view-controls{top:80px}
 .rollout-contact{padding:12px 0;border-bottom:1px solid #91aaa244}
 .rollout-contact p{margin:5px 0}.rollout-contact small{display:block;margin-bottom:5px}
 @media(max-width:650px){.rollout-search{grid-template-columns:minmax(0,1fr)}.rollout-search button{width:100%}.rollout-card,.rollout-empty{padding:14px}.rollout-card-heading h3{min-width:0;flex-basis:100%}}
+
+/* LeaX Office Pro desktop and embedded CCL shell. */
+#owner-dialog[data-shell-view=ccl]{width:100vw;height:100dvh;max-width:none;max-height:none;inset:0;margin:0;padding:0;border:0;border-radius:0;background:#090f18;box-shadow:none}
+#owner-dialog[data-shell-view=ccl]::backdrop{background:#090f18}
+#owner-dialog[data-shell-view=ccl] .computer-titlebar,#owner-dialog[data-shell-view=ccl] #computer-tabs,#owner-dialog[data-shell-view=ccl] #computer-message{display:none}
+#owner-dialog[data-shell-view=ccl] .computer-shell,#owner-dialog[data-shell-view=ccl] .computer-content{display:block;width:100%;height:100%;max-height:none;margin:0;padding:0;border:0;border-radius:0}
+#control-center-shell{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;border:0;background:#070b14}
+#ccl-app-frame{display:block;width:100%;height:100%;border:0;background:#070b14}
+#owner-dialog[data-shell-view=desktop]{width:min(1180px,96vw);height:min(760px,94dvh);max-width:96vw;max-height:94dvh;overflow:hidden;background:#111923}
+#owner-dialog[data-shell-view=desktop] .computer-shell{height:calc(100% - 54px);display:block}
+#owner-dialog[data-shell-view=desktop] #computer-tabs,#owner-dialog[data-shell-view=desktop] #computer-message{display:none}
+#owner-dialog[data-shell-view=desktop] .computer-content{height:100%;max-height:none;padding:0;overflow:hidden;background:#111923}
+#office-desktop{height:100%;margin:0;padding:0;border:0;border-radius:0;background:#101c2b}
+.office-desktop{height:100%;position:relative;overflow:hidden;margin:0;border:0;border-radius:0;padding:clamp(24px,5vw,58px);display:flex;flex-direction:column;color:#eef5f5;background:radial-gradient(ellipse at 12% 14%,#1e5260 0,transparent 40%),radial-gradient(ellipse at 88% 86%,#264b50 0,transparent 38%),linear-gradient(135deg,#0c1422,#142536 58%,#101923)}
+.desktop-brand{display:flex;align-items:center;gap:14px}.desktop-brand strong{display:block;font-size:19px}.desktop-brand small{display:block;color:#b3c8c8;font-size:11px;margin-top:3px}
+.desktop-logo,.desktop-app-icon{display:grid;place-items:center;width:46px;height:46px;border-radius:14px;color:#0d2724;font-weight:900;background:linear-gradient(135deg,#7ff0d8,#7ac9de);box-shadow:0 9px 28px #01070a55}
+.desktop-icons{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,150px));gap:16px;margin-top:56px}
+.desktop-icon{display:flex;align-items:center;flex-direction:column;gap:7px;padding:15px 9px;border:1px solid transparent;border-radius:15px;background:transparent;color:#eef5f5;text-align:center}
+.desktop-icon:hover{background:#ffffff10;border-color:#7ff0d855}.desktop-icon strong{font-size:11px}.desktop-icon small{font-size:9px;color:#b3c8c8}
+.desktop-app-icon{width:54px;height:54px;border-radius:17px;font-size:19px}.browser-icon{background:linear-gradient(135deg,#9ee7c0,#87cbe8);font-size:30px}.kali-icon{background:#859bb4;color:#111923}
+.planned-app{opacity:.58;cursor:default}.planned-app:hover{background:transparent;border-color:transparent}
+.desktop-footer{position:absolute;bottom:0;left:0;right:0;display:flex;justify-content:space-between;gap:10px;padding:12px 20px;background:#07101baa;color:#bdd0ce;font-size:10px}
+@media(max-width:600px){#owner-dialog[data-shell-view=desktop]{width:100vw;height:100dvh;max-width:none;max-height:none;inset:0;border-radius:0}.office-desktop{padding:22px}.desktop-icons{grid-template-columns:repeat(2,minmax(110px,1fr));gap:9px;margin-top:36px}}
