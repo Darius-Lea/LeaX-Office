@@ -1,4 +1,58 @@
 const $=s=>document.querySelector(s),views=[['dash','Home','◈'],['pipe','Pipeline','▥'],['ops','Operations','☷'],['studio','Studio','✦'],['auto','Automations','⚡'],['browser','LeaX AI Browser','◎']],names=Object.fromEntries(views.map(v=>[v[0],v[1]]).concat([['overview','Business overview'],['agents','AI Agents'],['learning','Learning & data']]));let current='dash',state={},browserCurrent='',lastViewSignature=null;
+const CONNECTOR_GROUPS=[
+ {name:'Social & Content',description:'Posts, clips and page management.',items:[
+  {id:'autobot',name:'AutoBot',detail:'No AutoBot publishing adapter is connected.'},
+  {id:'facebook-page',name:'Facebook Business Page',detail:'Page publishing and comment automation are not connected.',url:'https://www.facebook.com/business/'},
+  {id:'instagram',name:'Instagram Business',detail:'Instagram publishing is not connected.',url:'https://business.instagram.com/'},
+  {id:'shorts',name:'TikTok & YouTube Shorts',detail:'Short-video publishing is not connected.',url:'https://www.tiktok.com/business/'},
+  {id:'google-business',name:'Google Business Profile',detail:'Profile posts and review replies are not connected.',url:'https://www.google.com/business/'}]},
+ {name:'Marketplaces & Stores',description:'Connect a store with an API or save a reference link. A link alone does not automate the store.',items:[
+  {id:'woocommerce',name:'WooCommerce',detail:'Official product publishing is supported after an owner-authorized REST key is checked.',adapter:'woocommerce',url:'https://woocommerce.com/'},
+  {id:'etsy',name:'Etsy',detail:'Seller API, listing changes and order sync are not connected.',url:'https://www.etsy.com/sell'},
+  {id:'ebay',name:'eBay',detail:'Seller publishing and order sync are not connected.',url:'https://www.ebay.com/sellercenter'},
+  {id:'amazon',name:'Amazon Seller',detail:'Seller Central and SP-API are not connected.',url:'https://sell.amazon.com/'},
+  {id:'walmart',name:'Walmart Marketplace',detail:'Marketplace publishing and order sync are not connected.',url:'https://marketplace.walmart.com/'},
+  {id:'facebook-marketplace',name:'Facebook Marketplace',detail:'Marketplace publishing and order sync are not connected.',url:'https://www.facebook.com/marketplace/'},
+  {id:'shopify',name:'Shopify',detail:'Shopify product publishing is not connected.',url:'https://www.shopify.com/'}]},
+ {name:'Print on Demand',description:'Supplier setup, product mockups, costs and order fulfillment need a provider connection.',items:[
+  {id:'printful',name:'Printful',detail:'Product creation, order routing and fulfillment are not connected.',url:'https://www.printful.com/'},
+  {id:'printify',name:'Printify',detail:'Product creation, order routing and fulfillment are not connected.',url:'https://printify.com/'}]},
+ {name:'Field Jobs & Bids',description:'These services are not connected for work import or bid submission.',items:[
+  {id:'field-nation',name:'Field Nation',detail:'Work orders and payout sync are not connected.',url:'https://fieldnation.com/'},
+  {id:'workmarket',name:'WorkMarket',detail:'Assignments and payout sync are not connected.',url:'https://www.workmarket.com/'},
+  {id:'servicechannel',name:'ServiceChannel',detail:'Service ticket import is not connected.',url:'https://servicechannel.com/'},
+  {id:'constructconnect',name:'ConstructConnect',detail:'Project search and bid-room access are not connected.',url:'https://www.constructconnect.com/'},
+  {id:'planhub',name:'PlanHub',detail:'Project search and bid submission are not connected.',url:'https://www.planhub.com/'},
+  {id:'buildingconnected',name:'BuildingConnected',detail:'Bid invitation import and response submission are not connected.',url:'https://buildingconnected.com/'},
+  {id:'dodge',name:'Dodge Construction Network',detail:'Project search is not connected.',url:'https://www.construction.com/'},
+  {id:'bidnet',name:'BidNet Direct',detail:'Bid search and submission are not connected.',url:'https://www.bidnetdirect.com/'},
+  {id:'biddingo',name:'Biddingo',detail:'Bid search and submission are not connected.',url:'https://www.biddingo.com/'},
+  {id:'bid-source',name:'Construction Bid Source',detail:'Bid search is not connected.'},
+  {id:'sam',name:'SAM.gov',detail:'Federal notice search can be reviewed in LeaX Office; this does not submit bids.',adapter:'sam',url:'https://sam.gov/'}]},
+ {name:'Leads & CRM',description:'Public research is available in LeaX Office; paid enrichment services are not connected.',items:[
+  {id:'public-research',name:'LeaX public research',detail:'Saved public-source research is available. Contacts and current demand still need verification.',adapter:'research'},
+  {id:'apollo',name:'Apollo.io',detail:'Contact enrichment is not connected.',url:'https://www.apollo.io/'},
+  {id:'hubspot',name:'HubSpot',detail:'Two-way CRM sync is not connected.',url:'https://www.hubspot.com/'}]},
+ {name:'Money & Banking',description:'No live bank balances, accounting sync, payment collection or payroll is connected.',items:[
+  {id:'plaid',name:'Bank link (Plaid)',detail:'Bank data access is not connected.',url:'https://plaid.com/'},
+  {id:'quickbooks',name:'QuickBooks',detail:'Accounting sync is not connected.',url:'https://quickbooks.intuit.com/'},
+  {id:'nav',name:'NAV Business Credit',detail:'Business credit monitoring is not connected.',url:'https://www.nav.com/'},
+  {id:'stripe',name:'Stripe',detail:'Payment collection and invoicing are not connected.',url:'https://stripe.com/'},
+  {id:'gusto',name:'Gusto Payroll',detail:'Payroll and tax filing are not connected.',url:'https://gusto.com/'}]},
+ {name:'Team & Scheduling',description:'Calendar sync, booking, SMS and e-signatures are not connected.',items:[
+  {id:'google-calendar',name:'Google Calendar',detail:'Calendar sync is not connected.',url:'https://calendar.google.com/'},
+  {id:'calendly',name:'Calendly',detail:'Booking sync is not connected.',url:'https://calendly.com/'},
+  {id:'twilio',name:'Twilio SMS',detail:'SMS delivery is not connected.',url:'https://www.twilio.com/'},
+  {id:'docusign',name:'DocuSign',detail:'E-signature sending is not connected.',url:'https://www.docusign.com/'}]},
+ {name:'AI Engines & Access',description:'Inference uses one selected local model or a verified paired desktop worker.',items:[
+  {id:'ai-router',name:'LeaX AI router',detail:'Shows the selected local model or paired worker. No free cross-provider failover is set up.',adapter:'ai'},
+  {id:'groq',name:'Groq',detail:'A Groq API connection is not configured.',url:'https://console.groq.com/'},
+  {id:'gemini',name:'Google Gemini',detail:'A Gemini API connection is not configured.',url:'https://aistudio.google.com/'},
+  {id:'openrouter',name:'OpenRouter',detail:'An OpenRouter connection is not configured.',url:'https://openrouter.ai/'},
+  {id:'browser',name:'LeaX AI Browser',detail:'This version hands pages to your device browser. It is not embedded, private or shared with agents.',adapter:'browser'}]},
+ {name:'Email & Approvals',description:'Sending an email requires review and your explicit approval.',items:[
+  {id:'email',name:'Email account',detail:'The existing private email connector is shown here; setup and send approval are not handled by this CCL card.',adapter:'email'}]}
+];
 const el=(tag,value,cls)=>{const n=document.createElement(tag);if(value!==undefined)n.textContent=String(value);if(cls)n.className=cls;return n},btn=(label,fn,cls='btn gh sm')=>{const n=el('button',label,cls);n.type='button';n.onclick=fn;return n},send=(type,payload={})=>parent.postMessage({type:'ccl:'+type,...payload},location.origin),arr=v=>Array.isArray(v)?v:[];
 const SVG='http://www.w3.org/2000/svg',STAGES=['Ready to contact','Needs qualification','Contacted','Interested','Proposal','Won','Closed'],RAW_STAGE=stage=>stage==='Needs qualification'?'Researching':stage,STAGE_COLORS=['var(--ac)','var(--ac2)','#a78bfa','#6366f1','#f59e0b','#22c55e','#94a3b8'];
 function svgNode(name,attrs={}){const node=document.createElementNS(SVG,name);for(const [key,value] of Object.entries(attrs))node.setAttribute(key,String(value));return node}
@@ -52,7 +106,7 @@ function nav(){
 function render(force=false){
  for(const b of document.querySelectorAll('[data-view]')){b.classList.toggle('on',b.dataset.view===current);if(b.dataset.view===current)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')}
  $('#h1').textContent=names[current];$('#action-count').textContent=ownerCount();$('#agent-badge').textContent=activeCount();$('#agent-badge').hidden=!activeCount();
- const signature=JSON.stringify([current,current==='dash'?[state.operations?.metrics,state.operations?.events,state.operations?.employees,state.deals?.cases,state.outcomes?.events]:current==='overview'?[state.operations?.events,state.operations?.employees,state.deals?.cases,state.outcomes?.events]:current==='pipe'?[state.deals?.cases,state.deals?.summary]:current==='ops'||current==='agents'?[state.operations?.employees,state.operations?.metrics,state.operations?.manager]:current==='studio'?[state.commerce?.products,state.commerce?.designs,state.commerce?.listings,state.commerce?.orders,state.commerce?.preparation]:current==='auto'?[state.operations?.clock,state.operations?.metrics,state.operations?.manager,state.workPlan]:current==='learning'?[state.learning,state.localEngines?.selected]:null]);if(!force&&signature===lastViewSignature)return;lastViewSignature=signature;
+ const signature=JSON.stringify([current,current==='dash'?[state.operations?.metrics,state.operations?.events,state.operations?.employees,state.deals?.cases,state.outcomes?.events]:current==='overview'?[state.operations?.events,state.operations?.employees,state.deals?.cases,state.outcomes?.events]:current==='pipe'?[state.deals?.cases,state.deals?.summary]:current==='ops'||current==='agents'?[state.operations?.employees,state.operations?.metrics,state.operations?.manager]:current==='studio'?[state.commerce?.products,state.commerce?.designs,state.commerce?.listings,state.commerce?.orders,state.commerce?.preparation]:current==='auto'?[state.operations?.clock,state.operations?.metrics,state.operations?.manager,state.workPlan,state.connections]:current==='learning'?[state.learning,state.localEngines?.selected]:null]);if(!force&&signature===lastViewSignature)return;lastViewSignature=signature;
  const content=$('#v');content.replaceChildren();const root=el('div',undefined,'view');
  const fn={dash:home,overview:businessOverview,pipe:pipeline,ops:operations,studio:studio,auto:automations,browser:browser,agents:agents,learning:learning}[current];root.append(fn());content.append(root);if(current==='browser'&&browserCurrent){$('#browser-url').value=browserCurrent;$('#browser-open-tab').href=browserCurrent;$('#browser-open-tab').hidden=false;}
 }
@@ -97,11 +151,56 @@ function studio(){
  if(!products.length&&!designs.length){root.append(makeCard('No saved product proofs yet','Create or import a real product in the existing store workspace.','Open store workspace',()=>parentGo('stores')));return root}
  const list=grid();for(const x of [...products,...designs].slice(0,30)){const c=el('article',undefined,'card p product-card');c.append(el('h3',x.title||x.name||x.label||'Saved product file'),el('p',[x.category,x.status,x.readiness?.status||x.reviewStatus].filter(Boolean).join(' · ')||'Saved file; review and publication are not confirmed.','muted'),btn('Review product',()=>parentGo(x.id?'product':'stores',x.id),'btn gh sm'));list.append(c)}root.append(list,btn('Manage products and stores',()=>parentGo('stores'),'btn'));return root;
 }
+function connectorStatus(item){
+ const c=state.connections||{},stores=c.storefronts?.connections||[];
+ if(item.id==='woocommerce'){const saved=stores.filter(x=>x.provider==='woocommerce');if(saved.some(x=>x.connected))return 'API checked';if(saved.some(x=>x.configured))return 'Saved — check access';return 'Set up here'}
+ if(item.id==='email')return c.email?.configured?(c.email.verified?'Connection checked':'Saved — test connection'):'Not set up';
+ if(item.id==='sam')return c.sam?.records?'Saved notices: '+c.sam.records:'Search available in LeaX Office';
+ if(item.id==='ai')return c.ai?.available?'Paired worker online':c.ai?.selected?c.ai.selected.engineName+' · selected model':'No AI worker selected';
+ if(item.id==='browser')return 'Device browser handoff';
+ if(item.id==='research')return 'Public-source research available';
+ const link=stores.find(x=>x.provider==='manual'&&x.name.toLowerCase().includes(item.name.toLowerCase()));
+ if(link)return 'Shop link saved · manual only';
+ return 'Not connected';
+}
+function connectorKind(value){return /API checked|Connection checked|online|selected|research available|Search available/i.test(value)?'connected':/Saved|Set up here/.test(value)?'available':'off'}
+function openCclModal(title,intro,content){
+ const overlay=$('#ov'),box=$('#md');overlay.classList.add('on');overlay.setAttribute('aria-hidden','false');box.replaceChildren();
+ const header=el('div',undefined,'ccl-modal-head');header.append(el('h2',title));const close=btn('×',closeSearch,'ccl-modal-close');close.setAttribute('aria-label','Close details');header.append(close);box.append(header,el('p',intro,'muted'),content);
+}
+async function cclPost(path,payload){const response=await fetch('/api/'+path,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});let body={};try{body=await response.json()}catch{}if(!response.ok)throw Error(body.error||'The connection could not be saved.');return body}
+function openStoreSetup(item,manual=false){
+ const form=document.createElement('form');form.className='ccl-connection-form';const nameLabel=el('label','Store name');const name=document.createElement('input');name.name='name';name.required=true;name.maxLength=120;name.value=manual?item.name+' store':'';nameLabel.append(name);
+ const urlLabel=el('label',manual?'Your shop URL':'WooCommerce store address');const baseUrl=document.createElement('input');baseUrl.name='baseUrl';baseUrl.type='url';baseUrl.required=true;baseUrl.maxLength=2048;baseUrl.placeholder='https://your-store.example';baseUrl.autocomplete='url';urlLabel.append(baseUrl);form.append(nameLabel,urlLabel);
+ let consumerKey,consumerSecret;
+ if(!manual){const keyLabel=el('label','WooCommerce REST consumer key (read/write)');consumerKey=document.createElement('input');consumerKey.name='consumerKey';consumerKey.type='password';consumerKey.required=true;consumerKey.autocomplete='new-password';consumerKey.maxLength=120;keyLabel.append(consumerKey);const secretLabel=el('label','WooCommerce REST consumer secret');consumerSecret=document.createElement('input');consumerSecret.name='consumerSecret';consumerSecret.type='password';consumerSecret.required=true;consumerSecret.autocomplete='new-password';consumerSecret.maxLength=120;secretLabel.append(consumerSecret);form.append(keyLabel,secretLabel);}
+ const consentLabel=el('label',manual?'I own this shop or have permission to save its URL.':'I own this store and this REST key is authorized for LeaX Office.');const consent=document.createElement('input');consent.type='checkbox';consent.required=true;consentLabel.prepend(consent);form.append(consentLabel);
+ form.append(el('p',manual?'This saves a reference link for your shop. It does not publish listings, import orders, collect payouts or fulfill products.':'Access is checked by the existing WooCommerce API. Saving a connection does not publish or change any product. Keys are submitted over the authenticated connection and are never shown in CCL lists.','fineprint'));
+ const status=el('p','','ccl-form-status'),save=btn(manual?'Save shop link':'Save and check access',null,'btn');save.type='submit';form.append(status,save);form.onsubmit=async event=>{event.preventDefault();save.disabled=true;status.textContent=manual?'Saving your shop link…':'Saving and checking your store connection…';try{const record=await cclPost('storefronts/save',{name:name.value.trim(),baseUrl:baseUrl.value.trim(),provider:manual?'manual':'woocommerce',consumerKey:manual?'':consumerKey.value,consumerSecret:manual?'':consumerSecret.value,confirmedOwner:true});if(consumerKey)consumerKey.value='';if(consumerSecret)consumerSecret.value='';send('refresh');if(manual){status.textContent='Shop link saved. CCL will label it manual only; no store automation was connected.';save.disabled=false;return;}status.textContent='Connection saved. Checking authorized access…';try{await cclPost('storefronts/verify',{id:record.id,expectedRevision:record.revision});status.textContent='WooCommerce access checked. No product was created or changed.';send('refresh')}catch(error){status.textContent='The connection was saved, but access could not be checked: '+error.message+' No product was changed.';send('refresh')}save.disabled=false}catch(error){status.textContent=error.message;save.disabled=false}};
+ openCclModal(manual?'Save a shop link':'Connect WooCommerce',manual?'A shop URL is only a reference. You can still review files and upload them yourself in that shop.':'You need an existing WooCommerce store and an owner-authorized REST key. This in-CCL form checks read access and USD currency; publishing remains separately reviewed.',form);
+}
+function openConnector(item){
+ const content=el('div',undefined,'connector-details'),status=connectorStatus(item);content.append(el('p',item.detail),el('p','Current status: '+status,'connector-detail-status'));
+ if(item.id==='woocommerce'){content.append(el('p','This version supports WooCommerce REST v3 only. Products are published only after a current API check, saved price limits and product approval. Orders, payouts, Printful/Printify fulfillment and other marketplaces are separate.','fineprint'),btn('Connect WooCommerce here',()=>openStoreSetup(item,false),'btn'))}
+ else if(item.id==='email'){content.append(el('p',state.connections?.email?.configured?'The account is saved. Use the existing email setup to test access; outgoing drafts still require your approval.':'Email setup requires provider-approved access, such as a local Proton Bridge or SMTP settings. No account is connected from this CCL card.','fineprint'))}
+ else if(item.id==='ai'){content.append(el('p','Only the single selected local model or verified paired desktop worker receives inference. ChatGPT, Gemini, Groq and OpenRouter are not connected just by appearing in this directory.','fineprint'))}
+ else if(item.id==='browser'){content.append(el('p','The embedded LeaX AI Browser is not implemented. A device-browser page does not share its login with agents.','fineprint'))}
+ else if(item.id==='sam'){content.append(el('p','SAM.gov notice search is a separate existing LeaX Office workspace. A saved notice is not an open contract or submitted bid.','fineprint'))}
+ else if(item.id==='research'){content.append(el('p','The existing research workspace can search public sources. It cannot search every website or guarantee a verified contact for every company.','fineprint'))}
+ else if(item.category==='Marketplaces & Stores'){content.append(el('p','You can save a shop URL for reference, but this does not connect seller APIs or automate listing, orders, payout, shipping or returns.','fineprint'),btn('Save this shop link',()=>openStoreSetup(item,true),'btn gh sm'))}
+ else content.append(el('p','An official account, provider authorization and a reviewed integration adapter are required before this app can read or change that service. This card does not claim it is connected.','fineprint'));
+ if(item.url){const link=el('a','Open official provider site');link.href=item.url;link.target='_blank';link.rel='noopener noreferrer';link.referrerPolicy='no-referrer';link.className='btn gh sm';content.append(link)}
+ openCclModal(item.name,'Check what actually works before you connect an account.',content);
+}
 function automations(){
- const root=el('div',undefined,'view-page'),ops=state.operations||{};root.append(makeSection('CURRENTLY ELIGIBLE WORK','Automations','Work runs only when required workers, sources, account access and office settings are available.'));
- const summary=el('section',undefined,'card p');summary.append(el('h3',ops.clock==='in'?'Office clocked in':'Office clocked out'),el('p',ops.summary||'No live run is reported.','muted'));if(ops.manager?.nextAction)summary.append(el('p','Next saved manager action: '+ops.manager.nextAction,'muted'));if(ops.manager?.nextActionAt)summary.append(el('small','Next check '+new Date(ops.manager.nextActionAt).toLocaleString(),'muted'));root.append(summary);
- const metrics=arr(ops.metrics),activity=metrics.filter(x=>['Executing now','Queued jobs'].includes(x.label)),work=el('div',undefined,'g g4 metric-grid');for(const x of activity){const c=el('article',undefined,'card p kpi');c.append(el('small',x.label,'muted'),el('b',x.value),el('small',x.detail||''));work.append(c)}root.append(work);
- const cards=grid();cards.append(makeCard('Research queue','Create or inspect source-backed lead work.','Open research',()=>parentGo('research')),makeCard('Connected services','Review supported providers and saved authorizations.','Manage connections',()=>parentGo('connections')),makeCard('Owner approvals','Review messages and actions waiting for your decision.','Open inbox',()=>parentGo('inbox')));root.append(cards,el('p','No verified 24/7 guarantee is reported. Work depends on the host and configured workers being available.','muted'));return root;
+ const root=el('div',undefined,'view-page'),ops=state.operations||{},all=CONNECTOR_GROUPS.flatMap(group=>group.items.map(item=>({...item,category:group.name})));root.append(makeSection('INTEGRATIONS & WORKFLOW','Automations','The prototype’s connector categories are here. Status below comes from saved account checks; unsupported providers are shown as not connected.'));
+ const counts={connected:0,available:0,off:0};for(const item of all){const kind=connectorKind(connectorStatus(item));counts[kind]++}
+ const summary=el('section',undefined,'g g3 metric-grid integration-summary');for(const [label,value,note] of [['Connected / available',counts.connected,'Verified access or a current real workflow'],['Setup supported here',counts.available,'WooCommerce API or manual shop links'],['Not connected',counts.off,'Requires an official adapter and account authorization']]){const card=el('article',undefined,'card p kpi');card.append(el('small',label,'muted'),el('b',value),el('small',note,'muted'));summary.append(card)}root.append(summary);
+ const explanation=el('section',undefined,'card p integration-note');explanation.append(el('strong','A card is not a connection.'),el('p','The prototype contained demonstration badges. CCL now checks real saved state. Only WooCommerce API access can be connected here. Other marketplace URLs can be saved as manual references; bids, listing writes, orders, payments, shipping and cross-AI failover remain unavailable until their adapters are built.','muted'));root.append(explanation);
+ const searchInput=document.createElement('input');searchInput.className='in integration-search';searchInput.type='search';searchInput.placeholder='Find a service…';searchInput.setAttribute('aria-label','Find an integration');root.append(searchInput);
+ const holder=el('div',undefined,'integration-groups');for(const group of CONNECTOR_GROUPS){const section=el('section',undefined,'integration-group');section.dataset.group=group.name;const heading=el('div',undefined,'hd');heading.append(el('h3',group.name),el('small',group.description,'muted'));section.append(heading);const cards=el('div',undefined,'integration-grid');for(const item of group.items){const card=el('article',undefined,'card p integration-card');card.dataset.search=(item.name+' '+group.name+' '+item.detail).toLowerCase();const header=el('div',undefined,'integration-card-head');header.append(el('h4',item.name));const status=connectorStatus(item),badge=el('span',status,'integration-status '+connectorKind(status));header.append(badge);card.append(header,el('p',item.detail,'muted'));card.append(btn(item.id==='woocommerce'?'Connect / manage':'View status',()=>openConnector({...item,category:group.name}),'btn gh sm'));cards.append(card)}section.append(cards);holder.append(section)}root.append(holder);
+ searchInput.oninput=()=>{const query=searchInput.value.trim().toLowerCase();for(const card of holder.querySelectorAll('.integration-card'))card.hidden=!!query&&!card.dataset.search.includes(query);for(const section of holder.querySelectorAll('.integration-group'))section.hidden=![...section.querySelectorAll('.integration-card')].some(card=>!card.hidden)};
+ const metrics=arr(ops.metrics),activity=metrics.filter(x=>['Executing now','Queued jobs'].includes(x.label)),work=el('section',undefined,'card p');work.append(el('h3','Actual work status'),el('p',ops.summary||'No live run is reported.','muted'));const gridWork=el('div',undefined,'g g2');for(const x of activity){const card=el('article',undefined,'kpi');card.append(el('small',x.label,'muted'),el('b',x.value),el('small',x.detail||'','muted'));gridWork.append(card)}work.append(gridWork);if(ops.manager?.nextAction)work.append(el('p','Next saved manager action: '+ops.manager.nextAction,'muted'));root.append(work);return root;
 }
 function agents(){
  const root=el('div',undefined,'view-page'),staff=arr(state.operations?.employees),alerts=staff.filter(x=>x.actionRequired||x.status==='Needs attention');root.append(makeSection('AI AGENTS & EMPLOYEES','Your team','Each saved status, current assignment and actual CEO action waiting.'));

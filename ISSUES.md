@@ -1,3 +1,6 @@
+## Preview.33 connector limitations
+
+The CCL Automations provider directory is not a universal integration layer. WooCommerce REST v3 is the only marketplace API connection available here. Manual shop links do not publish items or sync orders. Etsy, eBay, Amazon, Walmart, Shopify, Printful, Printify, Field Nation, WorkMarket, ConstructConnect, PlanHub, BuildingConnected, Dodge, BidNet, Biddingo, finance, calendar, SMS, social and cloud AI connectors still need provider-authorized adapters. The embedded LeaX AI Browser is also not implemented.
 ## Preview.32 remaining work
 
 - AI meetings let you speak a question and send its recognized text to selected agents. Replies require a real local model or paired desktop worker. There is no automatic free hosted AI. Browser/device voices vary, and real Poly hardware is not connected. Human call guests need a scheduled in-app meeting; invitations and per-person office permissions are not implemented.

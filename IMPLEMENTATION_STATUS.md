@@ -1,3 +1,8 @@
+## Preview.33 — CCL Automations status
+
+The CCL sidebar now keeps a provider directory in the CCL layout, covering the prototype’s social, marketplace, POD, bid, lead, finance, schedule and AI categories. It shows actual known state for WooCommerce, email, federal notices, the selected AI model/paired worker and the device-browser handoff. The only direct storefront API setup in CCL is WooCommerce; shop URLs saved for Etsy, Amazon, eBay or other sites are reference links, not active integrations.
+
+The original prototype connection badges were demonstration data. Third-party provider APIs still need authorization and reviewed adapters before CCL can import, publish, bid, send, collect payments, ship or sync records. Product image generation and POD fulfillment remain unimplemented.
 ## Preview.32 — meeting room and Distribution Center status
 
 The meeting remote opens from the tabletop controller and wall display. The display can be powered on before an AI or human call. Live browser-call video updates the wall gallery as frames arrive. AI meetings can include up to 26 selected agents; the default selection is the full roster. The mic feature transcribes speech to text and sends that text to agents; it does not stream raw audio to AI. Replies can use distinct installed local English voices when available. AI inference still requires a configured local model or paired desktop worker, and no Poly device is connected.

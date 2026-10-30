@@ -1,3 +1,10 @@
+## Preview.33 CCL integration check
+
+- node --check public/ccl-app.js — passed.
+- node --check public/control-center.js — passed.
+- CCL state projection check — passed; verified statuses are passed through while secrets remain omitted.
+- Browser click-through and API-key entry flow — not run in this checkout; Playwright is unavailable.
+- GitHub installer build for preview.33 — starts on push.
 ## Preview.32 validation status — 2026-10-30
 
 Three focused test runs passed: operations error-copy, meeting roster limit and inference gating, and distribution projection. Changed JS/TS syntax and git diff check passed. The wider selected test run was inconclusive on Node 22.15/Windows because of sandbox EPERM during private-vault rename, dependent paired-worker setup failures, and an existing nested-transaction failure in store preparation. The package requires Node 24.19+. No local Playwright or esbuild dependency is installed, so browser E2E and local production build were not run here. GitHub Actions, Render deployment and owner-device install are pending.

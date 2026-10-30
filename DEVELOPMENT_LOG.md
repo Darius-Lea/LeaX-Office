@@ -1,3 +1,8 @@
+## 2026-10-30 — preview.33: real CCL connector statuses
+
+CCL Automations now includes the prototype’s provider categories and services, but status badges are derived from the saved account checks. The WooCommerce REST connection can be entered and checked inside CCL. Other shop URLs can be saved as manual references only. Providers without an API adapter are clearly marked unconnected; prototype demo badges are not treated as live accounts.
+
+Validation: CCL and parent bridge JavaScript syntax checks passed. A direct state-projection check confirmed that CCL receives connection status but not credentials. Browser interaction testing is still needed. The directory does not implement Etsy/eBay/Amazon, print-on-demand, social publishing, bidding, finance, calendar, SMS or cross-provider AI connections.
 ## 2026-10-30 — preview.32: usable meeting room and truthful production roster
 
 The meeting room remote now opens from the tabletop controller or wall display and can power the display on before a meeting. Live human-call video is redrawn into the wall gallery as new frames arrive. AI meetings invite all selected agents by default and support up to 26 seats. The meeting microphone uses browser speech recognition and sends the recognized text to selected agents; agent replies use distinct installed local English voices when the device has them. This is not a Poly hardware integration, does not stream raw mic audio to an AI model, and voice quality depends on browser/device support.
