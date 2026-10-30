@@ -22,3 +22,6 @@ Preview.5 installer repair: the verified local office now opens before large AI 
 
 ## Package parity
 The native build runs `scripts/verify-installer.py` after compilation. To check an existing executable, first run the production build, then run that Python verifier. It rejects a stale embedded manifest, mismatched executable checksum, duplicate/unexpected entries or any different application file. This verifies code packaging, not actual installation or live integrations.
+
+
+Preview.42: application extraction allows the exact bundled browser/electron.exe up to 512 MiB; other entries and the Node runtime keep 150 MiB limits. A 1 GiB total limit and 1000-entry limit apply, with path/duplicate validation before any writes. The native build runs all Go tests against its exact payload before compilation, including actual extraction and manifest verification. Browser-enabled releases exceed GitHub's normal Git file-size limit and publish through the versioned GitHub Release workflow instead of committing a new executable to downloads/.

@@ -3,8 +3,6 @@
 package main
 
 import (
-	"archive/zip"
-	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
@@ -346,50 +344,6 @@ func fetch(url, path string, max int64) error {
 	}
 	return nil
 }
-func unzip(data []byte, destination string) error {
-	reader, e := zip.NewReader(bytes.NewReader(data), int64(len(data)))
-	if e != nil {
-		return e
-	}
-	for _, entry := range reader.File {
-		if e := operationContext.Err(); e != nil {
-			return e
-		}
-		p := filepath.Join(destination, filepath.FromSlash(entry.Name))
-		relative, e := filepath.Rel(destination, p)
-		if e != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) || entry.Mode()&os.ModeSymlink != 0 {
-			return errors.New("Unsafe archive path")
-		}
-		if entry.FileInfo().IsDir() {
-			if e = os.MkdirAll(p, 0700); e != nil {
-				return e
-			}
-			continue
-		}
-		if entry.UncompressedSize64 > 150*1024*1024 {
-			return errors.New("Archive entry exceeds size limit")
-		}
-		if e = os.MkdirAll(filepath.Dir(p), 0700); e != nil {
-			return e
-		}
-		input, e := entry.Open()
-		if e != nil {
-			return e
-		}
-		output, e := os.OpenFile(p, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
-		if e != nil {
-			input.Close()
-			return e
-		}
-		_, e = io.Copy(output, io.LimitReader(input, 150*1024*1024+1))
-		output.Close()
-		input.Close()
-		if e != nil {
-			return e
-		}
-	}
-	return nil
-}
 
 type wintrustFile struct {
 	Size    uint32
@@ -494,7 +448,7 @@ func ensureNode() (string, error) {
 		return "", e
 	}
 	defer os.RemoveAll(stage)
-	if e = unzip(b, stage); e != nil {
+	if e = extractSetupArchive(operationContext, b, stage, false); e != nil {
 		return "", e
 	}
 	if e = verifyNode(filepath.Join(stage, name, "node.exe")); e != nil {
@@ -547,7 +501,7 @@ func installApp(_ string) (string, string, error) {
 			return "", "", e
 		}
 		defer os.RemoveAll(stage)
-		if e = unzip(payload, stage); e != nil {
+		if e = extractSetupArchive(operationContext, payload, stage, true); e != nil {
 			return "", "", e
 		}
 		if e = verifyApplication(operationContext, stage); e != nil {

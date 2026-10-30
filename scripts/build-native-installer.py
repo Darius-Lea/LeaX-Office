@@ -11,6 +11,7 @@ files=[p for p in production.rglob('*') if p.is_file()]
 with zipfile.ZipFile(installer/'payload.zip','w',zipfile.ZIP_DEFLATED,compresslevel=9) as z:
     for p in sorted(files):
         entry=zipfile.ZipInfo(p.relative_to(production).as_posix(),date_time=(2026,1,1,0,0,0));entry.compress_type=zipfile.ZIP_DEFLATED;entry.external_attr=0o100600<<16;z.writestr(entry,p.read_bytes())
+subprocess.run([args.go,'test','./...'],cwd=installer,env={**os.environ,'LEAX_TEST_APPLICATION_ARCHIVE':str(installer/'payload.zip')},check=True)
 subprocess.run([args.go,'run','github.com/akavel/rsrc@v0.10.2','-manifest','app.manifest','-arch','amd64','-o','app_windows_amd64.syso'],cwd=installer,check=True)
 env={**os.environ,'GOOS':'windows','GOARCH':'amd64','CGO_ENABLED':'0'}
 target=out/'AI-Headquarters-Setup.exe'

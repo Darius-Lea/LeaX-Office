@@ -1,3 +1,7 @@
+## Preview.42 installer repair
+
+The browser-enabled package exceeded the installer's older 150 MiB per-entry cap. Fixed with a scoped 512 MiB allowance for browser/electron.exe plus full payload extraction tests during packaging. The fresh versioned preview.42 installer is required; reopening an older downloaded executable cannot contain this repair. Do not delete office data to work around the old failure. Actual Windows GUI retry remains to be confirmed by the owner.
+
 ## Preview.41 remaining limits
 
 - Page reading is confined to the local LeaX Chromium window, an owner-approved saved lead and one HTTPS website per timed grant. The selected local model receives filtered visible text only. Password/form values, cookies and saved browser credentials are not read; credential pages/password-field pages are blocked. Site-specific secrets rendered as ordinary page text may evade universal redaction, so never grant access to a page that displays secrets this way.
