@@ -2,7 +2,7 @@
 
 - Embedded LeaX AI Browser is not implemented. Current CCL browser view hands pages to the device browser; the installed native launcher also opens a browser window for the local office. Neither provides a separate in-app profile or arbitrary authenticated-site automation.
 - The hosted web app does not have a free AI model automatically provisioned. Online use needs a user-authorized, running paired desktop worker; only that worker’s verified local model is used.
-- Preview.31 source changes have only had syntax checks; the production installer, hosted deployment, browser engine and end-to-end meeting animation still need verification.
+- Preview.31 source received syntax checks and its Windows installer and Render version endpoint were verified. No on-device install or end-to-end meeting animation run was performed. The embedded browser and free hosted AI gaps remain.
 
 ## Preview.30 packaging status
 

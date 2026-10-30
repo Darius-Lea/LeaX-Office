@@ -1,6 +1,6 @@
-## Preview.31 validation status — 2026-10-29
+## Preview.31 validation status — 2026-10-30
 
-No test suite was run for this increment. Planned syntax checks cover changed JS/TS. No production build, Render deployment, Windows installation, browser-engine test or end-to-end meeting animation check is claimed.
+Changed JS/TS syntax and diff checks passed. No test suite or local production build was run. GitHub Actions run 41000790533 built and published the Windows installer successfully. Render /api/version reports preview.31; /download/windows returned an installer whose SHA-256 matched the published checksum. No owner-device install, browser-engine test or end-to-end meeting animation check was run.
 
 ## Preview.30 packaging repair
 

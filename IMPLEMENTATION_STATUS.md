@@ -4,7 +4,7 @@
 - LeaX sends each inference to one selected local model or explicitly paired worker. Cloud-tagged Ollama models are hidden and blocked, including legacy queued work and paired-worker requests. The underlying other Ollama chat models are not called by LeaX.
 - AI meetings invite all current agents by default and support up to ten attendees; avatars can walk to seats.
 - Browser is still a disclosed handoff preview. The current app does not include a real embedded/private browser engine. Web-hosted free AI still requires an explicitly paired desktop worker; an always-available free hosted model is not configured.
-- The hosted installer/update link is not verified from this workspace. Preview.31 requires packaging, deployment and user-device verification.
+- GitHub Actions successfully built and published the preview.31 Windows installer. Render reports preview.31 and the `/download/windows` installer checksum was verified. Actual install and UI testing on the owner device remains outstanding.
 
 ## Preview.30 — packaging repair in progress
 
