@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LeaX AI Browser</title>
+<link rel="stylesheet" href="chrome.css">
+</head>
+<body>
+<header class="toolbar">
+  <div class="identity"><span class="mark">L</span><span class="brand">LeaX AI Browser</span></div>
+  <nav class="nav" aria-label="Browser navigation">
+    <button id="back" title="Back" aria-label="Back">←</button>
+    <button id="forward" title="Forward" aria-label="Forward">→</button>
+    <button id="reload" title="Reload" aria-label="Reload">↻</button>
+  </nav>
+  <form id="address-form" class="address-wrap">
+    <span id="security" class="security" title="Connection security">●</span>
+    <input id="address" type="text" placeholder="Search or enter a website" autocomplete="off" spellcheck="false" aria-label="Search or enter a website">
+    <button class="go" type="submit">Go</button>
+  </form>
+  <span class="private-label" title="Sign-ins are saved locally on this device until you clear browsing data">SAVED ON DEVICE</span>
+  <button id="extensions" title="Install or remove trusted unpacked Chromium extensions">Extensions</button>
+
+  <button id="ai-access" class="ai-access" disabled title="Agent page access is not connected">AI access: Off</button>
+  <button id="devtools" title="Developer tools (F12)">Inspect</button>
+  <button id="clear-close" class="clear" title="Clear all LeaX browser sign-ins and browsing data" aria-label="Clear all LeaX browser sign-ins and browsing data">🧹 Clear data</button>
+</header>
+<div class="status"><span id="status">Sign-ins stay saved on this device</span><span id="page-title"></span></div>
+<script src="chrome.js" defer></script>
+</body>
+</html>

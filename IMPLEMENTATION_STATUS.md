@@ -1,3 +1,18 @@
+## Preview.40 — LeaX browser persistence, broom and custom extensions
+
+- Windows LeaX AI Browser uses a persistent profile under the protected local AIHeadquarters folder. Closing/reopening the browser retains supported site sign-ins and site storage.
+- The 🧹 Clear data action shows a confirmation and clears Electron session storage, cookies, cache, authentication cache, DNS cache and code cache. It leaves saved download files in place. Windows, websites and network providers may retain their own records.
+- Owners can install/remove custom unpacked Chromium extension folders after reviewing their declared permissions and site access. Install is local; the profile retains installed extension files. Electron supports only a subset of Chrome APIs, no `.crx` packages, and no LeaX extension store or verification.
+- CCL hosted browsing remains iframe-limited. A local sign-in does not let agents monitor the page: agent access and whole-device control remain OFF. No green control trail appears until a consented local action worker exists.
+- This is a real bundled Chromium browser window. It is not a Chromium engine written by LeaX, security-audited, anonymous, or a full Chrome extension-compatible browser. A standalone outside-app release requires more browser features, security review, update/signing policy and packaging.
+## Preview.39 — LeaX AI Browser
+
+- Windows now packages a LeaX-owned browser window powered by bundled Chromium/Electron, separate from Microsoft Edge UI and profile. Web content has no Node integration, uses context isolation and renderer sandboxing, and can navigate HTTP/HTTPS only. Site permissions are prompted per request; downloads require a save choice.
+- Browser data is held in a temporary local session and removed on normal close. Website, network and OS logging is outside LeaX’s control. CCL’s hosted page viewer remains constrained by iframe/sign-in policy.
+- CCL can launch the Windows browser through leaxoffice://. It does not transfer the local browser login or page contents to an agent.
+- Outside-app mouse/keyboard control is still not implemented. The permission display remains OFF and disabled until a real local control worker is available. No green activity trail appears because no agent can control the device yet.
+- Electron/Chromium packaging increases Windows installer size substantially; installer CI must confirm it builds and publishes.
+
 ## Preview.38 — browser viewer and public web search
 
 - CCL now loads HTTPS pages into its LeaX AI Browser workspace when sites permit embedding. Search/address input, back/forward/reload, and full-browser-tab fallback are available.

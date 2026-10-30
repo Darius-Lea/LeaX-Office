@@ -873,3 +873,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
+
+
+## LeaX AI Browser runtime: Electron 45.1.0 and Chromium
+
+The Windows installer bundles Electron and its Chromium runtime. This browser is a LeaX-owned Chromium app; it does not launch Microsoft Edge. The bundled distribution contains Electron license text at `browser/LICENSE` and Chromium license acknowledgements at `browser/resources/LICENSES.chromium.html`. See those included files for their complete third-party notices. The browser is not security-audited and does not guarantee anonymity, untraceable browsing or protection from all attacks.

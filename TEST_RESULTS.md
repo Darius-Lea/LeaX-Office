@@ -1,3 +1,17 @@
+## Preview.40 browser persistence and extension check — 2026-10-30
+
+- Node 24.19 syntax checks for the browser main process, extension manager, preload and toolbar — passed.
+- Production bundle — passed, 124 files; packaged manifest includes the Chromium runtime and `extensions.cjs`.
+- Windows native installer compile, actual sign-in/broom/extension UI interaction and Render deployment — pending. The build does not yet prove website sign-in persistence on the owner device.
+- Browser voice/page-reading assistant remains a follow-up and is not connected to the logged-in profile.
+## Preview.39 browser validation — 2026-10-30
+
+- Changed CCL/desktop-browser JavaScript syntax checks — passed.
+- Electron 45.1.0 Windows x64 runtime downloaded using the package’s published checksum verification — passed.
+- Production bundle and native installer packaging — pending; browser runtime must be embedded into the application manifest, installer, and CI artifact.
+- Actual browser launch/login, Windows custom-protocol handoff, CCL-to-browser click-through, Render deployment and owner-device install — pending.
+- Whole-device mouse/keyboard automation and neon edge indicator — not implemented.
+
 ## Preview.38 verification — 2026-10-30
 
 - Focused public-web search, source attribution, AI-quality export, AI inference and meeting-isolation tests — passed, 7/7.

@@ -842,6 +842,9 @@ func importBackup(source string) error {
 	return nil
 }
 func main() {
+	if handleLeaXBrowserCommand() {
+		return
+	}
 	if handleCredentialCommand() {
 		return
 	}

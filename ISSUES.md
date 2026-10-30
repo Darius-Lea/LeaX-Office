@@ -1,3 +1,10 @@
+## Preview.40 browser and device-control limits
+
+- LeaX AI Browser is bundled with the Windows app and saves sign-ins/site data in a local profile between launches. The 🧹 Clear data button asks first, then clears saved cookies, authentication cache, HTTP cache and site storage. Downloaded files and Windows/network/site logs are not removed.
+- Custom Chromium extensions can be installed from an unpacked folder after reviewing the extension name and requested permissions. Electron supports only a subset of Chrome extension APIs; Chrome Web Store packages and many extensions are not compatible. LeaX has no verified extension store yet.
+- The browser is not a security-audited or anonymity product. The hosted CCL viewer remains subject to website framing/sign-in rules.
+- AI agents do not receive logged-in page access. No whole-device controller exists; the permission stays OFF. A local screenshot/action worker, user interrupt/hand-back, green edge-trail overlay and preference controls remain necessary before device access can be enabled.
+- A separate standalone public browser installer is not yet produced. Outside-app release still needs security review, extension update policy, signing and a separate installer.
 ## Preview.38 remaining limits
 
 - This is a web-app page viewer, not a full standalone browser engine. Many websites set headers that block iframe embedding, third-party sign-in cookies may be unavailable, and those pages need the full browser-tab fallback.

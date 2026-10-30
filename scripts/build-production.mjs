@@ -1,5 +1,6 @@
 import {build,transform} from 'esbuild';
-import {mkdir,readFile,writeFile,readdir,rm} from 'node:fs/promises';
+import {mkdir,readFile,writeFile,readdir,rm,cp} from 'node:fs/promises';
+import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {resolve,dirname,join,sep} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -16,6 +17,13 @@ for(const name of await readdir(join(root,'public'))){
  if(/\.(js|css)$/.test(name))value=(await transform(value,{minify:true,loader:name.endsWith('.css')?'css':'js',target:'es2022',legalComments:'none'})).code;
  await put('public/'+name,value);
 }
+const electronInstall=join(root,'node_modules/electron/install.js');
+const electronDist=join(root,'node_modules/electron/dist');
+try{await readdir(electronDist)}catch{const electronCache=join(root,'node_modules/.cache/electron');await mkdir(electronCache,{recursive:true});execFileSync(process.execPath,[electronInstall],{cwd:root,stdio:'inherit',env:{...process.env,electron_config_cache:electronCache,TEMP:electronCache,TMP:electronCache}})}
+await cp(electronDist,join(output,'browser'),{recursive:true});
+const browserApp=join(output,'browser/resources/app');await mkdir(browserApp,{recursive:true});
+for(const name of ['main.cjs','preload.cjs','extensions.cjs','chrome.html','chrome.css','chrome.js','package.json'])await cp(join(root,'desktop-browser',name),join(browserApp,name));
+await put('browser/LEAX-BROWSER-NOTICES.txt','LeaX AI Browser bundles Electron 45.1.0 and Chromium. Electron and Chromium license texts are provided as browser/LICENSE and browser/resources/LICENSES.chromium.html.');
 const vendors={
  'three.module.js':'build/three.module.js','three.core.js':'build/three.core.js',
  'FontLoader.js':'examples/jsm/loaders/FontLoader.js','TextGeometry.js':'examples/jsm/geometries/TextGeometry.js',
@@ -33,4 +41,4 @@ await put('package.json',JSON.stringify({name:pkg.name,version:pkg.version,priva
 await put('THIRD_PARTY_NOTICES.md',(await readFile(join(root,'THIRD_PARTY_NOTICES.md'),'utf8')).replace(/\r\n/g,'\n'));
 const hashes={};async function walk(folder){for(const item of await readdir(join(output,folder),{withFileTypes:true})){const name=folder?folder+'/'+item.name:item.name;if(item.isDirectory())await walk(name);else hashes[name]=createHash('sha256').update(await readFile(join(output,name))).digest('hex')}}await walk('');
 await put('application-manifest.json',JSON.stringify({format:1,version:pkg.version,entry:'runtime/server.mjs',files:hashes},null,2));
-console.log('Production application built: '+Object.keys(hashes).length+' files. Original source, business data, development documents and source maps excluded.');
+console.log('Production application built: '+Object.keys(hashes).length+' files, including the LeaX Chromium browser. Original source, business data, development documents and source maps excluded.');
