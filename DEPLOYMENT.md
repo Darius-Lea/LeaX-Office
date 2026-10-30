@@ -1,3 +1,7 @@
+## Passwordless guest lobby - preview.46
+
+Deploy main to the same durable HTTPS service used by shared office accounts. Sign in at /offices and open Guest lobby invitations, or visit /guest. Invite links expire and are single-use. This is lobby access only; guest video and office tours are not included. See docs/GUEST-LOBBY.md. Live Render deployment is not verified.
+
 ## Google Sites launcher - preview.45
 
 In Google Sites choose Insert > Embed > By URL and paste https://leax-office.onrender.com/embed, then resize the block and publish the site. The Render service must first deploy preview.45. The launcher opens sign-in/the office in a new tab; full private-app iframe embedding is not implemented. Third-party cookies can block embedded sign-in. Public launcher framing does not expose private data or relax framing on the private office.

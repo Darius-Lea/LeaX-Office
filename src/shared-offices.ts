@@ -1,6 +1,7 @@
 // Collaboration accounts deliberately cannot authenticate the private founder APIs.
 import {randomBytes,randomUUID,scryptSync,timingSafeEqual,createHash} from 'node:crypto';
 import {db} from './store.ts';
+import {guestLobbyRequest,manageGuests} from './guest-lobby.ts';
 import {resetPassword} from './password-recovery.ts';
 import {sharedPhone} from './shared-phone.ts';
 import {accessState,requireActive} from './platform-access.ts';
@@ -29,6 +30,7 @@ function createRoom(userId:string,name:string,now:number){const roomId=id(),addr
 function newSession(userId:string,now:number){const token=secret();db.prepare('INSERT INTO shared_sessions VALUES(?,?,?)').run(digest(token),userId,now+7*86400000);return token;}
 export function sharedOfficeRequest(path:string,method:string,body:any,token:string,ip:string,now=Date.now()):{status?:number,data:any,token?:string} {
  prune(now);
+ if(path.startsWith('guest/')){if(path==='guest/redeem')rate('guest-redeem:'+ip,20,now);return guestLobbyRequest(path.slice(6),method,body,token,now);}
  if(path==='reset-password'&&method==='POST'){rate('reset:'+ip,10,now);return {data:resetPassword(body,now)};}
  if(['register','login'].includes(path)&&method==='POST'){
   rate('auth:'+ip,20,now);
@@ -49,6 +51,7 @@ export function sharedOfficeRequest(path:string,method:string,body:any,token:str
  if(path==='device-heartbeat'&&method==='POST'){db.prepare('UPDATE shared_sessions SET expires=? WHERE hash=?').run(now+7*86400000,user.sessionHash);return {data:{user:{id:user.id,handle:user.handle,name:user.name},access:accessState(user.id,now)}};}
  if(path==='me'&&method==='GET')return {data:{user:{id:user.id,handle:user.handle,name:user.name},access:accessState(user.id,now),terms:(db.prepare("SELECT value FROM settings WHERE key='platform_terms'").get() as any)?.value||'',offices:accessState(user.id,now).state!=='active'?[]:db.prepare('SELECT r.address,r.name,m.role FROM shared_rooms r JOIN shared_members m ON r.id=m.room_id WHERE m.user_id=? ORDER BY r.created').all(user.id)}};
  requireActive(user.id,now);
+ if(path.startsWith('guest-admin/')){if(path==='guest-admin/create')rate('guest-create:'+user.id,10,now);return {data:manageGuests(path.slice(12),method,body,user,now)};}
  if(path.startsWith('phone/'))return {data:sharedPhone(path.slice(6),method,body,user,now)};
  if(path==='create'&&method==='POST'){rate('create:'+user.id,5,now);const name=text(body.name,100,'an office name');const count=db.prepare('SELECT count(*) AS n FROM shared_rooms WHERE owner_id=?').get(user.id) as any;if(count.n>=10)throw bad('You can own up to ten offices');return {status:201,data:{address:transaction(()=>createRoom(user.id,name,now))}};}
  if(path==='join'&&method==='POST'){

@@ -1,0 +1,9 @@
+# Passwordless guest lobby — preview.46
+
+Sign in through `/offices`, then choose **Guest lobby invitations**. Owners and co-owners choose an office and an expiration (5–240 minutes) at `/guest`, create a link and send it privately to one guest. The guest opens it on desktop or phone, enters a display name, and joins without creating an account. Link secrets are in URL fragments, removed before subsequent navigation, and stored as hashes on the server. A separate HttpOnly SameSite cookie carries the guest session; it does not authenticate shared-account or founder APIs.
+
+The management screen shows whether a link is waiting, used, joined, or revoked, and the guest's display name. Its list refreshes every five seconds. **Revoke access** denies the next guest request immediately; the guest screen checks every three seconds and closes its lobby view. Expiration, loss of the link creator's owner/co-owner membership and creator account suspension also deny guest access. Links are one-use, and both the invitation and resulting guest session expire at the selected time. Leaving consumes the session; a new invitation is needed to rejoin.
+
+For web/desktop sharing, both must use the same updated HTTPS service with durable storage. Installed offices configured with an authoritative access origin generate links to that origin; an unconfigured localhost server cannot invite another device. Creating the link does not send email or messages automatically.
+
+This release provides a **limited guest lobby only**. There is no video/audio meeting, live office avatar, movement, tour, shared viewpoint, click display, agent answer or permission-to-speak integration. Those features remain unfinished on the separate WIP branch. Render deployment and real phone hardware remain unverified; browser validation uses a phone-sized Chromium context. The Google Sites embed failure is not resolved by this release.

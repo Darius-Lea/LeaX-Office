@@ -1,3 +1,7 @@
+## Preview.46 — expiring passwordless guest lobby, 2026-10-30
+
+Completed one-use 5–240-minute guest lobby links, name-only mobile joining, separate HttpOnly guest sessions, owner/co-owner management and revocation. Expiry, creator suspension and loss of creator management membership deny guest requests. Guests cannot authenticate account/private APIs. See docs/GUEST-LOBBY.md for use and exact boundaries. Video, office tours, agent permission meetings and the reported Google Sites embed failure remain unfinished; public Render deployment is unverified. Auto Poster remains disconnected.
+
 ## 2026-10-30 — finish and preserve work before usage reset
 
 Saved unfinished guest session, viewpoint/visitor and streaming-answer foundations to codex/live-guest-office-in-progress, separate from the stable main release. Completed preview.45 Google Sites public launcher and verified HTTP/CSP behavior: embeddable public content, new-tab secure sign-in, protected private office and unchanged authentication. Production build passed. No Google Sites page was edited and no hosting concealment/security guarantee is claimed. Auto Poster remains untouched/disconnected. Full guest meeting/tour behavior and release coordination remain continuation work.

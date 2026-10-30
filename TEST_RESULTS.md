@@ -1,3 +1,11 @@
+## Preview.46 guest lobby — 2026-10-30
+
+- Required full backend suite: `NODE_USE_ENV_PROXY=1 npm test` — 189 passed, zero failures/skips/cancellations/todos.
+- Direct `node test/guest-lobby.test.ts` — two tests passed, executing the actual assertions for one-use links, TTL, host authorization, revocation, suspension, separate guest cookie, origin guard and private API isolation.
+- `scripts/qa/guest-lobby-browser-check.mjs` — passed against source and packaged production server using independent Chromium contexts, including a 390×844 touch/mobile guest. Host creates link, guest joins without account, fragment is removed, private APIs deny guest, mobile has no horizontal overflow, host sees joined name and revokes, guest screen closes access on its next poll. No page JS errors.
+- `npm run build:app` — 144 production files, preview.46. `git -c core.whitespace=cr-at-eol diff --check` passed.
+- Loopback tests needed approved sandbox escalation; initial restricted run failed EPERM, then tests passed with loopback enabled. Public Render deployment, physical phones and Windows installer execution were not tested. This does not validate guest video, shared walking or agent answers: those features remain unfinished. Google Sites embedding is still unresolved.
+
 ## 2026-10-30 — preview.45 launcher validation
 
 The new HTTP test passed: /embed and its stylesheet return successfully, Google Sites framing is allowed on the public launcher, sign-in links open with noopener/noreferrer, no password form is embedded, private office framing remains denied and private state still requires authentication. Standalone production build passed with the new assets. Existing preview.44 regression results remain historical; no new guest meeting/tour implementation is claimed. Live Render/Google Sites verification remains unavailable. Unfinished guest code is preserved on a separate branch and excluded from main.
