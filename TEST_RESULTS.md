@@ -1,3 +1,17 @@
+## 2026-10-31 — guest office walkthroughs and responsive join
+
+- Full suite: Node 24.22.1, serialized for Windows server stability — 195 passed, zero failed/skipped/cancelled.
+- Real Chrome end-to-end guest-office check passed: owner creates an invite from `/offices`, guest sees the unchanged LeaX lobby while entering a name, joins without an account, opens the 3D room/meeting view, host follows the guest's camera, both pages have no horizontal overflow from 320px to 1024px, private account APIs deny guest access, and host revocation immediately returns the guest to the lobby and ends the session.
+- Production application rebuilt with 149 files. `node --check` passed for guest, media, office UI and browser-check scripts; `git diff --check` passed.
+- Browser coverage used a 390×844 touch/mobile emulation resized across 320, 390, 768 and 1024px. Physical phones, external Internet traversal and production TURN relay remain unverified.
+
+## 2026-10-31 — lobby-first sign-in and founder entrance
+
+- The checked-in `public/lobby.html` SHA-256 matches the supplied attachment exactly: `bf4465eb3fe032a95722b7b3235e353deca8645547f509d538a6c0aab310d902`. Focused HTTP/adapter checks passed (3/3): original preview shim pass-through, shared-account registration, founder setup, lobby on `/` for founder sessions, protected `/headquarters`, and the updated root-route expectation.
+- Full suite: Node 24.22.1, serialized to avoid Windows HTTP-server startup timeouts — 194 passed, zero failed/skipped/cancelled.
+- Production build: 149 files, including the preserved lobby and runtime adapters. A local browser rendered the original 3D lobby and sign-in form.
+- No live Render deployment or external provider authorization was performed. Unsupported lobby providers remain not connected.
+
 ## Preview.47 guest video/audio — 2026-10-30
 
 - Required `NODE_USE_ENV_PROXY=1 npm test`: 192 passed, zero failures/skips/cancellations/todos.
