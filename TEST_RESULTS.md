@@ -1,3 +1,34 @@
+## 2026-11-01 invitation sign-in copy
+
+- `node --check public/offices.js` and `node --check public/lobby-adapters.js` — passed. Focused VM check confirmed `/login?founder=1` triggers the existing founder entrance. SHA-256 of `public/lobby.html` matched the supplied download — passed.
+- `node --test test/lobby-http.test.ts` could not start its local server under the installed Node 22.15.0 runtime: `node:sqlite` does not export `backup` in this version. The project declares Node 24.19+; its earlier Node 24 run (194 passed) is historical and was not repeated here.
+
+## 2026-11-01 — guided tours, Monetization performance and product design motion
+
+- Node 24 focused tests passed: 19/19 across commerce, distribution and guest-session suites. JavaScript/TypeScript syntax checks passed for the changed scene, office and server modules.
+- Full suite: 194/195 passed. The single `test/production.test.ts` failure occurred during the production bundle step: the sandboxed esbuild child process was denied access to `../../../../../..` and could not resolve the in-workspace server entry. Running `scripts/build-production.mjs` directly hit the same environment denial. The source server/API integration tests passed.
+- The Monetization browser QA now measures its first-person walking render count and checks for a multiplied/stalled loop. It could not run here because Playwright is not installed in this checkout and the desktop browser kernel was unavailable.
+- No real model inference, external guest network, production Render deployment, third-party OAuth or physical-phone performance was tested. `public/lobby.html` remains outside the change set.
+
+## 2026-11-01 invitation sign-in copy
+
+- `node --check public/offices.js` and `node --check public/lobby-adapters.js` — passed. Focused VM check confirmed `/login?founder=1` triggers the existing founder entrance. SHA-256 of `public/lobby.html` matched the supplied download — passed.
+- `node --test test/lobby-http.test.ts` could not start its local server under the installed Node 22.15.0 runtime: `node:sqlite` does not export `backup` in this version. The project declares Node 24.19+; its earlier Node 24 run (194 passed) is historical and was not repeated here.
+
+## 2026-10-31 — guest office walkthroughs and responsive join
+
+- Full suite: Node 24.22.1, serialized for Windows server stability — 195 passed, zero failed/skipped/cancelled.
+- Real Chrome end-to-end guest-office check passed: owner creates an invite from `/offices`, guest sees the unchanged LeaX lobby while entering a name, joins without an account, opens the 3D room/meeting view, host follows the guest's camera, both pages have no horizontal overflow from 320px to 1024px, private account APIs deny guest access, and host revocation immediately returns the guest to the lobby and ends the session.
+- Production application rebuilt with 149 files. `node --check` passed for guest, media, office UI and browser-check scripts; `git diff --check` passed.
+- Browser coverage used a 390×844 touch/mobile emulation resized across 320, 390, 768 and 1024px. Physical phones, external Internet traversal and production TURN relay remain unverified.
+
+## 2026-10-31 — lobby-first sign-in and founder entrance
+
+- The checked-in `public/lobby.html` SHA-256 matches the supplied attachment exactly: `bf4465eb3fe032a95722b7b3235e353deca8645547f509d538a6c0aab310d902`. Focused HTTP/adapter checks passed (3/3): original preview shim pass-through, shared-account registration, founder setup, lobby on `/` for founder sessions, protected `/headquarters`, and the updated root-route expectation.
+- Full suite: Node 24.22.1, serialized to avoid Windows HTTP-server startup timeouts — 194 passed, zero failed/skipped/cancelled.
+- Production build: 149 files, including the preserved lobby and runtime adapters. A local browser rendered the original 3D lobby and sign-in form.
+- No live Render deployment or external provider authorization was performed. Unsupported lobby providers remain not connected.
+
 ## Preview.47 guest video/audio — 2026-10-30
 
 - Required `NODE_USE_ENV_PROXY=1 npm test`: 192 passed, zero failures/skips/cancellations/todos.

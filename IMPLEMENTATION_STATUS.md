@@ -1,3 +1,26 @@
+## 2026-11-01 — guided guest tours, office visuals and live product work
+
+- Guest visits now include host-to-guest **Follow host's tour** and host **Follow guest view** modes. Each mirrors only the in-office 3D pose/camera. The host avatar follows behind the guest; browser tabs stay private unless the guest separately grants screen share. Existing video/audio remains separately permissioned.
+- Office and guest pages use the lobby's glass, blue/cyan glow and motion style; `public/lobby.html` remains byte-for-byte identical to the supplied reference.
+- Fixed an extra animation-frame loop in the Monetization campus that compounded during walking. Mobile/lower-power clients use adaptive antialiasing, pixel ratio and shadow-map resolution. The QA script now checks frames while walking.
+- Distribution Center crew and draft-token movement are tied to real queued/running local-model invitation-design assignments. Unrelated AI work and completed/saved proofs are not shown as active factory tasks.
+- LeaX already supports local Ollama/LM Studio models and verified paired desktop workers for AI invitation drafts without a paid API key. Hosted consumer chat webpages are not used as programmatic model APIs. Background inference still requires the LeaX host/selected worker to remain online.
+- Focused Node 24 backend tests passed (19/19) for product design assignment projection, commerce and guest sessions. JavaScript/TypeScript syntax checks passed. Full suite: 194/195; the production build test failed because sandboxed esbuild could not read an ancestor directory. Direct production build hit the same sandbox error. Browser frame-loop smoke is added but could not run because Playwright is unavailable. Details are in `TEST_RESULTS.md`.
+
+## Invitation sign-in clarity — 2026-11-01
+
+- Invitation links now explain that the recipient is joining an existing LeaX office, and explicitly offer account creation or sign-in. Existing invitation acceptance, membership, and account APIs are unchanged.
+- `public/lobby.html` remains byte-for-byte identical to the supplied lobby (SHA-256 `bf4465eb3fe032a95722b7b3235e353deca8645547f509d538a6c0aab310d902`). The supplied lobby's visible member sign-in and create-account tabs continue to use LeaX shared-office accounts.
+- `node --check public/offices.js` passed. The local HTTP integration test could not start with installed Node 22.15 because this app requires Node 24.19+ (`node:sqlite` is missing the `backup` export in this runtime). Historical Node 24 validation remains recorded below; it was not rerun here.
+
+## Current implementation — lobby-first sign-in (2026-10-31)
+
+- The supplied `LeaX Headquarters lobby (preview) (1).html` is copied to `public/lobby.html` byte-for-byte (SHA-256 `bf4465eb3fe032a95722b7b3235e353deca8645547f509d538a6c0aab310d902`). The server adds separate fetch and provider-status adapters around it; the prototype's markup, attributes, inline code and original preview fetch shim remain intact.
+- `/`, `/login` and `/lobby` show the lobby for founders and members. Existing shared-account registration/sign-in remains wired to `/api/shared`; the hidden founder entrance is the original five logo clicks or typing `leaxadmin` outside a field. The founder form still requires the real founder password and first-setup code. Authenticated founders continue to `/headquarters`, which checks the founder session server-side.
+- For a simpler founder shortcut without changing the lobby, `/login?founder=1` opens that same password-protected founder form. Team invite links now explain that recipients can create an account or sign in to join the inviter's office.
+- Provider cards remain in the prototype. Unsupported OAuth providers and Twilio are shown as not connected, and clicking them cannot create a simulated connected state.
+- Locally rendered in the browser with the original 3D lobby visible. The build and automated results are in `TEST_RESULTS.md`. No public Render deployment or third-party provider connection was made.
+
 ## Preview.47 — passwordless guest video/audio meetings, 2026-10-30
 
 Added explicit guest request and host answer/decline, two-party WebRTC audio/video, optional camera, independent mute/camera controls, hang-up, remote playback/fullscreen and phone layout. Guest capability and answering host session isolate signaling; expiry/revocation/account holds or lost authorization stop media. Configurable TURN supports shared-secret short-lived credentials or an existing static relay. No production relay is provisioned. The same source serves web and packaged desktop; public Render deployment and actual Windows installation remain unverified. Office tours, room-display/agent reply integration and the Google Sites embed failure remain unfinished. Auto Poster remains disconnected. See docs/GUEST-LOBBY.md.
@@ -304,3 +327,9 @@ Validation: `npm run build:app` completed with 37 production files and `git diff
 Removed the fixed five-candidate, three-query, 200-link and two-contact-page limits from public company research. It now follows the public search provider's next-result links for ten targeted company queries, checks every matching candidate domain it finds, reads all matching contact/vendor pages on a company site, and shows every candidate in the lead brief. Existing HTTPS, public-address, robots-policy, source-attribution and company-identity confirmation safeguards remain in place. Coverage is limited to pages available in the public search index; the app cannot exhaustively scan every website on the internet.
 
 Validation: production app build completed with 37 files; `git diff --check` passed. Automated tests were not run in this turn. Live public-index behavior and Render deployment are not independently verified.
+## 2026-10-31 — guest office walkthroughs
+
+Owners and co-owners can create a 5–240 minute, one-use guest invitation from the shared office. Visit types include investor walkthrough, interview, training, contractor session, meeting and coworking. The guest opens a name-only join screen over the exact lobby prototype, then enters a responsive 3D office and meeting room. The host can follow the guest's pose and camera, receive a consented video or screen-share request, and revoke access. Guest capabilities remain temporary and lobby-scoped; private company/account APIs remain unavailable. A separate invitation grants permanent account membership.
+
+Validated with the 195-test suite, real-Chrome browser QA at 320/390/768/1024px, and a 149-file production build. Physical phone/tablet hardware, Render deployment and cross-network WebRTC are not verified. Configure production TURN credentials to improve media connection reliability on restrictive networks; screen sharing remains subject to browser support and guest permission.
+

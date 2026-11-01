@@ -1,3 +1,11 @@
+## 2026-11-01 — make office invitations easier to accept
+
+When a teammate opens an account invitation, the shared-offices page now identifies the invitation and offers account creation or sign-in in context. `/login?founder=1` opens the existing founder credential form directly; no lobby markup or artwork changed. JavaScript syntax, the adapter shortcut, and the attachment/lobby SHA-256 match were verified. A local HTTP test could not start because this environment has Node 22.15 while the project requires Node 24.19+; see TEST_RESULTS.md.
+
+## 2026-11-01 — make office invitations easier to accept
+
+When a teammate opens an account invitation, the shared-offices page now identifies the invitation and offers account creation or sign-in in context. `/login?founder=1` opens the existing founder credential form directly; no lobby markup or artwork changed. JavaScript syntax, the adapter shortcut, and the attachment/lobby SHA-256 match were verified. A local HTTP test could not start because this environment has Node 22.15 while the project requires Node 24.19+; see TEST_RESULTS.md.
+
 ## Preview.47 — passwordless guest video/audio meetings, 2026-10-30
 
 Added explicit guest request and host answer/decline, two-party WebRTC audio/video, optional camera, independent mute/camera controls, hang-up, remote playback/fullscreen and phone layout. Guest capability and answering host session isolate signaling; expiry/revocation/account holds or lost authorization stop media. Configurable TURN supports shared-secret short-lived credentials or an existing static relay. No production relay is provisioned. The same source serves web and packaged desktop; public Render deployment and actual Windows installation remain unverified. Office tours, room-display/agent reply integration and the Google Sites embed failure remain unfinished. Auto Poster remains disconnected. See docs/GUEST-LOBBY.md.
@@ -285,3 +293,22 @@ Added an AI Agents view with owner-action counts and a clear lead-search effort 
 The connector directory distinguishes current app capabilities from provider integrations that still require official APIs and account authorization. The blueprint’s static demo activity, simulated publishing, simulated failover, and simulated missed-deadline actions are not presented as real operations. Invitations and per-person roles remain unavailable because this version has a single-owner authentication model.
 
 Validation: source review only. Automated tests were not run. GitHub Actions installer build and Render deployment status are pending the release workflow.
+## 2026-10-31 — preserve and connect the lobby login
+
+Copied the provided lobby into `public/lobby.html` and verified its SHA-256 is identical to the attachment. Kept the prototype source intact; the server injects a separate same-origin API bridge and provider-status adapter. Root now serves the lobby for founders and members, and the hidden founder entrance continues through the existing password/setup-code checks to protected `/headquarters`. Third-party provider tiles stay present and cannot claim simulated OAuth success. The 194-test suite passed on Node 24.22.1, and the standalone production build contains 149 files. No live deployment or external provider authorization was made.
+
+## 2026-10-31 — passwordless guest office sessions
+
+Added one-click guest visit links to the shared office for walkthroughs, investor sessions, interviews, training, meetings and contractor or coworker visits. Guests enter a name in a page that keeps the original lobby visible while they wait; joining opens a full-screen, touch-friendly 3D office without creating an account. Owners/co-owners can follow guest position and camera, request/accept video or screen sharing, and revoke temporary access. Permanent office membership remains a separate account invitation.
+
+Mobile QA exposed and fixed a canvas overlap that blocked meeting controls, plus a pose callback signature mismatch that prevented host pilot view. Real Chrome QA now passes at 320–1024px; the existing lobby source remains byte-identical. Full suite passed 195/195, production build produced 149 files, and the updated browser smoke script passed. No live Render deployment or production TURN service was provisioned; physical-device and external network media checks remain outstanding.
+
+## 2026-11-01 — guided tours, office visuals and background product work
+
+Added explicit guest choice to follow the host's office tour or explore independently; the owner can follow the guest's office camera and position with a host avatar marker behind them. This mirrors only the 3D office view and clearly distinguishes it from separately permissioned screen sharing. Office pages share the lobby's glass/blue/cyan visual treatment while the supplied `public/lobby.html` stays unchanged.
+
+Fixed a duplicate animation-frame scheduling loop in the Monetization campus, which could multiply rendering during first-person walking. The campus now schedules a single frame at a time and lowers pixel ratio, antialiasing, target frame rate and shadow-map resolution on small or lower-power devices. Added a browser QA assertion for the walking render count.
+
+Queued/running local-model invitation-design jobs now appear as actual product-specific assignments in the Distribution Center. The worker moves and a distinct unsaved draft token travels on the line during inference; existing saved proofs stay still. Company-wide tasks do not appear as factory work.
+
+Validation: Node 24 syntax checks passed; focused commerce, distribution and guest-session tests passed 19/19. A browser check was added but could not execute because Playwright is absent and the desktop browser kernel was unavailable. Full-suite and production-build results are recorded in `TEST_RESULTS.md`. No cloud model login, real model inference, third-party provider connection, or live Render deployment was performed.

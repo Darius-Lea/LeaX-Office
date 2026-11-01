@@ -5,6 +5,7 @@ const fail=(message:string,status=400)=>Object.assign(new Error(message),{status
 db.exec(`CREATE TABLE IF NOT EXISTS guest_media_calls(id TEXT PRIMARY KEY,link_id TEXT NOT NULL UNIQUE,guest_hash TEXT NOT NULL,host_id TEXT,host_session TEXT,status TEXT NOT NULL,created INTEGER NOT NULL,host_seen INTEGER NOT NULL,guest_seen INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS guest_media_signals(id INTEGER PRIMARY KEY,call_id TEXT NOT NULL,target TEXT NOT NULL,payload TEXT NOT NULL,created INTEGER NOT NULL);
 CREATE INDEX IF NOT EXISTS guest_media_signals_call ON guest_media_signals(call_id,id);`);
+if(!(db.prepare('PRAGMA table_info(guest_media_calls)').all() as any[]).some(item=>item.name==='kind'))db.exec("ALTER TABLE guest_media_calls ADD COLUMN kind TEXT NOT NULL DEFAULT 'video'");
 function iceServers(expires:number,now:number){
  const servers:any[]=[];const stun=process.env.HQ_STUN_URL||'stun:stun.l.google.com:19302';if(/^stuns?:[^\s@]+$/.test(stun))servers.push({urls:stun});
  const urls=(process.env.HQ_TURN_URL||'').split(',').map(s=>s.trim()).filter(s=>/^turns?:[^\s@]+$/.test(s)).slice(0,4);
@@ -21,17 +22,18 @@ function activeLink(link:any,now:number){
  requireActive(link.creator,now);
  const member=db.prepare("SELECT role FROM shared_members WHERE room_id=? AND user_id=? AND role IN ('owner','co-owner')").get(link.room_id,link.creator);if(!member)throw fail('Guest host access has ended',410);
 }
-function describe(call:any,link:any,now:number){return {id:call.id,status:call.status,expires:link.expires,iceServers:iceServers(link.expires,now)};}
+function describe(call:any,link:any,now:number){return {id:call.id,status:call.status,kind:call.kind||'video',expires:link.expires,iceServers:iceServers(link.expires,now)};}
 export function guestMedia(action:string,method:string,v:any,actor:{guestHash?:string,user?:any},now=Date.now()){
  if(method!=='POST')throw fail('Method not allowed',405);pruneGuestMedia(now);
  if(action==='request'){
+  const kind=String(v.kind||'video');if(!['video','screen'].includes(kind))throw fail('Choose a supported guest session',400);
   const session=db.prepare('SELECT s.hash,l.* FROM guest_lobby_sessions s JOIN guest_lobby_links l ON l.id=s.link_id WHERE s.hash=?').get(actor.guestHash||'') as any;activeLink(session,now);
   const previous=db.prepare('SELECT * FROM guest_media_calls WHERE link_id=?').get(session.id) as any;
   if(previous&&previous.status!=='Ended')throw fail('A meeting is already requested. End it or wait 30 seconds after closing the previous page.',409);
   if(previous&&previous.created>now-3000)throw fail('Wait a moment before requesting another meeting',429);
   const id=randomBytes(24).toString('hex');
   if(previous)db.prepare('DELETE FROM guest_media_signals WHERE call_id=?').run(previous.id);
-  db.prepare("INSERT INTO guest_media_calls VALUES(?,?,?,NULL,NULL,'Ringing',?,0,?) ON CONFLICT(link_id) DO UPDATE SET id=excluded.id,guest_hash=excluded.guest_hash,host_id=NULL,host_session=NULL,status='Ringing',created=excluded.created,host_seen=0,guest_seen=excluded.guest_seen").run(id,session.id,actor.guestHash,now,now);
+  db.prepare("INSERT INTO guest_media_calls(id,link_id,guest_hash,host_id,host_session,status,created,host_seen,guest_seen,kind) VALUES(?,?,?,NULL,NULL,'Ringing',?,0,?,?) ON CONFLICT(link_id) DO UPDATE SET id=excluded.id,guest_hash=excluded.guest_hash,host_id=NULL,host_session=NULL,status='Ringing',created=excluded.created,host_seen=0,guest_seen=excluded.guest_seen,kind=excluded.kind").run(id,session.id,actor.guestHash,now,now,kind);
   return describe(db.prepare('SELECT * FROM guest_media_calls WHERE id=?').get(id),session,now);
  }
  const call=db.prepare('SELECT * FROM guest_media_calls WHERE id=?').get(String(v.callId||'')) as any;if(!call)throw fail('Meeting not found',404);

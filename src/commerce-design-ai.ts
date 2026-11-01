@@ -35,6 +35,16 @@ export function createAIInvitation(value:any){
   return {id,status:'Queued',message:'Your invitation request is queued for the selected local AI. No store listing or product purchase was created.'};
  }catch(error){db.exec('ROLLBACK');throw error;}
 }
+// Read-only operations snapshot for the Distribution Center's virtual floor.
+// Only an actual queued/running AI design run is eligible for a production
+// assignment; unrelated company work and completed drafts stay off the line.
+export function commerceDesignAssignments(){
+ const rows=db.prepare("SELECT j.id,j.request_id,r.agent,r.status,j.created FROM commerce_design_jobs j JOIN ai_runs r ON r.id=j.run_id WHERE j.design_id IS NULL AND r.status IN ('Queued','Running') ORDER BY CASE r.status WHEN 'Running' THEN 0 ELSE 1 END,j.created,j.id LIMIT 16").all() as any[];
+ const assigned=new Set<string>();
+ return rows.filter(row=>{const agent=String(row.agent||'');if(!agent||assigned.has(agent))return false;assigned.add(agent);return true;}).map(row=>{
+  return {id:String(row.agent),jobId:String(row.id),agent:String(row.agent),status:String(row.status),action:'Original invitation design · owner-requested creative brief',kind:'ai-design'};
+ });
+}
 export function invitationJobStatus(id:string){
  if(typeof id!=='string'||!UUID.test(id))throw Error('Choose a saved invitation-design request');
  const row=db.prepare('SELECT * FROM commerce_design_jobs WHERE id=?').get(id) as any;if(!row)throw Error('Invitation-design request not found');
