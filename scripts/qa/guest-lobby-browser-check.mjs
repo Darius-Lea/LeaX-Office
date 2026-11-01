@@ -90,7 +90,18 @@ try {
   const follow = a.locator('#guest-visits').getByRole('button', {name: 'Follow guest view'});
   await follow.waitFor({state: 'visible'});
   await follow.click();
+  await a.locator('#scene canvas[data-guest-follow-avatar="active"]').waitFor();
   await b.getByRole('button', {name: 'Go to meeting room'}).click();
+  await a.locator('#guest-visits').getByRole('button', {name: 'Stop following view'}).click();
+  await a.locator('#guest-visits').getByRole('button', {name: 'Guide this guest'}).click();
+  await b.getByRole('button', {name: 'Follow host’s tour'}).waitFor({state: 'visible'});
+  await b.getByRole('button', {name: 'Follow host’s tour'}).click();
+  await b.getByRole('button', {name: 'Explore on my own'}).waitFor({state: 'visible'});
+  assert.equal(await b.locator('[data-move="forward"]').isDisabled(), true);
+  await b.getByRole('button', {name: 'Explore on my own'}).click();
+  await b.locator('[data-move="forward"]:not([disabled])').waitFor({state: 'visible'});
+  await a.locator('#guest-visits').getByRole('button', {name: 'End guided tour'}).click();
+  await b.locator('#host-guide').waitFor({state: 'hidden'});
 
   assert.equal((await guest.request.get('/api/state')).status(), 401);
   assert.equal((await guest.request.get('/api/shared/me')).status(), 401);
@@ -120,7 +131,7 @@ try {
   assert.match(await b.locator('#entry-status').textContent(), /revoked|ended|expired/i);
   assert.equal((await guest.request.get('/api/shared/guest/state')).status(), 410);
   assert.deepEqual(errors, []);
-  console.log('PASS: office invite button, lobby while entering a name, phone-sized join, 3D meeting room, host follow view, 320–1024px layouts, private API denial, and immediate revocation.');
+  console.log('PASS: office invite, mobile join, live 3D guest follow avatar, guest-choice guided tour, mobile movement recovery, meeting room, 320–1024px layouts, private API denial, and revocation.');
 } finally {
   await browser?.close();
   if (child?.exitCode === null) {
