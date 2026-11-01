@@ -8,7 +8,15 @@ For web/desktop sharing, both must use the same updated HTTPS service with durab
 
 Preview.47 adds **two-person guest video/audio meetings in the lobby**. After joining, the guest presses Request video meeting. The host presses Answer meeting or Decline meeting on the matching invitation. Each person explicitly grants their own microphone/camera permission; camera is optional. Controls include independent microphone mute, camera off/on, hang-up, remote video playback and fullscreen (where the browser supports it). No call is recorded by this application. Keep the page open. Revocation, guest departure, expiry, loss of host authority, account holds, or failed authorization/network polling stops local capture and peer media. A missing heartbeat ends the server-side call after 30 seconds; ringing requests time out after 60 seconds.
 
-There is no live office avatar, movement, tour, shared viewpoint, click display, agent answer or permission-to-speak integration. Those features remain unfinished on the separate WIP branch. Render deployment and real phone hardware remain unverified; browser validation uses a phone-sized Chromium context. The Google Sites embed failure is not resolved by this release.
+## Office walkthroughs and guided 3D views
+
+An owner or co-owner can invite a guest to the existing office, choose the destination office, and share the one-use link. After joining, the guest can explore independently or choose **Follow host's tour**. Following mirrors the host's position and camera inside the office scene; the guest can leave the tour and move independently at any time. The host can separately choose **Follow guest view**, which mirrors the guest's 3D position and camera and places a host avatar behind the guest in the scene. This does not share the guest's browser tabs or desktop. Screen sharing is a separate, optional browser permission.
+
+The guest panel explains what the host can see. Both directions stop when the tour ends, the guest leaves, the invite expires or is revoked, or access checks fail. Office controls fit touch screens; the Monetization campus lowers render resolution and animation rate on smaller or lower-power devices. The existing lobby file remains unchanged; the office pages reuse its blue glass, cyan glow and motion treatment.
+
+Video/audio meetings remain a separate explicit flow. Each participant grants their own microphone/camera access, and guest screen sharing requires an additional browser prompt. The application does not record the call. Public Render deployment, a production TURN relay, physical phones and external-network walkthroughs are not verified by the local source checks. The Google Sites embed issue remains unresolved.
+
+AI product-design work in the Distribution Center reflects only a real queued/running local-model invitation-design assignment. The worker and a clearly labeled unsaved draft token move while the model is working. The saved proof files do not move unless a job is specifically linked to that file. The scene itself does not run work; the LeaX host and selected local or paired worker must be online.
 
 ## Relay configuration
 
