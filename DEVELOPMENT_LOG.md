@@ -1,6 +1,6 @@
 ## 2026-11-01 — make office invitations easier to accept
 
-When a teammate opens an account invitation, the shared-offices page now identifies the invitation and offers account creation or sign-in in context. The original headquarters lobby is unchanged. JavaScript syntax and the attachment/lobby SHA-256 match were verified. A local HTTP test could not start because this environment has Node 22.15 while the project requires Node 24.19+; see TEST_RESULTS.md.
+When a teammate opens an account invitation, the shared-offices page now identifies the invitation and offers account creation or sign-in in context. `/login?founder=1` opens the existing founder credential form directly; no lobby markup or artwork changed. JavaScript syntax, the adapter shortcut, and the attachment/lobby SHA-256 match were verified. A local HTTP test could not start because this environment has Node 22.15 while the project requires Node 24.19+; see TEST_RESULTS.md.
 
 ## Preview.47 — passwordless guest video/audio meetings, 2026-10-30
 

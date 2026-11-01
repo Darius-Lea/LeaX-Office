@@ -8,6 +8,7 @@
 
 - The supplied `LeaX Headquarters lobby (preview) (1).html` is copied to `public/lobby.html` byte-for-byte (SHA-256 `bf4465eb3fe032a95722b7b3235e353deca8645547f509d538a6c0aab310d902`). The server adds separate fetch and provider-status adapters around it; the prototype's markup, attributes, inline code and original preview fetch shim remain intact.
 - `/`, `/login` and `/lobby` show the lobby for founders and members. Existing shared-account registration/sign-in remains wired to `/api/shared`; the hidden founder entrance is the original five logo clicks or typing `leaxadmin` outside a field. The founder form still requires the real founder password and first-setup code. Authenticated founders continue to `/headquarters`, which checks the founder session server-side.
+- For a simpler founder shortcut without changing the lobby, `/login?founder=1` opens that same password-protected founder form. Team invite links now explain that recipients can create an account or sign in to join the inviter's office.
 - Provider cards remain in the prototype. Unsupported OAuth providers and Twilio are shown as not connected, and clicking them cannot create a simulated connected state.
 - Locally rendered in the browser with the original 3D lobby visible. The build and automated results are in `TEST_RESULTS.md`. No public Render deployment or third-party provider connection was made.
 

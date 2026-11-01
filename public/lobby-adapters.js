@@ -47,6 +47,11 @@
 
   const authBack = document.querySelector('#authBack');
   const continueButton = document.querySelector('#btnContinue');
+  // Open the lobby's existing credential-checked founder form from a direct link.
+  if (new URLSearchParams(location.search).get('founder') === '1') {
+    const brand = document.querySelector('.brand');
+    if (brand) for (let i = 0; i < 5; i++) brand.click();
+  }
   const routeContinue = () => {
     if (!authBack || authBack.hidden || !continueButton) return;
     const isFounder = document.querySelector('#authBackText')?.textContent.startsWith('Founder session is active.');
