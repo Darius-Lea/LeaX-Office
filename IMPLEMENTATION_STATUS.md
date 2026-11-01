@@ -1,3 +1,12 @@
+## 2026-11-01 — guided guest tours, office visuals and live product work
+
+- Guest visits now include host-to-guest **Follow host's tour** and host **Follow guest view** modes. Each mirrors only the in-office 3D pose/camera. The host avatar follows behind the guest; browser tabs stay private unless the guest separately grants screen share. Existing video/audio remains separately permissioned.
+- Office and guest pages use the lobby's glass, blue/cyan glow and motion style; `public/lobby.html` remains byte-for-byte identical to the supplied reference.
+- Fixed an extra animation-frame loop in the Monetization campus that compounded during walking. Mobile/lower-power clients use adaptive antialiasing, pixel ratio and shadow-map resolution. The QA script now checks frames while walking.
+- Distribution Center crew and draft-token movement are tied to real queued/running local-model invitation-design assignments. Unrelated AI work and completed/saved proofs are not shown as active factory tasks.
+- LeaX already supports local Ollama/LM Studio models and verified paired desktop workers for AI invitation drafts without a paid API key. Hosted consumer chat webpages are not used as programmatic model APIs. Background inference still requires the LeaX host/selected worker to remain online.
+- Focused Node 24 backend tests passed (19/19) for product design assignment projection, commerce and guest sessions. JavaScript/TypeScript syntax checks passed. Full suite: 194/195; the production build test failed because sandboxed esbuild could not read an ancestor directory. Direct production build hit the same sandbox error. Browser frame-loop smoke is added but could not run because Playwright is unavailable. Details are in `TEST_RESULTS.md`.
+
 ## Invitation sign-in clarity — 2026-11-01
 
 - Invitation links now explain that the recipient is joining an existing LeaX office, and explicitly offer account creation or sign-in. Existing invitation acceptance, membership, and account APIs are unchanged.
@@ -323,3 +332,4 @@ Validation: production app build completed with 37 files; `git diff --check` pas
 Owners and co-owners can create a 5–240 minute, one-use guest invitation from the shared office. Visit types include investor walkthrough, interview, training, contractor session, meeting and coworking. The guest opens a name-only join screen over the exact lobby prototype, then enters a responsive 3D office and meeting room. The host can follow the guest's pose and camera, receive a consented video or screen-share request, and revoke access. Guest capabilities remain temporary and lobby-scoped; private company/account APIs remain unavailable. A separate invitation grants permanent account membership.
 
 Validated with the 195-test suite, real-Chrome browser QA at 320/390/768/1024px, and a 149-file production build. Physical phone/tablet hardware, Render deployment and cross-network WebRTC are not verified. Configure production TURN credentials to improve media connection reliability on restrictive networks; screen sharing remains subject to browser support and guest permission.
+
