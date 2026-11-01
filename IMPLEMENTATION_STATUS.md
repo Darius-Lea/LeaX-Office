@@ -1,3 +1,9 @@
+## Invitation sign-in clarity — 2026-11-01
+
+- Invitation links now explain that the recipient is joining an existing LeaX office, and explicitly offer account creation or sign-in. Existing invitation acceptance, membership, and account APIs are unchanged.
+- `public/lobby.html` remains byte-for-byte identical to the supplied lobby (SHA-256 `bf4465eb3fe032a95722b7b3235e353deca8645547f509d538a6c0aab310d902`). The supplied lobby's visible member sign-in and create-account tabs continue to use LeaX shared-office accounts.
+- `node --check public/offices.js` passed. The local HTTP integration test could not start with installed Node 22.15 because this app requires Node 24.19+ (`node:sqlite` is missing the `backup` export in this runtime). Historical Node 24 validation remains recorded below; it was not rerun here.
+
 ## Current implementation — lobby-first sign-in (2026-10-31)
 
 - The supplied `LeaX Headquarters lobby (preview) (1).html` is copied to `public/lobby.html` byte-for-byte (SHA-256 `bf4465eb3fe032a95722b7b3235e353deca8645547f509d538a6c0aab310d902`). The server adds separate fetch and provider-status adapters around it; the prototype's markup, attributes, inline code and original preview fetch shim remain intact.

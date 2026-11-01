@@ -8,11 +8,12 @@ test('single-use guest capability expires, isolates accounts, checks host author
  const owner=call('register',{handle:'guestowner',name:'Owner',password}),stranger=call('register',{handle:'guestother',name:'Other',password});const address=owner.data.address;
  assert.throws(()=>call('guest-admin/create',{address},stranger.token),/owner or co-owner/);
  assert.throws(()=>call('guest-admin/create',{address,minutes:241},owner.token),/5–240/);
- const create=()=>call('guest-admin/create',{address,minutes:5},owner.token).data;
+ const create=()=>call('guest-admin/create',{address,minutes:5,purpose:'training'},owner.token).data;
  const link=create();assert.ok(!(db.prepare('SELECT hash FROM guest_lobby_links WHERE id=?').get(link.id) as any).hash.includes(link.invitation));
  const guest=call('guest/redeem',{invitation:link.invitation,name:'Phone visitor'});assert.ok(guest.token);assert.equal(authenticated(guest.token!),false);
  assert.throws(()=>call('guest/redeem',{invitation:link.invitation,name:'Second'}),/already used/);
- assert.equal(call('guest/state',undefined,guest.token).data.scope,'lobby-only');
+ assert.equal(call('guest/state',undefined,guest.token).data.scope,'temporary-office-visit');assert.equal(call('guest/state',undefined,guest.token).data.purpose,'training');
+ const pose={active:true,cameraMode:'explore',x:3.25,z:1.5,yaw:.4,pitch:.2};call('guest/pose',{pose},guest.token);assert.deepEqual(call('guest-admin/list',{address},owner.token).data.links.find((item:any)=>item.name==='Phone visitor').pose,pose);assert.throws(()=>call('guest/pose',{pose:{...pose,x:NaN}},guest.token),/Invalid office view/);
  assert.throws(()=>call('me',undefined,guest.token),/Sign in/);assert.throws(()=>call('room/'+address,undefined,guest.token),/Sign in/);
  call('guest-admin/revoke',{address,id:link.id},owner.token);assert.throws(()=>call('guest/state',undefined,guest.token),/ended/);
  const expires=create(),expGuest=call('guest/redeem',{invitation:expires.invitation,name:'Expires'});assert.throws(()=>call('guest/state',undefined,expGuest.token,now+300000),/ended/);
@@ -28,7 +29,7 @@ test('HTTP guest page, separate HttpOnly cookie, origin guard and private API is
  const made=await post('guest-admin/create',{address,minutes:5},ownerCookie);assert.equal(made.status,200);const link=await made.json();
  const joined=await post('guest/redeem',{invitation:link.invitation,name:'Mobile'});assert.equal(joined.status,200);assert.match(joined.headers.get('set-cookie')!,/^lx_guest=.*HttpOnly; SameSite=Strict/);const cookie=joined.headers.get('set-cookie')!.split(';')[0];
  assert.equal((await fetch(origin+'/guest')).status,200);assert.equal((await fetch(origin+'/guest.js')).status,200);
- assert.equal((await fetch(origin+'/api/shared/guest/state',{headers:{Cookie:cookie}})).status,200);
+ assert.equal((await fetch(origin+'/api/shared/guest/state',{headers:{Cookie:cookie}})).status,200);const inviteLobby=await fetch(origin+'/guest-lobby');assert.equal(inviteLobby.status,200);assert.match(inviteLobby.headers.get('content-security-policy')!,/frame-ancestors 'self'/);assert.match(await inviteLobby.text(),/HQ: HEADQUARTERS - YOUR BUSINESS IN MOTION/);
  assert.equal((await fetch(origin+'/api/state',{headers:{Cookie:cookie}})).status,401);
  assert.equal((await fetch(origin+'/api/shared/me',{headers:{Cookie:cookie}})).status,401);
  assert.equal((await fetch(origin+'/api/shared/guest/leave',{method:'POST',headers:{Origin:'https://attacker.invalid',Cookie:cookie}})).status,403);

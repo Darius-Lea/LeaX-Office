@@ -1,3 +1,8 @@
+## 2026-11-01 invitation sign-in copy
+
+- `node --check public/offices.js` — passed. SHA-256 of `public/lobby.html` matched the supplied download — passed.
+- `node --test test/lobby-http.test.ts` could not start its local server under the installed Node 22.15.0 runtime: `node:sqlite` does not export `backup` in this version. The project declares Node 24.19+; its earlier Node 24 run (194 passed) is historical and was not repeated here.
+
 ## 2026-10-31 — guest office walkthroughs and responsive join
 
 - Full suite: Node 24.22.1, serialized for Windows server stability — 195 passed, zero failed/skipped/cancelled.

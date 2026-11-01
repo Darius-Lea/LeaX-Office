@@ -35,7 +35,7 @@ test('rollout APIs require founder authentication and same-origin writes, retain
   const state=await (await call('state')).json();assert.equal(state.rollouts.enabled,false);assert.equal(state.rollouts.checkedAt,null);assert.equal(state.rollouts.leads.length,0);
   assert.equal(state.rollouts.lanes.length,6);
   const asset=await fetch(origin+'/rollouts.js');assert.equal(asset.status,200);assert.match(asset.headers.get('content-type')||'',/javascript/);
-  const html=await (await fetch(origin+'/')).text();assert.match(html,/id="rollout-workspace"/);
+  const html=await (await fetch(origin+'/')).text();assert.match(html,/id="authCard"/);assert.doesNotMatch(html,/id="rollout-workspace"/);const privateOfficeResponse=await fetch(origin+'/headquarters',{headers:{Cookie:cookie}});assert.equal(privateOfficeResponse.status,200);assert.match(await privateOfficeResponse.text(),/id="rollout-workspace"/);
   await stop();origin=await launch();assert.equal((await (await call('rollouts')).json()).enabled,false);
   const resumed=await call('rollouts/configure',{enabled:true});assert.equal(resumed.status,200);assert.equal((await resumed.json()).enabled,true);
  }finally{await stop();rmSync(directory,{recursive:true,force:true});}

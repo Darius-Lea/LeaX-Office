@@ -32,3 +32,6 @@ test('guest call timeout, explicit decline, revocation, expiry and account holds
 test('configured TURN shared secret becomes short-lived credentials without exposing the secret',()=>{
  now+=60000;const a=guest();const previous={url:process.env.HQ_TURN_URL,secret:process.env.HQ_TURN_SECRET};process.env.HQ_TURN_URL='turns:relay.example.test:5349';process.env.HQ_TURN_SECRET='synthetic-test-relay-secret';try{const result=peer('request',a.token);const relay=result.iceServers.find((s:any)=>Array.isArray(s.urls));assert.ok(relay.username&&relay.credential);assert.ok(!JSON.stringify(result).includes(process.env.HQ_TURN_SECRET));assert.ok(Number(relay.username.split(':')[0])*1000<=a.link.expires);}finally{if(previous.url===undefined)delete process.env.HQ_TURN_URL;else process.env.HQ_TURN_URL=previous.url;if(previous.secret===undefined)delete process.env.HQ_TURN_SECRET;else process.env.HQ_TURN_SECRET=previous.secret;}
 });
+test('a guest may separately request a consent-based screen share and only its host can answer',()=>{
+ now+=60000;const a=guest(),requestResult=peer('request',a.token,{kind:'screen'});assert.equal(requestResult.kind,'screen');assert.equal(host('answer',requestResult.id).kind,'screen');host('end',requestResult.id);assert.equal(peer('poll',a.token,{callId:requestResult.id}).status,'Ended');
+});

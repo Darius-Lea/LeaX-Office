@@ -1,3 +1,7 @@
+## 2026-11-01 — make office invitations easier to accept
+
+When a teammate opens an account invitation, the shared-offices page now identifies the invitation and offers account creation or sign-in in context. The original headquarters lobby is unchanged. JavaScript syntax and the attachment/lobby SHA-256 match were verified. A local HTTP test could not start because this environment has Node 22.15 while the project requires Node 24.19+; see TEST_RESULTS.md.
+
 ## Preview.47 — passwordless guest video/audio meetings, 2026-10-30
 
 Added explicit guest request and host answer/decline, two-party WebRTC audio/video, optional camera, independent mute/camera controls, hang-up, remote playback/fullscreen and phone layout. Guest capability and answering host session isolate signaling; expiry/revocation/account holds or lost authorization stop media. Configurable TURN supports shared-secret short-lived credentials or an existing static relay. No production relay is provisioned. The same source serves web and packaged desktop; public Render deployment and actual Windows installation remain unverified. Office tours, room-display/agent reply integration and the Google Sites embed failure remain unfinished. Auto Poster remains disconnected. See docs/GUEST-LOBBY.md.
