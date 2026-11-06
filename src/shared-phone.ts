@@ -1,4 +1,5 @@
 import {randomBytes,randomUUID} from 'node:crypto';
+import {mediaConfiguration} from './media-config.ts';
 import {db} from './store.ts';
 import {accessState,requireActive} from './platform-access.ts';
 const fail=(s:string,status=400)=>Object.assign(Error(s),{status});
@@ -11,7 +12,7 @@ function member(userId:string,address:string){const r=db.prepare('SELECT r.*,m.r
 function publicCompany(c:any){return {number:c.number,name:c.hidden?'Private company':c.name,accepting:!!c.accepting};}
 function access(call:any,userId:string){if(call.from_user===userId)return true;if(call.to_user)return call.to_user===userId;return !!db.prepare("SELECT 1 FROM shared_members WHERE room_id=? AND user_id=? AND role!='visitor'").get(call.to_room,userId);}
 function current(callId:any,userId:string){if(typeof callId!=='string')throw fail('Choose a call');const c=db.prepare('SELECT * FROM shared_phone_calls WHERE id=?').get(callId) as any;if(!c||!access(c,userId))throw fail('Call not available',404);if([c.from_user,c.to_user,c.answered_by].filter(Boolean).some(id=>accessState(id).state!=='active')){db.prepare("UPDATE shared_phone_calls SET status='Ended',updated=? WHERE id=?").run(Date.now(),c.id);c.status='Ended';}return c;}
-function describe(c:any,userId:string){const from=company(db.prepare('SELECT * FROM shared_rooms WHERE id=?').get(c.from_room)),to=company(db.prepare('SELECT * FROM shared_rooms WHERE id=?').get(c.to_room));return {id:c.id,status:c.status,message:c.message,from:publicCompany(from),to:publicCompany(to),fromUser:c.from_user,toUser:c.answered_by||c.to_user,incoming:c.from_user!==userId,created:c.created,updated:c.updated};}
+function describe(c:any,userId:string){const from=company(db.prepare('SELECT * FROM shared_rooms WHERE id=?').get(c.from_room)),to=company(db.prepare('SELECT * FROM shared_rooms WHERE id=?').get(c.to_room));return {...mediaConfiguration(),id:c.id,status:c.status,message:c.message,from:publicCompany(from),to:publicCompany(to),fromUser:c.from_user,toUser:c.answered_by||c.to_user,incoming:c.from_user!==userId,created:c.created,updated:c.updated};}
 export function sharedPhone(path:string,method:string,v:any,user:any,now=Date.now()){
  requireActive(user.id,now);
  db.prepare("UPDATE shared_phone_calls SET status='Missed',updated=? WHERE status IN ('Ringing','Requested') AND updated<?").run(now,now-120000);

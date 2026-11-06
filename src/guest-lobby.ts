@@ -1,3 +1,5 @@
+import {guestMeeting} from './room-meetings.ts';
+import {guestPresence} from './room-presence.ts';
 import {randomBytes,createHash} from 'node:crypto';
 import {guestMedia,pruneGuestMedia} from './guest-media.ts';
 import {db} from './store.ts';
@@ -55,6 +57,8 @@ export function guestLobbyRequest(action:string,method:string,body:any,token:str
   return {data:{ok:true},token:capability};
  }
  if(action==='leave'&&method==='POST'){db.prepare('DELETE FROM guest_lobby_sessions WHERE hash=?').run(hash(token));return {data:{ok:true},token:''};}
+ if(action.startsWith('meeting-')){if(method!=='POST')throw fail('Method not allowed',405);return {data:guestMeeting(action.slice(8),body,hash(token),now)};}
+ if(action==='presence'){if(method!=='POST')throw fail('Method not allowed',405);return {data:guestPresence(body,hash(token),now)};}
  if(action.startsWith('media-'))return {data:guestMedia(action.slice(6),method,body,{guestHash:hash(token)},now)};
  if(action==='pose'&&method==='POST'){
   const session=db.prepare('SELECT s.link_id,l.creator,l.expires,l.revoked FROM guest_lobby_sessions s JOIN guest_lobby_links l ON l.id=s.link_id WHERE s.hash=?').get(hash(token)) as any;if(!session)throw fail('Guest access has ended. Ask your host for a new link.',410);if(session.revoked||session.expires<=now)throw fail('Guest access has ended. Ask your host for a new link.',410);requireActive(session.creator,now);
@@ -68,12 +72,12 @@ export function guestLobbyRequest(action:string,method:string,body:any,token:str
   db.prepare('UPDATE guest_lobby_sessions SET follows_host=? WHERE hash=?').run(active?1:0,hash(token));return {data:{followingHost:active}};
  }
  if(action==='state'&&method==='GET'){
-  const row=db.prepare('SELECT s.name,s.link_id,l.creator,l.expires,l.purpose,r.name AS office FROM guest_lobby_sessions s JOIN guest_lobby_links l ON l.id=s.link_id JOIN shared_rooms r ON r.id=l.room_id JOIN shared_members m ON m.room_id=r.id AND m.user_id=l.creator WHERE s.hash=? AND l.expires>? AND l.revoked=0 AND m.role IN (\'owner\',\'co-owner\')').get(hash(token),now) as any;
+  const row=db.prepare('SELECT s.name,s.link_id,l.creator,l.expires,l.purpose,r.name AS office,r.address FROM guest_lobby_sessions s JOIN guest_lobby_links l ON l.id=s.link_id JOIN shared_rooms r ON r.id=l.room_id JOIN shared_members m ON m.room_id=r.id AND m.user_id=l.creator WHERE s.hash=? AND l.expires>? AND l.revoked=0 AND m.role IN (\'owner\',\'co-owner\')').get(hash(token),now) as any;
   if(!row)throw fail('Guest access has ended. Ask your host for a new link.',410);requireActive(row.creator,now);
   db.prepare('UPDATE guest_lobby_sessions SET seen=? WHERE hash=?').run(now,hash(token));
   const session=db.prepare('SELECT pose,host_pose,host_pose_seen,follows_host FROM guest_lobby_sessions WHERE hash=?').get(hash(token)) as any;
   const hostPose=session.host_pose&&now-session.host_pose_seen<5000?JSON.parse(session.host_pose):null;
-  return {data:{name:row.name,office:row.office,expires:row.expires,purpose:row.purpose,pose:session.pose?JSON.parse(session.pose):null,hostPose,guideActive:!!hostPose?.active,followingHost:!!session.follows_host,scope:'temporary-office-visit'}};
+  return {data:{name:row.name,office:row.office,address:row.address,expires:row.expires,purpose:row.purpose,pose:session.pose?JSON.parse(session.pose):null,hostPose,guideActive:!!hostPose?.active,followingHost:!!session.follows_host,scope:'temporary-office-visit'}};
  }
  throw fail('Unknown guest action',404);
 }

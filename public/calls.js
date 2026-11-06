@@ -9,10 +9,10 @@ function callForm(meeting){
  if(active){active.dialog.focus();return;}
  const form=el('form'),label=el('label','Your participant name'),name=el('input');name.required=true;name.maxLength=80;label.append(name);
  const videoLabel=el('label','Share camera (optional)'),video=el('input');video.type='checkbox';videoLabel.prepend(video);
- const serverLabel=el('label','Optional STUN or TURN server URL'),server=el('input');server.placeholder='stun:your-server.example.com:3478';serverLabel.append(server);
+ const serverLabel=el('label','Advanced relay override (normally leave blank)'),server=el('input');server.placeholder='stun:your-server.example.com:3478';serverLabel.append(server);
  const userLabel=el('label','TURN username (if needed)'),user=el('input');userLabel.append(user);
  const passwordLabel=el('label','TURN credential (if needed)'),password=el('input');password.type='password';passwordLabel.append(password);
- const message=el('p','Join from this same office address on each device. After you choose Join, your browser asks for microphone/camera access and seats you in the first-person room. The other person’s actual camera appears on the room display when connected. No recording is made. Restrictive networks may require your own STUN/TURN server or the saved external meeting link.'),join=el('button','Join live call');
+ const message=el('p','Join from this same office address on each device. After you choose Join, your browser asks for microphone/camera access and seats you in the first-person room. The other person’s actual camera appears on the room display when connected. No recording is made. The host’s configured relay is used automatically. Without a host relay, restrictive networks may need the saved external meeting link.'),join=el('button','Join live call');
  form.append(label,videoLabel,serverLabel,userLabel,passwordLabel,message,join);
  form.onsubmit=async event=>{event.preventDefault();join.disabled=true;try{const iceServers=[];if(server.value){if(!/^(stun|stuns|turn|turns):[^\s@]+$/.test(server.value)||server.value.length>1000)throw Error('Use a valid STUN/TURN server URL without embedded credentials');iceServers.push({urls:server.value,...(user.value?{username:user.value,credential:password.value}:{})});}await beginCall(meeting,name.value,video.checked,iceServers);password.value='';}catch(error){message.textContent=error.message;join.disabled=false;}};
  window.hqPopup.open({title:'Join '+meeting.title,contentNode:form,readable:false});
@@ -23,6 +23,7 @@ async function beginCall(meeting,name,camera,iceServers){
  try{
   media=await navigator.mediaDevices.getUserMedia({audio:true,video:camera});
   const joined=await api('calls/join',{meetingId:meeting.id,name});
+  if(!iceServers.length)iceServers=joined.iceServers||[];
   const panel=el('section');panel.className='meeting-call-panel';panel.id='meeting-call-controls';panel.tabIndex=-1;panel.setAttribute('aria-label','Live meeting controls');panel.dataset.sceneAvailable='false';
   const heading=el('div');heading.className='meeting-call-heading';heading.append(el('h2',meeting.title));const privacy=el('span','LIVE CALL · NOT RECORDED');privacy.style.fontSize='10px';heading.append(privacy);
   const status=el('p','Waiting for another participant. The call will appear on your meeting-room screen when connected.');status.setAttribute('role','status');
