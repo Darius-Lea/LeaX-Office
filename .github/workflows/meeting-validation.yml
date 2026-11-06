@@ -1,0 +1,30 @@
+name: Validate meeting updates
+on:
+  push:
+    branches: [codex/meeting-room-upgrades]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      NODE_USE_ENV_PROXY: '1'
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 24.22.1
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Run backend suite
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force work/test-temp | Out-Null
+          $env:TEMP = Join-Path $pwd 'work/test-temp'
+          $env:TMP = $env:TEMP
+          npm test
+      - name: Build production application
+        run: npm run build:app
