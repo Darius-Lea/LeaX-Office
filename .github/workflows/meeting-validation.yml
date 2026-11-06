@@ -13,6 +13,8 @@ jobs:
     env:
       NODE_USE_ENV_PROXY: '1'
     steps:
+      - name: Preserve repository file bytes on Windows
+        run: git config --global core.autocrlf false
       - uses: actions/checkout@v7.0.1
       - uses: actions/setup-node@v7.1.0
         with:
