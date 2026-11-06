@@ -30,3 +30,23 @@ jobs:
           npm test
       - name: Build production application
         run: npm run build:app
+      - name: Install isolated browser test tooling
+        run: |
+          npm install --prefix work/qa --no-package-lock --no-save playwright@1.56.1
+          node work/qa/node_modules/playwright/cli.js install chromium
+      - name: Verify four-person source and packaged meetings
+        shell: pwsh
+        run: |
+          $env:HQ_PLAYWRIGHT_MODULE = node -p "require('node:url').pathToFileURL(require('node:path').resolve('work/qa/node_modules/playwright/index.mjs')).href"
+          $env:HQ_TEST_PACKAGED = '0'
+          node scripts/qa/room-meeting-browser-check.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $env:HQ_TEST_PACKAGED = '1'
+          node scripts/qa/room-meeting-browser-check.mjs
+      - name: Save browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: meeting-browser-evidence
+          path: work/qa-results
+          if-no-files-found: ignore

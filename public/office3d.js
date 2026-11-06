@@ -551,13 +551,13 @@ export function createOffice3D(host,{onEmployee,onOwner,onMeetingMode=()=>{},onE
  const guestFollowAvatar=makePerson('#48b795',2,true),guestFollowLabel=label('Host · Following guest','#a8f3d4',2.9,.42),guestFollowTarget=new THREE.Vector3();let guestFollowYaw=0,guestFollowActive=false;
  guestFollowAvatar.scale.setScalar(.84);guestFollowAvatar.visible=false;guestFollowLabel.visible=false;scene.add(guestFollowAvatar,guestFollowLabel);
  const guestFollowRing=new THREE.Mesh(new THREE.TorusGeometry(.37,.018,8,36),material('#6ce9ba',{emissive:'#2c8e6e',emissiveIntensity:.3,roughness:.4}));guestFollowRing.rotation.x=-Math.PI/2;guestFollowRing.position.y=.025;guestFollowRing.visible=false;guestFollowAvatar.add(guestFollowRing);geometries.add(guestFollowRing.geometry);
- function setGuestFollowAvatar(value,active=true){if(!active||!value?.active){guestFollowActive=false;guestFollowAvatar.visible=guestFollowLabel.visible=guestFollowRing.visible=false;delete canvas.dataset.guestFollowAvatar;markDirty();return false;}const yaw=Number(value.yaw)||0,x=value.cameraMode==='meeting'?meetingPosition.x:Number(value.x)||0,z=value.cameraMode==='meeting'?meetingPosition.z:Number(value.z)||0;guestFollowTarget.set(x+Math.sin(yaw)*1.15,0,z+Math.cos(yaw)*1.15);guestFollowYaw=yaw;if(!guestFollowActive){guestFollowAvatar.position.copy(guestFollowTarget);guestFollowAvatar.rotation.y=yaw;guestFollowLabel.position.copy(guestFollowTarget).add(new THREE.Vector3(0,2.25,0));}guestFollowActive=true;canvas.dataset.guestFollowAvatar='active';guestFollowAvatar.visible=guestFollowLabel.visible=guestFollowRing.visible=true;markDirty();return true;}
+ function setGuestFollowAvatar(value,active=true){if(!active||!value?.active){guestFollowActive=false;guestFollowAvatar.visible=guestFollowLabel.visible=guestFollowRing.visible=false;delete canvas.dataset.guestFollowAvatar;markDirty();return false;}const yaw=Number(value.yaw)||0,x=value.cameraMode==='meeting'?meetingPosition.x:Number(value.x)||0,z=value.cameraMode==='meeting'?meetingPosition.z:Number(value.z)||0;guestFollowTarget.set(x+Math.sin(yaw)*1.15,0,z+Math.cos(yaw)*1.15);guestFollowYaw=yaw;if(!guestFollowActive){guestFollowAvatar.position.copy(guestFollowTarget);guestFollowAvatar.rotation.y=yaw;guestFollowLabel.position.copy(guestFollowTarget).add(new THREE.Vector3(0,2.25,0));}guestFollowActive=true;canvas.dataset.guestFollowAvatar='active';guestFollowAvatar.visible=guestFollowLabel.visible=guestFollowRing.visible=!sharedRosterActive;markDirty();return true;}
 
  // Remote visitors are rendered from authenticated presence, never inferred from room membership.
- const sharedPeople=new Map();let localSharedSeat=null;
+ const sharedPeople=new Map();let localSharedSeat=null,sharedRosterActive=false;
  function removeSharedPerson(id){const person=sharedPeople.get(id);if(!person)return;scene.remove(person.standing,person.seated,person.nameplate);disposeLabel(person.nameplate);sharedPeople.delete(id);}
  function setSharedParticipants(people=[],selfId=null){
-  const roster=(Array.isArray(people)?people:[]).slice(0,64),ids=new Set();
+  const roster=(Array.isArray(people)?people:[]).slice(0,64),ids=new Set();sharedRosterActive=roster.length>0;if(sharedRosterActive)guestFollowAvatar.visible=guestFollowLabel.visible=guestFollowRing.visible=false;
   const own=roster.find(p=>p.id===selfId),ownSeat=own?.pose?.active&&own.pose.cameraMode==='meeting'&&Number.isInteger(own.seat)&&meetingSeats[own.seat]?own.seat:null;
   if(ownSeat!==localSharedSeat){
    localSharedSeat=ownSeat;
@@ -587,7 +587,7 @@ export function createOffice3D(host,{onEmployee,onOwner,onMeetingMode=()=>{},onE
  }
  function updateSharedParticipants(time,dt){
   let moving=false;for(const person of sharedPeople.values()){
-   const visible=(cameraMode==='meeting')===person.isMeeting,body=person.isMeeting?person.seated:person.standing;
+   const body=person.isMeeting?person.seated:person.standing,visible=(cameraMode==='meeting')===person.isMeeting&&Math.hypot(person.target.x-camera.position.x,person.target.z-camera.position.z)>.65;
    person.standing.visible=visible&&!person.isMeeting;person.seated.visible=visible&&person.isMeeting;person.nameplate.visible=visible;
    const distance=body.position.distanceTo(person.target),ease=reduced.matches?1:1-Math.exp(-dt*10);
    body.position.lerp(person.target,ease);body.rotation.y+=Math.atan2(Math.sin(person.yaw-body.rotation.y),Math.cos(person.yaw-body.rotation.y))*ease;
