@@ -1,3 +1,7 @@
+## 2026-11-06 — preview.48 release checkpoint
+
+Implemented shared member/guest four-person room calls, centralized ICE configuration, shared avatars/seats, screen-sharing controls, moderation, revisioned decisions/action items and explicitly shared-context local advisers. Windows CI passed all208 backend tests and production build. Four-browser end-to-end checks timed out at page/guest entry; no end-to-end media pass is claimed. Physical devices, external networks, production TURN, live Render deployment and Windows setup execution remain unverified. Hosted paired-worker meeting advisers remain setup-required. The owner explicitly requested publishing the current update before remaining session usage expires. See PR23 and docs/ROOM-MEETINGS.md; do not describe this as complete cross-network certification.
+
 ## 2026-11-01 — make office invitations easier to accept
 
 When a teammate opens an account invitation, the shared-offices page now identifies the invitation and offers account creation or sign-in in context. `/login?founder=1` opens the existing founder credential form directly; no lobby markup or artwork changed. JavaScript syntax, the adapter shortcut, and the attachment/lobby SHA-256 match were verified. A local HTTP test could not start because this environment has Node 22.15 while the project requires Node 24.19+; see TEST_RESULTS.md.

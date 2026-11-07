@@ -1,4 +1,6 @@
 // Collaboration accounts deliberately cannot authenticate the private founder APIs.
+import {memberMeeting} from './room-meetings.ts';
+import {memberPresence} from './room-presence.ts';
 import {randomBytes,randomUUID,scryptSync,timingSafeEqual,createHash} from 'node:crypto';
 import {db} from './store.ts';
 import {guestLobbyRequest,manageGuests} from './guest-lobby.ts';
@@ -51,6 +53,10 @@ export function sharedOfficeRequest(path:string,method:string,body:any,token:str
  if(path==='device-heartbeat'&&method==='POST'){db.prepare('UPDATE shared_sessions SET expires=? WHERE hash=?').run(now+7*86400000,user.sessionHash);return {data:{user:{id:user.id,handle:user.handle,name:user.name},access:accessState(user.id,now)}};}
  if(path==='me'&&method==='GET')return {data:{user:{id:user.id,handle:user.handle,name:user.name},access:accessState(user.id,now),terms:(db.prepare("SELECT value FROM settings WHERE key='platform_terms'").get() as any)?.value||'',offices:accessState(user.id,now).state!=='active'?[]:db.prepare('SELECT r.address,r.name,m.role FROM shared_rooms r JOIN shared_members m ON r.id=m.room_id WHERE m.user_id=? ORDER BY r.created').all(user.id)}};
  requireActive(user.id,now);
+ const meetingPath=path.match(/^room\/(lx-[a-f0-9]{24})\/meeting\/(join|poll|signal|leave|media|moderate|end|notes)$/);
+ if(meetingPath){if(method!=='POST')throw bad('Method not allowed',405);return {data:memberMeeting(meetingPath[2],body,user,meetingPath[1],now)};}
+ const presencePath=path.match(/^room\/(lx-[a-f0-9]{24})\/presence$/);
+ if(presencePath){if(method!=='POST')throw bad('Method not allowed',405);return {data:memberPresence(presencePath[1],body,user,now)};}
  if(path.startsWith('guest-admin/')){if(path==='guest-admin/create')rate('guest-create:'+user.id,10,now);return {data:manageGuests(path.slice(12),method,body,user,now)};}
  if(path.startsWith('phone/'))return {data:sharedPhone(path.slice(6),method,body,user,now)};
  if(path==='create'&&method==='POST'){rate('create:'+user.id,5,now);const name=text(body.name,100,'an office name');const count=db.prepare('SELECT count(*) AS n FROM shared_rooms WHERE owner_id=?').get(user.id) as any;if(count.n>=10)throw bad('You can own up to ten offices');return {status:201,data:{address:transaction(()=>createRoom(user.id,name,now))}};}

@@ -1,4 +1,5 @@
-import {randomBytes,createHmac} from 'node:crypto';
+import {randomBytes} from 'node:crypto';
+import {mediaConfiguration} from './media-config.ts';
 import {db} from './store.ts';
 import {requireActive} from './platform-access.ts';
 const fail=(message:string,status=400)=>Object.assign(new Error(message),{status});
@@ -6,12 +7,6 @@ db.exec(`CREATE TABLE IF NOT EXISTS guest_media_calls(id TEXT PRIMARY KEY,link_i
 CREATE TABLE IF NOT EXISTS guest_media_signals(id INTEGER PRIMARY KEY,call_id TEXT NOT NULL,target TEXT NOT NULL,payload TEXT NOT NULL,created INTEGER NOT NULL);
 CREATE INDEX IF NOT EXISTS guest_media_signals_call ON guest_media_signals(call_id,id);`);
 if(!(db.prepare('PRAGMA table_info(guest_media_calls)').all() as any[]).some(item=>item.name==='kind'))db.exec("ALTER TABLE guest_media_calls ADD COLUMN kind TEXT NOT NULL DEFAULT 'video'");
-function iceServers(expires:number,now:number){
- const servers:any[]=[];const stun=process.env.HQ_STUN_URL||'stun:stun.l.google.com:19302';if(/^stuns?:[^\s@]+$/.test(stun))servers.push({urls:stun});
- const urls=(process.env.HQ_TURN_URL||'').split(',').map(s=>s.trim()).filter(s=>/^turns?:[^\s@]+$/.test(s)).slice(0,4);
- if(urls.length){let username=process.env.HQ_TURN_USER||'',credential=process.env.HQ_TURN_PASSWORD||'';if(process.env.HQ_TURN_SECRET){username=Math.floor(Math.min(expires,now+3600000)/1000)+':lx-'+randomBytes(8).toString('hex');credential=createHmac('sha1',process.env.HQ_TURN_SECRET).update(username).digest('base64');}if(username&&credential)servers.push({urls,username,credential});}
- return servers;
-}
 export function pruneGuestMedia(now=Date.now()){
  db.prepare("UPDATE guest_media_calls SET status='Ended' WHERE status='Ringing' AND guest_seen<? OR status='Connected' AND (host_seen<? OR guest_seen<?) OR link_id NOT IN (SELECT id FROM guest_lobby_links WHERE revoked=0 AND expires>?)").run(now-60000,now-30000,now-30000,now);
  db.prepare("DELETE FROM guest_media_signals WHERE created<? OR call_id IN (SELECT id FROM guest_media_calls WHERE status='Ended')").run(now-120000);
@@ -22,7 +17,7 @@ function activeLink(link:any,now:number){
  requireActive(link.creator,now);
  const member=db.prepare("SELECT role FROM shared_members WHERE room_id=? AND user_id=? AND role IN ('owner','co-owner')").get(link.room_id,link.creator);if(!member)throw fail('Guest host access has ended',410);
 }
-function describe(call:any,link:any,now:number){return {id:call.id,status:call.status,kind:call.kind||'video',expires:link.expires,iceServers:iceServers(link.expires,now)};}
+function describe(call:any,link:any,now:number){return {id:call.id,status:call.status,kind:call.kind||'video',expires:link.expires,...mediaConfiguration(link.expires,now)};}
 export function guestMedia(action:string,method:string,v:any,actor:{guestHash?:string,user?:any},now=Date.now()){
  if(method!=='POST')throw fail('Method not allowed',405);pruneGuestMedia(now);
  if(action==='request'){
