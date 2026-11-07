@@ -1,3 +1,7 @@
+## 2026-11-06 — unified room meeting checkpoint
+
+See docs/ROOM-MEETINGS.md for the implemented changes, actual validation and remaining release/device/network checks. First integrated source passed203 backend tests and production build; final controls/adviser/browser validation is pending. No live web or Windows release is claimed at this checkpoint.
+
 ## 2026-11-01 — make office invitations easier to accept
 
 When a teammate opens an account invitation, the shared-offices page now identifies the invitation and offers account creation or sign-in in context. `/login?founder=1` opens the existing founder credential form directly; no lobby markup or artwork changed. JavaScript syntax, the adapter shortcut, and the attachment/lobby SHA-256 match were verified. A local HTTP test could not start because this environment has Node 22.15 while the project requires Node 24.19+; see TEST_RESULTS.md.

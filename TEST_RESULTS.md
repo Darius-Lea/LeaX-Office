@@ -1,3 +1,7 @@
+## 2026-11-06 — unified room meeting checkpoint
+
+See docs/ROOM-MEETINGS.md for the implemented changes, actual validation and remaining release/device/network checks. First integrated source passed203 backend tests and production build; final controls/adviser/browser validation is pending. No live web or Windows release is claimed at this checkpoint.
+
 ## 2026-11-01 invitation sign-in copy
 
 - `node --check public/offices.js` and `node --check public/lobby-adapters.js` — passed. Focused VM check confirmed `/login?founder=1` triggers the existing founder entrance. SHA-256 of `public/lobby.html` matched the supplied download — passed.

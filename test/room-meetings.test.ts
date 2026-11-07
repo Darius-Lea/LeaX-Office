@@ -81,9 +81,15 @@ test('owner moderation, source-of-truth media state and reviewed notes respect r
  member(owner,owner,'notes',{peerId:h.peerId,expectedRevision:1,decisions:['Corrected decision'],actionItems:[]});
  assert.equal(db.prepare('SELECT count(*) AS n FROM room_meeting_notes WHERE meeting_id=?').get(h.meetingId).n,2,'earlier reviewed notes retained');
  assert.throws(()=>member(worker,owner,'poll',{peerId:w.peerId,pose:{active:true,cameraMode:'explore',x:Infinity,z:0,yaw:0,pitch:0}}),/position/);
+ call('room/'+owner.address+'/member',{userId:worker.user.id,role:'co-owner'},owner.token);
+ assert.throws(()=>member(coowner,owner,'moderate',{peerId:c.peerId,targetId:w.peerId,muted:true}),/Only the office owner/);
+ assert.equal(member(worker,owner,'poll',{peerId:w.peerId}).self.role,'co-owner');
  member(owner,owner,'moderate',{peerId:h.peerId,targetId:w.peerId,remove:true});
  assert.throws(()=>member(worker,owner,'poll',{peerId:w.peerId}),/Join this meeting/);
  assert.throws(()=>member(worker,owner,'join'),/removed/);
+ const handle=db.prepare('SELECT handle FROM shared_users WHERE id=?').get(worker.user.id).handle;
+ const newSession=call('login',{handle,password},'').token;
+ assert.throws(()=>memberMeeting('join',{},sharedUser(newSession,now),owner.address,now),/removed/,'signing in again cannot bypass a person removal');
  member(owner,owner,'end',{peerId:h.peerId});
  assert.throws(()=>member(coowner,owner,'poll',{peerId:c.peerId}),/ended/);
  const next=member(owner,owner,'join');assert.notEqual(next.meetingId,h.meetingId);

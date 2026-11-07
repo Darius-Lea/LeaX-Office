@@ -9,9 +9,9 @@ test('presence client normalizes scene poses, renders roster and discards late r
  const scene={getExploreState:()=>({active:true,cameraMode:'explore',position:{x:1,z:2},yaw:.3,pitch:0}),setSharedParticipants:(people:any[],selfId:any)=>rendered.push({people,selfId})};
  const client=init({api:(path:string,v:any)=>{calls.push({path,v});if(v.leave)return Promise.resolve({});return new Promise(resolve=>{release=resolve;});},address:()=> 'lx-room',getScene:()=>scene});
  client.start();client.start();assert.equal(calls.length,1);assert.equal(calls[0].path,'room/lx-room/presence');assert.equal(calls[0].v.pose.x,1);assert.equal(calls[0].v.pose.z,2);
- release({selfId:'self',people:[{id:'other',name:'Other',pose:{active:true}}]});await Promise.resolve();await Promise.resolve();
+ release({selfId:'self',people:[{id:'other',name:'Other',pose:{active:true}}]});await new Promise(resolve=>setImmediate(resolve));
  assert.equal(rendered.at(-1).selfId,'self');assert.equal(client.getState().running,true);assert.equal(timers.at(-1).ms,900);
  timers.at(-1).fn();assert.equal(calls.length,2);client.close();assert.equal(calls.at(-1).v.leave,true);assert.equal(rendered.at(-1).people.length,0);
- release({selfId:'late',people:[{id:'late'}]});await Promise.resolve();await Promise.resolve();
+ release({selfId:'late',people:[{id:'late'}]});await new Promise(resolve=>setImmediate(resolve));
  assert.equal(client.getState().running,false);assert.equal(rendered.at(-1).people.length,0);assert.equal(listeners.size,0);
 });

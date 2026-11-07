@@ -1,3 +1,7 @@
+## 2026-11-06 — unified room meeting checkpoint
+
+See docs/ROOM-MEETINGS.md for the implemented changes, actual validation and remaining release/device/network checks. First integrated source passed203 backend tests and production build; final controls/adviser/browser validation is pending. No live web or Windows release is claimed at this checkpoint.
+
 ## 2026-11-01 — guided guest tours, office visuals and live product work
 
 - Guest visits now include host-to-guest **Follow host's tour** and host **Follow guest view** modes. Each mirrors only the in-office 3D pose/camera. The host avatar follows behind the guest; browser tabs stay private unless the guest separately grants screen share. Existing video/audio remains separately permissioned.

@@ -26,6 +26,8 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 45
     steps:
+      - name: Preserve repository file bytes
+        run: git config --global core.autocrlf false
       - name: Check out the release source
         uses: actions/checkout@v7.0.1
         with:
@@ -40,6 +42,14 @@ jobs:
           go-version: 1.24.x
       - name: Install locked Node dependencies
         run: npm ci
+      - name: Test release before packaging
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force work/test-temp | Out-Null
+          $env:TEMP = Join-Path $pwd 'work/test-temp'
+          $env:TMP = $env:TEMP
+          npm test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Build and verify the installer
         run: python scripts/build-native-installer.py --go go
       - name: Read release version

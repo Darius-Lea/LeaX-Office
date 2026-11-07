@@ -1,3 +1,4 @@
+import {advisorTurns} from './room-advisor.ts';
 import {randomUUID} from 'node:crypto';
 import {db} from './store.ts';
 import {requireActive} from './platform-access.ts';
@@ -31,8 +32,8 @@ function guestActor(guestHash,now){
 function stillAllowed(peer,roomId,now){
  try{
   if(peer.actor_kind==='member'){
-   const row=db.prepare('SELECT u.id,m.role FROM shared_sessions s JOIN shared_users u ON u.id=s.user_id JOIN shared_members m ON m.user_id=u.id AND m.room_id=? WHERE s.hash=? AND s.user_id=? AND s.expires>?').get(roomId,peer.session_hash,peer.user_id,now);
-   if(!row)return false;requireActive(row.id,now);return true;
+   const row=db.prepare('SELECT u.id,u.name,m.role FROM shared_sessions s JOIN shared_users u ON u.id=s.user_id JOIN shared_members m ON m.user_id=u.id AND m.room_id=? WHERE s.hash=? AND s.user_id=? AND s.expires>?').get(roomId,peer.session_hash,peer.user_id,now);
+   if(!row)return false;requireActive(row.id,now);db.prepare('UPDATE room_meeting_peers SET name=?,role=? WHERE id=?').run(row.name,row.role,peer.id);return true;
   }
   const actor=guestActor(peer.session_hash,now);return actor.roomId===roomId&&actor.link===peer.guest_link;
  }catch{return false;}
@@ -62,7 +63,7 @@ function publicPeer(peer){return {id:peer.id,name:peer.name,role:peer.role,muted
 function notes(meetingId){const row=db.prepare('SELECT * FROM room_meeting_notes WHERE meeting_id=? ORDER BY revision DESC LIMIT 1').get(meetingId);return row?{revision:row.revision,decisions:JSON.parse(row.decisions),actionItems:JSON.parse(row.action_items),updatedAt:row.updated,updatedBy:row.updated_by}:{revision:0,decisions:[],actionItems:[],updatedAt:null,updatedBy:null};}
 function describe(meeting,peer,actor,now){
  const peers=db.prepare("SELECT * FROM room_meeting_peers WHERE meeting_id=? AND status='Joined' ORDER BY seat,id").all(meeting.id).map(publicPeer);
- return {peerId:peer.id,meetingId:meeting.id,roomId:meeting.room_id,address:actor.address,role:actor.role,self:publicPeer(peer),peers,notes:notes(meeting.id),...mediaConfiguration(Math.min(actor.expires,now+3600000),now)};
+ return {peerId:peer.id,meetingId:meeting.id,roomId:meeting.room_id,address:actor.address,role:actor.role,self:publicPeer(peer),peers,notes:notes(meeting.id),advisors:advisorTurns(meeting.id),...mediaConfiguration(Math.min(actor.expires,now+3600000),now)};
 }
 function cleanPose(p){
  if(!p||typeof p!=='object'||typeof p.active!=='boolean'||!['orbit','explore','meeting'].includes(p.cameraMode)||![p.x,p.z,p.yaw,p.pitch].every(Number.isFinite)||Math.abs(p.x)>200||Math.abs(p.z)>200||Math.abs(p.yaw)>10000||Math.abs(p.pitch)>Math.PI/2)throw fail('Invalid office position');
@@ -85,6 +86,7 @@ function perform(action,v,actor,now){
    const count=db.prepare("SELECT count(*) AS n FROM room_meetings WHERE status='Open'").get();if(count.n>=100)throw fail('Too many active meetings',429);
    const id=randomUUID();db.prepare("INSERT INTO room_meetings VALUES(?,?,'Open',?,?)").run(id,actor.roomId,now,now);meeting={id,room_id:actor.roomId,status:'Open',created:now,updated:now};
   }
+  if(actor.userId&&db.prepare("SELECT 1 FROM room_meeting_peers WHERE meeting_id=? AND user_id=? AND status='Removed'").get(meeting.id,actor.userId))throw fail('The host removed you from this meeting',403);
   let peer=db.prepare('SELECT * FROM room_meeting_peers WHERE meeting_id=? AND actor_key=?').get(meeting.id,actor.key);
   if(peer?.status==='Removed')throw fail('The host removed you from this meeting',403);
   const replacing=peer?.status==='Joined'&&peer.client_id!==clientId;
