@@ -1,6 +1,6 @@
-## 2026-11-06 — unified room meeting checkpoint
+## 2026-11-06 — preview.48 release checkpoint
 
-See docs/ROOM-MEETINGS.md for the implemented changes, actual validation and remaining release/device/network checks. First integrated source passed203 backend tests and production build; final controls/adviser/browser validation is pending. No live web or Windows release is claimed at this checkpoint.
+Implemented shared member/guest four-person room calls, centralized ICE configuration, shared avatars/seats, screen-sharing controls, moderation, revisioned decisions/action items and explicitly shared-context local advisers. Windows CI passed all208 backend tests and production build. Four-browser end-to-end checks timed out at page/guest entry; no end-to-end media pass is claimed. Physical devices, external networks, production TURN, live Render deployment and Windows setup execution remain unverified. Hosted paired-worker meeting advisers remain setup-required. The owner explicitly requested publishing the current update before remaining session usage expires. See PR23 and docs/ROOM-MEETINGS.md; do not describe this as complete cross-network certification.
 
 ## 2026-11-01 invitation sign-in copy
 

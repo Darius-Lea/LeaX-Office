@@ -9,3 +9,6 @@ Reviewed decisions and action items are saved with revisions. A saved action is 
 Central ICE settings now apply to guest calls, company phone and boardroom calls: HQ_STUN_URL (none disables), HQ_TURN_URL and HQ_TURN_SECRET, or HQ_TURN_USER/HQ_TURN_PASSWORD. Secrets are host configuration, not source code or chat. This update does not provision a production relay. All devices must use the same authoritative service; separate localhost installations do not federate.
 
 Validation: first integrated update passed203 backend tests and production build. A later presence-client VM test exposed cross-realm Promise scheduling in its harness; it now waits for the event loop. New adviser code, final browser checks and release packaging are pending the validation workflow at this checkpoint. Synthetic loopback tests cannot establish physical-phone or external-network reliability. No production TURN or durable hosting was provisioned, and no owner data was used.
+
+
+Final checkpoint:208/208 backend tests and production build passed in runs42329547097/42329964610. Four-browser QA timed out at office/guest page entry and remains FAILED/UNVERIFIED. Publishing requested by owner; actual media/device/network validation remains required.
