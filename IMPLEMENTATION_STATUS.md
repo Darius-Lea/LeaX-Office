@@ -337,3 +337,20 @@ Owners and co-owners can create a 5–240 minute, one-use guest invitation from 
 
 Validated with the 195-test suite, real-Chrome browser QA at 320/390/768/1024px, and a 149-file production build. Physical phone/tablet hardware, Render deployment and cross-network WebRTC are not verified. Configure production TURN credentials to improve media connection reliability on restrictive networks; screen sharing remains subject to browser support and guest permission.
 
+
+
+## 2026-11-23 — lobby-style-unification branch fixes (preview.48)
+
+Three defects found during live verification of the branch, all fixed on the branch. (1) The branch added Google Fonts links to the offices, but the app-page Content Security Policy blocked fonts.googleapis.com, so office typography fell back to system fonts; the else-branch policy in src/server.ts now allows the lobby font sources (commit c5aadce). (2) The marketing lab heading rendered in a system font because nothing styled it; public/style.css now gives #marketing-lab the lobby type treatment (c5aadce). (3) On the hosted site the top-right badge showed Connecting forever because the online-access check is skipped when hosted, so the status never leaves Connecting; src/online-access.ts now reports the hosted flag and public/online-client.js hides the badge on hosted sites (17ded64, verified live, npm test 208/208).
+
+Phone system status: the full signaling path (directory, call setup, ringing, answer, offer/answer/candidate exchange, candidate application, ICE pair formation with resolvable addresses) is verified working. Final media connection cannot be verified in the test VM because it blocks mDNS resolution and all UDP traffic. Production TURN remains unprovisioned; cross-network calls are still unverified.
+
+## 2026-11-23 — phone office invites (branch phone-office-invites)
+
+From the in-app phone, an office owner or co-owner can invite a registered contact into the office they are in right now: open the phone, tap Invite next to a directory entry, and the invitee's phone rings wherever they are in the app. On accept they land in the host's live office and session, as a visitor: they see the same messages and people, can join the conversation, and owner-only controls stay owner-only. If the host is in a meeting, the invite is flagged (verified server-side against the host's live meeting peer) and the guest auto-joins the meeting in progress. Decline, cancel and no-answer (2-minute ring window) all end cleanly with a small notice to the inviter; nothing stays ringing. The host can remove a guest at any time from Members; a guest who leaves or is removed returns to their own office, and the host's session carries on untouched.
+
+Built on the existing systems, not beside them: the phone call system (ringing, inbox, 2-minute timeout), the shared-offices invitation system (server-side membership grant, no invite code ever reaches the client), and the existing room entry, presence and meeting join paths. The guest-lobby system was not used: it serves account-less visitors via links, while invites are for registered contacts with no links or codes. Join paths were investigated for the same-session requirement: shared-room entry returns persistent messages and live presence, and meeting join attaches to the existing open meeting, so guests land in live state with no fresh-session bug found and no join-path change needed.
+
+Also fixed while verifying: invite rows keep their link record permanently as the kind marker (previously deleted on terminal transitions, so Accepted/Declined/Missed invites rendered as calls), and the meeting timeouts were widened (client request deadline 12s to 30s, failure window 20s to 90s, server heartbeat 30s to 120s) because the meeting client closed under load.
+
+Validation: 212/212 backend tests (4 new invite tests); live two-account Playwright verification across four runs (68/69 main run, 24/24 meeting, 19/21 no-answer + mobile with the two lagging checks re-verified 5/5). WebRTC media, physical devices, external networks, production TURN and live Render deployment remain unverified. Branch pushed, unmerged.

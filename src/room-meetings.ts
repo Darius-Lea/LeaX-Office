@@ -5,7 +5,7 @@ import {requireActive} from './platform-access.ts';
 import {mediaConfiguration} from './media-config.ts';
 
 const fail=(message,status=400)=>Object.assign(new Error(message),{status});
-const MAX_PEERS=4, HEARTBEAT=30000, SIGNAL_TTL=120000;
+const MAX_PEERS=4, HEARTBEAT=120000, SIGNAL_TTL=120000;
 db.exec(`
 CREATE TABLE IF NOT EXISTS room_meetings(id TEXT PRIMARY KEY,room_id TEXT NOT NULL,status TEXT NOT NULL,created INTEGER NOT NULL,updated INTEGER NOT NULL);
 CREATE UNIQUE INDEX IF NOT EXISTS room_meeting_open ON room_meetings(room_id) WHERE status='Open';
