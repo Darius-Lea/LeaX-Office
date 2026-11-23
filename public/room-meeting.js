@@ -26,7 +26,7 @@ export function initRoomMeeting({api,guest=false,address,getScene=()=>null,notif
  const inform=value=>{status.textContent=String(value);notify(String(value));};
  const currentAddress=()=>typeof address==='function'?address():address;
  const route=(action,body={},room=currentAddress())=>api(guest?'guest/meeting-'+action:'room/'+room+'/meeting/'+action,{clientId,...body});
- const deadline=(promise)=>{let timer;return Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Meeting request timed out')),12000);})]).finally(()=>clearTimeout(timer));};
+ const deadline=(promise)=>{let timer;return Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Meeting request timed out')),30000);})]).finally(()=>clearTimeout(timer));};
  const post=(s,action,body={})=>deadline(route(action,{peerId:s.peerId,...body},s.address));
  const decisions=()=>{const values=notes.value.split(/\n/).map(v=>v.trim()).filter(Boolean);if(values.length>30||values.some(v=>v.length>2000))throw Error('Use up to 30 decisions, each no longer than 2,000 characters.');return values;};notes.addEventListener('input',()=>{if(state)state.notesDirty=true;});
  const self=s=>s.roster.find(p=>p.id===s.peerId)||{};
@@ -81,7 +81,7 @@ export function initRoomMeeting({api,guest=false,address,getScene=()=>null,notif
    if(Number.isSafeInteger(data.cursor))s.after=Math.max(s.after,data.cursor);
    if(!s.notesDirty&&(!s.savedNotes||Number(data.notes?.revision||0)>=Number(s.savedNotes.revision||0))){s.savedNotes=data.notes||{revision:0,decisions:[],actionItems:[]};notes.value=(s.savedNotes.decisions||[]).join('\n');savedActions.replaceChildren(...(s.savedNotes.actionItems||[]).map(item=>node('p',item.text+(item.assignee?' · '+item.assignee:'')+(item.dueAt?' · due '+new Date(item.dueAt).toLocaleString():''))));s.notesLoaded=true;}
    refreshControls();
-  }catch(error){if(state!==s)return;const fatal=[401,403,404,410].includes(error.status)||/revoked|expired|suspended|sign in|membership required|removed from|meeting has ended|meeting not found/i.test(error.message);if(fatal){await close(error.message,false);return;}s.failureAt=s.failureAt||Date.now();s.reconnecting=true;setStatus();if(Date.now()-s.failureAt>20000){await close('Meeting connection was lost. Join again when your network is available.');return;}}
+  }catch(error){if(state!==s)return;const fatal=[401,403,404,410].includes(error.status)||/revoked|expired|suspended|sign in|membership required|removed from|meeting has ended|meeting not found/i.test(error.message);if(fatal){await close(error.message,false);return;}s.failureAt=s.failureAt||Date.now();s.reconnecting=true;setStatus();if(Date.now()-s.failureAt>90000){await close('Meeting connection was lost. Join again when your network is available.');return;}}
   if(state===s&&!s.closed)s.timer=setTimeout(()=>poll(s),s.reconnecting?1500:850);
  }
  async function join(){
