@@ -1,4 +1,4 @@
-import {randomBytes,randomUUID} from 'node:crypto';
+import {createHash,randomBytes,randomUUID} from 'node:crypto';
 import {mediaConfiguration} from './media-config.ts';
 import {db} from './store.ts';
 import {accessState,requireActive} from './platform-access.ts';
@@ -6,13 +6,16 @@ const fail=(s:string,status=400)=>Object.assign(Error(s),{status});
 db.exec(`CREATE TABLE IF NOT EXISTS shared_companies(room_id TEXT PRIMARY KEY REFERENCES shared_rooms(id),number TEXT UNIQUE NOT NULL,name TEXT NOT NULL,listed INTEGER NOT NULL DEFAULT 0,accepting INTEGER NOT NULL DEFAULT 1,hidden INTEGER NOT NULL DEFAULT 0,hide_requested INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS shared_phone_calls(id TEXT PRIMARY KEY,from_user TEXT NOT NULL REFERENCES shared_users(id),to_user TEXT REFERENCES shared_users(id),from_room TEXT NOT NULL REFERENCES shared_rooms(id),to_room TEXT NOT NULL REFERENCES shared_rooms(id),status TEXT NOT NULL,answered_by TEXT REFERENCES shared_users(id),message TEXT NOT NULL,created INTEGER NOT NULL,updated INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS shared_phone_signals(id INTEGER PRIMARY KEY,call_id TEXT NOT NULL REFERENCES shared_phone_calls(id),sender TEXT NOT NULL REFERENCES shared_users(id),target TEXT NOT NULL REFERENCES shared_users(id),payload TEXT NOT NULL,created INTEGER NOT NULL);
-CREATE TABLE IF NOT EXISTS shared_phone_messages(id INTEGER PRIMARY KEY,call_id TEXT NOT NULL REFERENCES shared_phone_calls(id),sender TEXT NOT NULL REFERENCES shared_users(id),body TEXT NOT NULL,created INTEGER NOT NULL);`);
+CREATE TABLE IF NOT EXISTS shared_phone_messages(id INTEGER PRIMARY KEY,call_id TEXT NOT NULL REFERENCES shared_phone_calls(id),sender TEXT NOT NULL REFERENCES shared_users(id),body TEXT NOT NULL,created INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS shared_phone_invites(call_id TEXT PRIMARY KEY REFERENCES shared_phone_calls(id),invite_hash TEXT NOT NULL,room_id TEXT NOT NULL REFERENCES shared_rooms(id),meeting INTEGER NOT NULL DEFAULT 0);`);
 function company(room:any){let c=db.prepare('SELECT * FROM shared_companies WHERE room_id=?').get(room.id) as any;if(!c){const number='LX-'+BigInt('0x'+randomBytes(6).toString('hex')).toString().padStart(15,'0');db.prepare('INSERT INTO shared_companies(room_id,number,name) VALUES(?,?,?)').run(room.id,number,room.name);c=db.prepare('SELECT * FROM shared_companies WHERE room_id=?').get(room.id);}return c;}
 function member(userId:string,address:string){const r=db.prepare('SELECT r.*,m.role FROM shared_rooms r JOIN shared_members m ON m.room_id=r.id WHERE r.address=? AND m.user_id=?').get(address,userId) as any;if(!r)throw fail('Office membership required',403);return r;}
 function publicCompany(c:any){return {number:c.number,name:c.hidden?'Private company':c.name,accepting:!!c.accepting};}
+function digest(s:string){return createHash('sha256').update(s).digest('hex');}
+function inviteFor(callId:string){return db.prepare('SELECT * FROM shared_phone_invites WHERE call_id=?').get(callId) as any;}
 function access(call:any,userId:string){if(call.from_user===userId)return true;if(call.to_user)return call.to_user===userId;return !!db.prepare("SELECT 1 FROM shared_members WHERE room_id=? AND user_id=? AND role!='visitor'").get(call.to_room,userId);}
 function current(callId:any,userId:string){if(typeof callId!=='string')throw fail('Choose a call');const c=db.prepare('SELECT * FROM shared_phone_calls WHERE id=?').get(callId) as any;if(!c||!access(c,userId))throw fail('Call not available',404);if([c.from_user,c.to_user,c.answered_by].filter(Boolean).some(id=>accessState(id).state!=='active')){db.prepare("UPDATE shared_phone_calls SET status='Ended',updated=? WHERE id=?").run(Date.now(),c.id);c.status='Ended';}return c;}
-function describe(c:any,userId:string){const from=company(db.prepare('SELECT * FROM shared_rooms WHERE id=?').get(c.from_room)),to=company(db.prepare('SELECT * FROM shared_rooms WHERE id=?').get(c.to_room));return {...mediaConfiguration(),id:c.id,status:c.status,message:c.message,from:publicCompany(from),to:publicCompany(to),fromUser:c.from_user,toUser:c.answered_by||c.to_user,incoming:c.from_user!==userId,created:c.created,updated:c.updated};}
+function describe(c:any,userId:string){const from=company(db.prepare('SELECT * FROM shared_rooms WHERE id=?').get(c.from_room)),to=company(db.prepare('SELECT * FROM shared_rooms WHERE id=?').get(c.to_room));const inv=inviteFor(c.id);const room=inv?db.prepare('SELECT name,address FROM shared_rooms WHERE id=?').get(inv.room_id) as any:null;return {...mediaConfiguration(),id:c.id,status:c.status,message:c.message,from:publicCompany(from),to:publicCompany(to),fromUser:c.from_user,toUser:c.answered_by||c.to_user,incoming:c.from_user!==userId,created:c.created,updated:c.updated,kind:inv?'invite':'call',...(inv?{roomName:room?.name||'',roomAddress:room?.address||'',meeting:!!inv.meeting,inviteeName:(db.prepare('SELECT name FROM shared_users WHERE id=?').get(c.to_user) as any)?.name||''}:{})};}
 export function sharedPhone(path:string,method:string,v:any,user:any,now=Date.now()){
  requireActive(user.id,now);
  db.prepare("UPDATE shared_phone_calls SET status='Missed',updated=? WHERE status IN ('Ringing','Requested') AND updated<?").run(now,now-120000);
@@ -35,13 +38,51 @@ export function sharedPhone(path:string,method:string,v:any,user:any,now=Date.no
  else{to=db.prepare('SELECT * FROM shared_companies WHERE number=? AND accepting=1').get(String(v.number||''));if(!to)throw fail('Company unavailable or not accepting contact',404);}
  if(typeof v.message!=='string'||v.message.length>1000)throw fail('Use an introduction of at most 1000 characters');const callId=randomUUID();db.prepare("INSERT INTO shared_phone_calls VALUES(?,?,?,?,?,'Ringing',NULL,?,?,?)").run(callId,user.id,v.userId||null,room.id,to.room_id,v.message.trim(),now,now);return describe(db.prepare('SELECT * FROM shared_phone_calls WHERE id=?').get(callId),user.id);
  }
+ if(path==='invite'){
+ const room=member(user.id,v.address);if(!['owner','co-owner'].includes(room.role))throw fail('Office owner or co-owner required',403);
+ const count=db.prepare('SELECT count(*) AS n FROM shared_phone_calls WHERE from_user=? AND created>?').get(user.id,now-60000) as any;if(count.n>=5)throw fail('Wait before sending more invitations',429);
+ let toUser:string;
+ if(v.userId){if(v.userId===user.id)throw fail('Choose another person');const target=db.prepare('SELECT id FROM shared_users WHERE id=?').get(v.userId) as any;if(!target)throw fail('That person was not found',404);requireActive(v.userId,now);toUser=v.userId;}
+ else{const companyRow=db.prepare('SELECT * FROM shared_companies WHERE number=? AND accepting=1').get(String(v.number||'')) as any;if(!companyRow)throw fail('Company unavailable or not accepting contact',404);const targetRoom=db.prepare('SELECT owner_id FROM shared_rooms WHERE id=?').get(companyRow.room_id) as any;if(!targetRoom||targetRoom.owner_id===user.id)throw fail('Choose another person');requireActive(targetRoom.owner_id,now);toUser=targetRoom.owner_id;}
+ const actorKey='member:'+user.sessionHash;const inMeeting=!!db.prepare("SELECT p.id FROM room_meeting_peers p JOIN room_meetings m ON m.id=p.meeting_id WHERE m.room_id=? AND m.status='Open' AND p.actor_key=? AND p.status='Joined'").get(room.id,actorKey);
+ const meeting=v.meeting===true&&inMeeting;const callId=randomUUID();const invitation=randomBytes(32).toString('hex');
+ db.exec('BEGIN IMMEDIATE');try{
+ db.prepare('INSERT INTO shared_invites VALUES(?,?,?,?,?,NULL)').run(digest(invitation),room.id,'visitor',user.id,now+120000);
+ db.prepare("INSERT INTO shared_phone_calls VALUES(?,?,?,?,?,'Ringing',NULL,?,?,?)").run(callId,user.id,toUser,room.id,room.id,user.name+' invited you to join '+room.name,now,now);
+ db.prepare('INSERT INTO shared_phone_invites VALUES(?,?,?,?)').run(callId,digest(invitation),room.id,+meeting);
+ db.exec('COMMIT');}catch(e){db.exec('ROLLBACK');throw e;}
+ return describe(db.prepare('SELECT * FROM shared_phone_calls WHERE id=?').get(callId),user.id);
+ }
  const call=current(v.id,user.id);
  if(path==='answer'){
+ if(inviteFor(call.id))throw fail('This is an office invitation, not a call. Accept or decline it from the phone.');
  if(call.from_user===user.id)throw fail('Wait for the other person to answer');if(call.status!=='Ringing')throw fail('This call is no longer ringing');
  if(db.prepare("SELECT id FROM shared_phone_calls WHERE status='Connected' AND (from_user=? OR answered_by=?)").get(user.id,user.id))throw fail('Leave your current call first');
  const result=db.prepare("UPDATE shared_phone_calls SET status='Connected',answered_by=?,updated=? WHERE id=? AND status='Ringing'").run(user.id,now,call.id);if(!result.changes)throw fail('Someone else answered');return describe(current(call.id,user.id),user.id);
  }
- if(path==='end'){if(call.status==='Connected'&&![call.from_user,call.answered_by].includes(user.id))throw fail('Only the call participants can end a connected call',403);db.prepare("UPDATE shared_phone_calls SET status='Ended',updated=? WHERE id=?").run(now,call.id);return {ok:true};}
+ if(path==='invite-accept'){
+ if(call.to_user!==user.id)throw fail('Only the invited person can accept',403);
+ const inv=inviteFor(call.id);if(!inv)throw fail('This is not an office invitation',404);
+ if(call.status!=='Ringing')throw fail('This invitation is no longer ringing');
+ const inviteRow=db.prepare('SELECT * FROM shared_invites WHERE hash=? AND expires>? AND used_by IS NULL').get(inv.invite_hash,now) as any;if(!inviteRow)throw fail('Invitation expired or already used',404);
+ const room=db.prepare('SELECT address,name FROM shared_rooms WHERE id=?').get(inv.room_id) as any;if(!room)throw fail('That office is no longer available',404);
+ db.exec('BEGIN IMMEDIATE');try{
+ const existing=db.prepare('SELECT role FROM shared_members WHERE room_id=? AND user_id=?').get(inv.room_id,user.id);
+ if(!existing)db.prepare('INSERT INTO shared_members VALUES(?,?,?)').run(inv.room_id,user.id,'visitor');
+ db.prepare('UPDATE shared_invites SET used_by=? WHERE hash=?').run(user.id,inv.invite_hash);
+ db.prepare("UPDATE shared_phone_calls SET status='Accepted',updated=? WHERE id=?").run(now,call.id);
+ db.exec('COMMIT');}catch(e){db.exec('ROLLBACK');throw e;}
+ return {address:room.address,roomName:room.name,meeting:!!inv.meeting};
+ }
+ if(path==='invite-decline'){
+ if(call.to_user!==user.id)throw fail('Only the invited person can decline',403);
+ const inv=inviteFor(call.id);if(!inv)throw fail('This is not an office invitation',404);
+ if(call.status!=='Ringing')throw fail('This invitation is no longer ringing');
+ db.prepare('DELETE FROM shared_invites WHERE hash=?').run(inv.invite_hash);
+ db.prepare("UPDATE shared_phone_calls SET status='Declined',updated=? WHERE id=?").run(now,call.id);
+ return {ok:true};
+ }
+ if(path==='end'){if(call.status==='Connected'&&![call.from_user,call.answered_by].includes(user.id))throw fail('Only the call participants can end a connected call',403);const inv=inviteFor(call.id);if(inv)db.prepare('DELETE FROM shared_invites WHERE hash=?').run(inv.invite_hash);db.prepare("UPDATE shared_phone_calls SET status='Ended',updated=? WHERE id=?").run(now,call.id);return {ok:true};}
  if(path==='message'){
  if(typeof v.message!=='string'||!v.message.trim()||v.message.length>2000)throw fail('Enter a message of 1–2000 characters');const total=db.prepare('SELECT count(*) AS n FROM shared_phone_messages WHERE call_id=?').get(call.id) as any;if(total.n>=200)throw fail('Start a new conversation');db.prepare('INSERT INTO shared_phone_messages(call_id,sender,body,created) VALUES(?,?,?,?)').run(call.id,user.id,v.message.trim(),now);return {ok:true};}
  if(path==='poll'){

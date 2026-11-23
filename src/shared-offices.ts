@@ -3,7 +3,7 @@ import {memberMeeting} from './room-meetings.ts';
 import {memberPresence} from './room-presence.ts';
 import {randomBytes,randomUUID,scryptSync,timingSafeEqual,createHash} from 'node:crypto';
 import {db} from './store.ts';
-import {guestLobbyRequest,manageGuests} from './guest-lobby.ts';
+import {guestLobbyRequest,manageGuests,pruneGuestMessages,roomConversation,roomGuests} from './guest-lobby.ts';
 import {resetPassword} from './password-recovery.ts';
 import {sharedPhone} from './shared-phone.ts';
 import {accessState,requireActive} from './platform-access.ts';
@@ -24,7 +24,7 @@ db.exec(`
  CREATE TABLE IF NOT EXISTS shared_auth_limits(key TEXT PRIMARY KEY,count INTEGER NOT NULL,until INTEGER NOT NULL);
  CREATE INDEX IF NOT EXISTS shared_messages_room ON shared_messages(room_id,id);
 `);
-function prune(now:number){db.prepare('DELETE FROM shared_sessions WHERE expires<=?').run(now);db.prepare('DELETE FROM shared_auth_limits WHERE until<=?').run(now);db.prepare('DELETE FROM shared_invites WHERE expires<=?').run(now);db.prepare('DELETE FROM shared_presence WHERE seen<?').run(now-45000);}
+function prune(now:number){db.prepare('DELETE FROM shared_sessions WHERE expires<=?').run(now);db.prepare('DELETE FROM shared_auth_limits WHERE until<=?').run(now);db.prepare('DELETE FROM shared_invites WHERE expires<=?').run(now);db.prepare('DELETE FROM shared_presence WHERE seen<?').run(now-45000);pruneGuestMessages(now);}
 function rate(key:string,limit:number,now:number){const hashed=digest(key),row=db.prepare('SELECT * FROM shared_auth_limits WHERE key=?').get(hashed) as any;if(row&&row.until>now&&row.count>=limit)throw bad('Please wait a minute before trying again',429);db.prepare('INSERT INTO shared_auth_limits VALUES(?,1,?) ON CONFLICT(key) DO UPDATE SET count=count+1').run(hashed,now+60000);}
 export function sharedUser(token:string,now=Date.now()) {return db.prepare('SELECT u.id,u.handle,u.name,s.hash AS sessionHash FROM shared_sessions s JOIN shared_users u ON u.id=s.user_id WHERE s.hash=? AND s.expires>?').get(digest(token),now) as any;}
 function roomFor(user:any,address:string){const room=db.prepare('SELECT r.id,r.address,r.name,r.owner_id,m.role FROM shared_rooms r JOIN shared_members m ON m.room_id=r.id WHERE r.address=? AND m.user_id=?').get(address,user.id) as any;if(!room)throw bad('Office not found or invitation required',404);return room;}
@@ -32,7 +32,7 @@ function createRoom(userId:string,name:string,now:number){const roomId=id(),addr
 function newSession(userId:string,now:number){const token=secret();db.prepare('INSERT INTO shared_sessions VALUES(?,?,?)').run(digest(token),userId,now+7*86400000);return token;}
 export function sharedOfficeRequest(path:string,method:string,body:any,token:string,ip:string,now=Date.now()):{status?:number,data:any,token?:string} {
  prune(now);
- if(path.startsWith('guest/')){if(path==='guest/redeem')rate('guest-redeem:'+ip,20,now);return guestLobbyRequest(path.slice(6),method,body,token,now);}
+ if(path.startsWith('guest/')){if(path==='guest/redeem')rate('guest-redeem:'+ip,20,now);if(path==='guest/message')rate('guest-message:'+ip,30,now);return guestLobbyRequest(path.slice(6),method,body,token,now);}
  if(path==='reset-password'&&method==='POST'){rate('reset:'+ip,10,now);return {data:resetPassword(body,now)};}
  if(['register','login'].includes(path)&&method==='POST'){
   rate('auth:'+ip,20,now);
@@ -71,8 +71,8 @@ export function sharedOfficeRequest(path:string,method:string,body:any,token:str
  const room=roomFor(user,match[1]),action=match[2],admin=['owner','co-owner'].includes(room.role);
  if(!action&&method==='GET'){
   const members=admin?db.prepare('SELECT u.id,u.name,u.handle,m.role FROM shared_members m JOIN shared_users u ON u.id=m.user_id WHERE m.room_id=?').all(room.id):[];
-  const people=db.prepare("SELECT u.id,u.name,u.handle,m.role,max(p.seen) AS seen FROM shared_presence p JOIN shared_sessions s ON s.hash=p.session_hash JOIN shared_users u ON u.id=s.user_id JOIN shared_members m ON m.room_id=p.room_id AND m.user_id=u.id WHERE p.room_id=? AND p.seen>? AND s.expires>? AND NOT EXISTS(SELECT 1 FROM platform_access a WHERE a.user_id=u.id AND a.state IN ('suspended','revoked') AND (a.until_at IS NULL OR a.until_at>?)) GROUP BY u.id").all(room.id,now-45000,now,now);
-  const messages=db.prepare('SELECT x.id,u.name,x.body,x.created FROM shared_messages x JOIN shared_users u ON u.id=x.user_id WHERE x.room_id=? ORDER BY x.id DESC LIMIT 100').all(room.id).reverse();
+  const people=[...db.prepare("SELECT u.id,u.name,u.handle,m.role,max(p.seen) AS seen FROM shared_presence p JOIN shared_sessions s ON s.hash=p.session_hash JOIN shared_users u ON u.id=s.user_id JOIN shared_members m ON m.room_id=p.room_id AND m.user_id=u.id WHERE p.room_id=? AND p.seen>? AND s.expires>? AND NOT EXISTS(SELECT 1 FROM platform_access a WHERE a.user_id=u.id AND a.state IN ('suspended','revoked') AND (a.until_at IS NULL OR a.until_at>?)) GROUP BY u.id").all(room.id,now-45000,now,now),...roomGuests(room.id,now)];
+  const messages=roomConversation(room.id);
   const invites=admin?db.prepare('SELECT hash,role,expires FROM shared_invites WHERE room_id=? AND used_by IS NULL AND expires>?').all(room.id,now):[];
   return {data:{address:room.address,name:room.name,role:room.role,members,people,messages,invites,serverNow:now}};
  }

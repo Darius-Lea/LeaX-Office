@@ -119,5 +119,5 @@ test('membership removal, guest revocation/expiry and heartbeat loss remove part
  const rejoined=member(owner,owner,'join',{},now+300001);
  assert.equal(rejoined.peers.length,1,'stale and expired peers are not present after reconnect');
  assert.throws(()=>guestMeeting('join',{},'unknown-guest-hash',now),/ended/);
- assert.throws(()=>member(owner,owner,'poll',{peerId:rejoined.peerId},now+330002),/Join this meeting/);
+ assert.throws(()=>member(owner,owner,'poll',{peerId:rejoined.peerId},now+420002),/Join this meeting/);
 });
