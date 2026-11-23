@@ -23,7 +23,7 @@ export function createOffice3D(host,{onEmployee,onOwner,onMeetingMode=()=>{},onE
  const camera=new THREE.PerspectiveCamera(39,1,.1,250),target=new THREE.Vector3(.2,1.05,.2);
  let yaw=.14,elevation=.07,distance=11.5,enabled=true,disposed=false,dirty=true,frame=0,lastFrame=0,cameraMode='entry',meetingYaw=0,meetingPitch=0,meetingCameraTransition=null,orbitSnapshot=null,remoteFollow=false;
  const meetingPosition=new THREE.Vector3(38,1.48,8.6);
- const explorePosition=new THREE.Vector3(-2.8,1.65,8.5),exploreInputs=new Set();let exploreYaw=0,explorePitch=0,meetingOriginMode='orbit',fabricationVisible=false;let walkTarget=null,walkStuck=0,autoWalk=false,pendingTap=null,tapSuppressUntil=0,joyVector=null;
+ const explorePosition=new THREE.Vector3(0,1.65,8.5),exploreInputs=new Set();let exploreYaw=0,explorePitch=0,meetingOriginMode='orbit',fabricationVisible=false;let walkTarget=null,walkStuck=0,autoWalk=false,pendingTap=null,tapSuppressUntil=0,joyVector=null;
  const reduced=matchMedia('(prefers-reduced-motion: reduce)'),materials=new Map(),geometries=new Set(),textures=new Set();
  // Extra GPU objects created for the cinematic look are tracked here so dispose() can release them.
  const extras=new Set(),fx={uTime:{value:0}};const faceMaterials=new Map(),screenMaterials=new Set();
@@ -514,7 +514,7 @@ export function createOffice3D(host,{onEmployee,onOwner,onMeetingMode=()=>{},onE
   featureMat.color.set(colors[0]);slatMat.color.set(colors[1]);sideMat.color.set(colors[2]);skirtMat.color.set(colors[3]);
   fill.color.set(id==='marketing'?'#c4a7ff':id==='sales'?'#8cdce4':'#7fdcec');rim.color.set(id==='marketing'?'#f0b2bf':'#7ea6ff');
   if(campusBadge.userData.office!==id){scene.remove(campusBadge);disposeLabel(campusBadge);const caption=id==='sales'?'SALES OFFICE · COMMERCE & FULFILLMENT':id==='marketing'?'MONETIZATION & MARKETING · CREATIVE STUDIO':'HEADQUARTERS · BUSINESS OPERATIONS';campusBadge=label(caption,id==='marketing'?'#f0c587':id==='sales'?'#a8d7e6':'#bde3d4',8.5,.56);campusBadge.position.set(0,4.76,-9);campusBadge.userData.office=id;scene.add(campusBadge);}
-  if(changed&&cameraMode==='explore'){explorePosition.set(-2.8,1.65,8.5);exploreYaw=0;explorePitch=0;exploreInputs.clear();autoWalk=false;walkTarget=null;onExploreMode(true,getExploreState());}
+  if(changed&&cameraMode==='explore'){explorePosition.set(0,1.65,8.5);exploreYaw=0;explorePitch=0;exploreInputs.clear();autoWalk=false;walkTarget=null;onExploreMode(true,getExploreState());}
   if(changed&&id==='hq'){if(entryActive){entryOverlay.hidden=false;canvas.dataset.entryView='true';markDirty();}else if(cameraMode==='orbit')enterEntryView(false);}
   if(changed&&id!=='hq'&&entryActive)entryOverlay.hidden=true;
   if(changed&&minerFocused){minerFocused=false;flyTo(homePose);}canvas.dataset.campusOffice=id;canvas.dataset.minerVisible=String(miner.visible);markDirty();
@@ -727,7 +727,7 @@ export function createOffice3D(host,{onEmployee,onOwner,onMeetingMode=()=>{},onE
  function syncTouchUI(){const explore=cameraMode==='explore'&&!remoteFollow;joyBase.hidden=!explore||!isTouchDevice;stopWalkButton.hidden=!autoWalk;if(autoWalk){touchHint.textContent='Walking forward — drag to look, tap anywhere to stop.';touchHint.hidden=false;}else touchHint.hidden=true;}
  function stopAutoWalk(){if(!autoWalk)return;autoWalk=false;syncTouchUI();onExploreMode(true,getExploreState());markDirty();}
  function startAutoWalk(){if(cameraMode!=='explore'||remoteFollow)return;walkTarget=null;autoWalk=true;syncTouchUI();onExploreMode(true,getExploreState());markDirty();}
- const walkSpots={desk:{x:3.6,z:-4.9,yaw:.89,pitch:0},meeting:{x:-3.2,z:-4.6,yaw:.99,pitch:0},lounge:{x:3,z:7.5,yaw:-1.75,pitch:0},entry:{x:-2.8,z:8.5,yaw:0,pitch:0}};
+ const walkSpots={desk:{x:3.6,z:-4.9,yaw:.89,pitch:0},meeting:{x:-3.2,z:-4.6,yaw:.99,pitch:0},lounge:{x:3,z:7.5,yaw:-1.75,pitch:0},entry:{x:0,z:8.5,yaw:0,pitch:0}};
  function goToSpot(name){const spot=walkSpots[name];if(!spot)return getExploreState();walkTarget=null;autoWalk=false;syncTouchUI();return setExploreView(spot);}
  function floorPointAt(x,y){const r=canvas.getBoundingClientRect();raycaster.setFromCamera(new THREE.Vector2((x-r.left)/r.width*2-1,-((y-r.top)/r.height)*2+1),camera);const hits=raycaster.intersectObjects([floor,...interactives.filter(item=>{for(let parent=item;parent;parent=parent.parent)if(!parent.visible)return false;return true;})],false);if(!hits.length||hits[0].object!==floor)return null;return {x:hits[0].point.x,z:hits[0].point.z};}
  function handleExploreTap(x,y){if(Date.now()<tapSuppressUntil)return;if(autoWalk){stopAutoWalk();tapSuppressUntil=Date.now()+350;return;}if(pendingTap){clearTimeout(pendingTap.timer);pendingTap=null;startAutoWalk();return;}pendingTap={timer:setTimeout(()=>{pendingTap=null;const point=floorPointAt(x,y);if(point&&canExploreAt(point.x,point.z)){walkTarget={x:point.x,z:point.z};walkStuck=0;markDirty();}},280)};}
