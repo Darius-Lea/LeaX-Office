@@ -66,8 +66,8 @@ function describe(meeting,peer,actor,now){
  return {peerId:peer.id,meetingId:meeting.id,roomId:meeting.room_id,address:actor.address,role:actor.role,self:publicPeer(peer),peers,notes:notes(meeting.id),advisors:advisorTurns(meeting.id),...mediaConfiguration(Math.min(actor.expires,now+3600000),now)};
 }
 function cleanPose(p){
- if(!p||typeof p!=='object'||typeof p.active!=='boolean'||!['orbit','explore','meeting'].includes(p.cameraMode)||![p.x,p.z,p.yaw,p.pitch].every(Number.isFinite)||Math.abs(p.x)>200||Math.abs(p.z)>200||Math.abs(p.yaw)>10000||Math.abs(p.pitch)>Math.PI/2)throw fail('Invalid office position');
- return {active:p.active,cameraMode:p.cameraMode,x:p.x,z:p.z,yaw:p.yaw,pitch:p.pitch};
+ if(!p||typeof p!=='object'||typeof p.active!=='boolean'||!['orbit','explore','meeting','entry'].includes(p.cameraMode)||![p.x,p.z,p.yaw,p.pitch].every(Number.isFinite)||Math.abs(p.x)>200||Math.abs(p.z)>200||Math.abs(p.yaw)>10000||Math.abs(p.pitch)>Math.PI/2)throw fail('Invalid office position');
+ return {active:p.active&&p.cameraMode!=='entry',cameraMode:p.cameraMode,x:p.x,z:p.z,yaw:p.yaw,pitch:p.pitch};
 }
 function mediaState(peer,v,now){
  for(const key of ['muted','camera','screen'])if(v[key]!==undefined&&typeof v[key]!=='boolean')throw fail('Invalid meeting media state');
