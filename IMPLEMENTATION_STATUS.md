@@ -337,3 +337,10 @@ Owners and co-owners can create a 5–240 minute, one-use guest invitation from 
 
 Validated with the 195-test suite, real-Chrome browser QA at 320/390/768/1024px, and a 149-file production build. Physical phone/tablet hardware, Render deployment and cross-network WebRTC are not verified. Configure production TURN credentials to improve media connection reliability on restrictive networks; screen sharing remains subject to browser support and guest permission.
 
+
+
+## 2026-11-23 — lobby-style-unification branch fixes (preview.48)
+
+Three defects found during live verification of the branch, all fixed on the branch. (1) The branch added Google Fonts links to the offices, but the app-page Content Security Policy blocked fonts.googleapis.com, so office typography fell back to system fonts; the else-branch policy in src/server.ts now allows the lobby font sources (commit c5aadce). (2) The marketing lab heading rendered in a system font because nothing styled it; public/style.css now gives #marketing-lab the lobby type treatment (c5aadce). (3) On the hosted site the top-right badge showed Connecting forever because the online-access check is skipped when hosted, so the status never leaves Connecting; src/online-access.ts now reports the hosted flag and public/online-client.js hides the badge on hosted sites (17ded64, verified live, npm test 208/208).
+
+Phone system status: the full signaling path (directory, call setup, ringing, answer, offer/answer/candidate exchange, candidate application, ICE pair formation with resolvable addresses) is verified working. Final media connection cannot be verified in the test VM because it blocks mDNS resolution and all UDP traffic. Production TURN remains unprovisioned; cross-network calls are still unverified.

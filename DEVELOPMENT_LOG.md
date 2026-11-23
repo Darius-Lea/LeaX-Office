@@ -316,3 +316,8 @@ Fixed a duplicate animation-frame scheduling loop in the Monetization campus, wh
 Queued/running local-model invitation-design jobs now appear as actual product-specific assignments in the Distribution Center. The worker moves and a distinct unsaved draft token travels on the line during inference; existing saved proofs stay still. Company-wide tasks do not appear as factory work.
 
 Validation: Node 24 syntax checks passed; focused commerce, distribution and guest-session tests passed 19/19. A browser check was added but could not execute because Playwright is absent and the desktop browser kernel was unavailable. Full-suite and production-build results are recorded in `TEST_RESULTS.md`. No cloud model login, real model inference, third-party provider connection, or live Render deployment was performed.
+
+
+## 2026-11-23 — branch verification, phone probes, badge fix
+
+Verified the lobby-style-unification branch live in Playwright: six phases, 95 of 99 checks pass. Fixed the app-page CSP blocking the branch's Google Fonts and styled the marketing lab heading (c5aadce). Found and fixed the stuck Connecting badge on hosted sites (17ded64): the hosted access check is skipped by design, so the status never leaves Connecting; the badge now hides on hosted while the bar still says Hosted workspace. Ran three phone probes that proved the signaling path works end to end and isolated the media failure to the test VM (no mDNS resolution, UDP blocked even on loopback). Full suite passes 208/208 after both fixes. The branch is pushed and unmerged; merging to main is Darius's call. Production TURN is still unprovisioned.
