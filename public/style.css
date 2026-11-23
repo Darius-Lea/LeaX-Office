@@ -519,3 +519,10 @@ body[data-view='2d'] .desk-status{color:#6f8bb0}
 .factory-order{background:rgba(5,16,40,.55);border-left-color:var(--lx-blue);color:#dcecff}
 .factory-order[data-stage=Shipped]{border-left-color:var(--lx-violet)}
 .app-update-download{background:linear-gradient(135deg,var(--lx-blue),var(--lx-cyan));color:#fff;box-shadow:0 0 1em rgba(88,214,255,.4)}
+
+/* Lobby style unification (visual only): the Monetization & Marketing lab pane renders a
+   bare h2 ("Creative intelligence workflow") that the restyle missed — it fell back to the
+   system font while every other office heading uses Orbitron. Mirror the Distribution lab
+   treatment, with marketing's violet accent for the glow. Found by live browser testing. */
+#marketing-lab{font-family:var(--lx-fb)}
+#marketing-lab>h2{font-family:var(--lx-fd);letter-spacing:.04em;color:#dff0ff;text-shadow:0 0 .8em rgba(176,123,255,.5)}
