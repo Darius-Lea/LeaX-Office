@@ -6,6 +6,12 @@
 - Verified live: invite sent, received and accepted; guest lands in the host's live session (pre-invite messages visible, people present); two simultaneous invites both accepted; guest limits (owner controls hidden, no Page buttons, direct room-invite API returns 403); bidirectional messaging; Back returns the guest home; host removal returns the guest home while the other guest stays; decline (inviter notice + Declined + guest stays home + toggle clears); no-answer (inviter notice + Missed + toggle clears + "No answer" row); meeting invite auto-joins the same meeting.
 - Two defects found and fixed during verification: (1) invite rows lost their kind marker on terminal transitions because the shared_phone_invites link row was deleted; the link rows are now kept permanently as the kind marker. (2) The meeting client closed under load (12s request deadline, 20s failure window, 30s server heartbeat prune); widened to 30s/90s client-side and a 120s server heartbeat, with the heartbeat-loss test updated to match.
 - Not verified: WebRTC media (the test VM blocks UDP and mDNS resolution), physical devices, external networks, production TURN, live Render deployment. The feature branch is pushed and unmerged; merging is Darius's call.
+## 2026-11-23 — guest invite links + mobile touch walking (branch guest-invite-links)
+
+- `npm test` — 210/210 passed (208 baseline + 2 new guest-conversation tests: live conversation merge, people list, revoke/expiry purge, validation).
+- Playwright E2E (guestlink-e2e.mjs, two browser contexts, guest on 390px mobile): 27/28. The one failure was a leave race (an in-flight poll overwrote the leave message); fixed with a leaving flag and re-verified 3/3 in a focused leave test (guestlink-leave.mjs, 4/4).
+- Playwright mobile touch controls (guestlink-mobile.mjs): 21/21 feature checks passed — tap-to-spot, double-tap continuous walk with drag-to-steer, single-tap/double-tap/Stop-button stops, joystick, quick-jump spots, 390px/768px layout with no horizontal overflow. The lobby navigation step timed out under load in that run; a standalone lobby check passed 2/2 at 390px and 768px.
+- Movement distances in this VM are small (~0.5m per check) because the 3D scene renders at ~0.5 fps under SwiftShader and the physics step is clamped to 70ms/frame; on a real phone at 30-60fps the same code walks at 2.1 m/s. Media (guest video meetings) not re-verified here: UDP/mDNS are blocked in this VM, as before.
 
 ## 2026-11-06 — preview.48 release checkpoint
 
