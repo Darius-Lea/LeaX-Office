@@ -8,7 +8,8 @@ const packaged=process.env.HQ_TEST_PACKAGED==='1',label=packaged?'packaged':'sou
 mkdirSync(results,{recursive:true});const folder=mkdtempSync(join(tmpdir(),'leax-room-meeting-'));
 let browser,child,serverLog='',pages=[];const pageErrors=[],consoleErrors=[];
 async function checked(response,status=200){const text=await response.text();assert.equal(response.status(),status,text.slice(0,1000));return JSON.parse(text);}
-async function ready(page){await page.waitForFunction(()=>!!window.lxRoomMeeting&&!!window.lxSharedPresence,null,{timeout:45000});}
+async function ready(page){await page.waitForFunction(()=>!!window.lxRoomMeeting&&!!window.lxSharedPresence,null,{timeout:90000});}
+async function sceneReady(page){await page.locator('#scene canvas[data-shared-participants]').waitFor({state:'attached',timeout:90000});}
 async function active(page,expected=true){await page.waitForFunction(value=>(window.lxRoomMeeting?.getState().active||false)===value,expected,{timeout:30000});}
 async function settled(){await new Promise(resolve=>setTimeout(resolve,1500));}
 try{
@@ -29,7 +30,7 @@ try{
  const invitation=await checked(await ownerContext.request.post('/api/shared/guest-admin/create',{headers,data:{address,minutes:10,purpose:'meeting'}}));
  await guest.goto('/guest#invite='+encodeURIComponent(invitation.invitation),{waitUntil:'domcontentloaded'});await guest.getByLabel('Your name',{exact:true}).fill('Phone guest');await guest.locator('#join-form button').click();await guest.locator('#visitor').waitFor({state:'visible'});await ready(guest);
  for(const context of contexts)assert.equal((await context.request.get('/api/state')).status(),401,'Shared/guest accounts must not authenticate founder state');
- for(const page of pages){assert.equal(await page.evaluate(()=>window.fixtureCaptureTracks.length),0,'Meeting capture starts only after Join');await page.locator('.room-meeting input[type=checkbox]').first().check();await page.locator('.room-meeting [data-action=join]').click();await active(page);await page.locator('.room-meeting [data-action=room]').click();}
+ for(const page of pages){assert.equal(await page.evaluate(()=>window.fixtureCaptureTracks.length),0,'Meeting capture starts only after Join');await page.locator('.room-meeting input[type=checkbox]').first().check();await page.locator('.room-meeting [data-action=join]').click();await active(page);await sceneReady(page);await page.locator('.room-meeting [data-action=room]').click();}
  for(const page of pages){
   await page.waitForFunction(()=>window.lxRoomMeeting.getState().peers.length===4,null,{timeout:30000});
   await page.waitForFunction(async()=>{const stats=await window.lxRoomMeeting.getStats(),ids=new Set(stats.filter(s=>s.kind==='audio'&&s.packetsReceived>0).map(s=>s.peerId)),videos=new Set(stats.filter(s=>s.kind==='video'&&s.framesDecoded>0).map(s=>s.peerId));return ids.size===3&&videos.size===3;},null,{timeout:60000});

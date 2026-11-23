@@ -6,8 +6,8 @@ const fail=(message:string,status=403)=>Object.assign(new Error(message),{status
 db.exec(`CREATE TABLE IF NOT EXISTS room_live_presence(id TEXT PRIMARY KEY,room_id TEXT NOT NULL,kind TEXT NOT NULL,actor_ref TEXT NOT NULL,name TEXT NOT NULL,role TEXT NOT NULL,pose TEXT,seat INTEGER,seen INTEGER NOT NULL,UNIQUE(kind,actor_ref));
 CREATE INDEX IF NOT EXISTS room_live_presence_room ON room_live_presence(room_id,seen);`);
 function cleanPose(v:any){
- if(!v||typeof v.active!=='boolean'||!['orbit','explore','meeting'].includes(v.cameraMode)||![v.x,v.z,v.yaw,v.pitch].every(n=>typeof n==='number'&&Number.isFinite(n)))throw fail('Invalid office position',400);
- return {active:v.active&&v.cameraMode!=='orbit',cameraMode:v.cameraMode,x:Math.max(-10.1,Math.min(10.1,v.x)),z:Math.max(-9.1,Math.min(9.6,v.z)),yaw:Math.max(-100,Math.min(100,v.yaw)),pitch:Math.max(-.7,Math.min(.65,v.pitch))};
+ if(!v||typeof v.active!=='boolean'||!['orbit','explore','meeting','entry'].includes(v.cameraMode)||![v.x,v.z,v.yaw,v.pitch].every(n=>typeof n==='number'&&Number.isFinite(n)))throw fail('Invalid office position',400);
+ return {active:v.active&&v.cameraMode!=='orbit'&&v.cameraMode!=='entry',cameraMode:v.cameraMode,x:Math.max(-10.1,Math.min(10.1,v.x)),z:Math.max(-9.1,Math.min(9.6,v.z)),yaw:Math.max(-100,Math.min(100,v.yaw)),pitch:Math.max(-.7,Math.min(.65,v.pitch))};
 }
 function member(address:string,user:any,now:number){
  const r=db.prepare('SELECT r.id,u.name,m.role FROM shared_rooms r JOIN shared_members m ON m.room_id=r.id JOIN shared_users u ON u.id=m.user_id JOIN shared_sessions s ON s.user_id=u.id WHERE r.address=? AND u.id=? AND s.hash=? AND s.expires>?').get(address,user?.id||'',user?.sessionHash||'',now) as any;
