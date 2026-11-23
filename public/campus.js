@@ -52,7 +52,7 @@ function drawWorkspace(){
   const symbol=node('div',item.id==='sales'?'↗':item.id==='marketing'?'✦':'⌂');symbol.className='campus-symbol';card.append(symbol,node('p',item.purpose),node('h3',item.name),node('p',item.description));
   const selected=latest?.activeOffice===item.id,byJet=latest?.activeOffice==='marketing'||item.id==='marketing';
   const button=node('button',selected?'Open this office':byJet?'Travel by private jet · 10 sec':'Drive across the city · 10 sec');button.disabled=!!latest?.travel&&!selected;button.onclick=()=>selected?workspace(item.id):void goToOffice(item.id);card.append(button);
-  if(selected){const look=node('button','Look around this location');look.className='secondary-button';look.onclick=()=>explore(item.id);card.append(look,node('small','You are here'));}
+  if(selected){const look=node('button','First person view');look.className='secondary-button first-person-cta';look.onclick=()=>explore(item.id);card.append(look,node('small','You are here'));}
   grid.append(card);
  }
  pane.append(grid);const note=node('p','Virtual travel changes your office view. Saved work and real connection statuses remain available.');note.className='fine-print';pane.append(note);
@@ -115,7 +115,7 @@ function showArrival(id){
  const header=node('header');header.append(node('p','ARRIVAL · YOUR VIRTUAL OFFICE HOST'));const close=node('button','×');close.className='campus-close';close.setAttribute('aria-label','Close arrival greeting');close.onclick=()=>d.close();header.append(close);
  const greeting=node('div');greeting.className='campus-arrival-greeting';const emblem=node('span',id==='marketing'?'✦':id==='sales'?'↗':'⌂');emblem.className='campus-arrival-emblem';
  const title=node('h2','Welcome to '+item.name),message=node('p',id==='marketing'?'Your creative playground is ready. Explore the studio, discover the displays and enjoy the space.':id==='sales'?'Welcome to your production campus. Walk the warehouse floor, inspect saved artwork and review actual assignments, orders and field jobs.':'Welcome home. Take a look around your headquarters or return to your saved company work.');message.setAttribute('role','status');greeting.append(emblem,title,message,node('small',item.purpose));
- const controls=node('div');controls.className='campus-travel-controls';const look=node('button','Look around this location');look.dataset.travelEnter='';look.onclick=()=>explore(id);const work=node('button','Open department workspace');work.onclick=()=>workspace(id);controls.append(look,work);
+ const controls=node('div');controls.className='campus-travel-controls';const look=node('button','First person view');look.className='first-person-cta';look.dataset.travelEnter='';look.onclick=()=>explore(id);const work=node('button','Open department workspace');work.onclick=()=>workspace(id);controls.append(look,work);
  d.append(header,greeting,controls);if(!d.open)d.showModal();
 }
 function tick(){
