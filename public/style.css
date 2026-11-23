@@ -543,3 +543,9 @@ body[data-view='2d'] .desk-status{color:#6f8bb0}
 .office-entry-cta:hover{background:linear-gradient(135deg,rgba(74,134,255,1),rgba(88,214,255,1));box-shadow:0 0 1.8em rgba(88,214,255,.9),0 0 4em rgba(88,214,255,.4)}
 @keyframes office-entry-pulse{50%{box-shadow:0 0 2em rgba(88,214,255,.95),0 0 4.5em rgba(88,214,255,.45)}}
 @media (prefers-reduced-motion:reduce){.office-entry-cta{animation:none}}
+
+/* First person view: the option people look for. Pupa, 2026-11-23: highlight it
+   and name it what it is. Same glow treatment as the Office overview option. */
+.first-person-cta{border:1.5px solid var(--lx-cyan)!important;color:#fff!important;background:linear-gradient(135deg,rgba(74,134,255,.85),rgba(88,214,255,.85))!important;box-shadow:0 0 1.2em rgba(88,214,255,.65),0 0 3em rgba(88,214,255,.3);animation:office-entry-pulse 2.2s ease-in-out infinite}
+.first-person-cta:hover{background:linear-gradient(135deg,rgba(74,134,255,1),rgba(88,214,255,1))!important;box-shadow:0 0 1.8em rgba(88,214,255,.9),0 0 4em rgba(88,214,255,.4)}
+@media (prefers-reduced-motion:reduce){.first-person-cta{animation:none}}
