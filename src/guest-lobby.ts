@@ -8,7 +8,15 @@ const hash=(s:string)=>createHash('sha256').update(s).digest('hex');
 const secret=()=>randomBytes(32).toString('hex');
 const fail=(message:string,status=403)=>Object.assign(new Error(message),{status});
 db.exec(`CREATE TABLE IF NOT EXISTS guest_lobby_links(id TEXT PRIMARY KEY,hash TEXT NOT NULL UNIQUE,room_id TEXT NOT NULL,creator TEXT NOT NULL,expires INTEGER NOT NULL,revoked INTEGER NOT NULL DEFAULT 0,used INTEGER NOT NULL DEFAULT 0);
-CREATE TABLE IF NOT EXISTS guest_lobby_sessions(hash TEXT PRIMARY KEY,link_id TEXT NOT NULL,name TEXT NOT NULL,seen INTEGER NOT NULL);`);
+CREATE TABLE IF NOT EXISTS guest_lobby_sessions(hash TEXT PRIMARY KEY,link_id TEXT NOT NULL,name TEXT NOT NULL,seen INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS shared_guest_messages(id INTEGER PRIMARY KEY,room_id TEXT NOT NULL,link_id TEXT NOT NULL,name TEXT NOT NULL,body TEXT NOT NULL,created INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS shared_guest_messages_room ON shared_guest_messages(room_id,id);`);
+// Merged room conversation (member + guest messages) and the guests currently
+// present in a room. The room API in shared-offices.ts uses these so a guest
+// is part of the same live conversation and people list as the members.
+export function roomConversation(roomId:string){return db.prepare("SELECT id,name,body,created,guest FROM (SELECT id,name,body,created,0 AS guest FROM (SELECT x.id,u.name,x.body,x.created FROM shared_messages x JOIN shared_users u ON u.id=x.user_id WHERE x.room_id=?) UNION ALL SELECT id,name,body,created,1 AS guest FROM shared_guest_messages WHERE room_id=? ORDER BY created DESC,id DESC LIMIT 100) ORDER BY created ASC,id ASC").all(roomId,roomId);}
+export function roomGuests(roomId:string,now:number){return db.prepare("SELECT NULL AS id,s.name,NULL AS handle,'guest' AS role,s.seen FROM guest_lobby_sessions s JOIN guest_lobby_links l ON l.id=s.link_id WHERE l.room_id=? AND l.expires>? AND l.revoked=0 AND s.seen>?").all(roomId,now,now-45000);}
+export function pruneGuestMessages(now:number){db.prepare('DELETE FROM shared_guest_messages WHERE link_id IN (SELECT id FROM guest_lobby_links WHERE expires<=? OR revoked=1)').run(now);}
 function addColumn(table:string,column:string,definition:string){if(!(db.prepare('PRAGMA table_info('+table+')').all() as any[]).some(item=>item.name===column))db.exec('ALTER TABLE '+table+' ADD COLUMN '+column+' '+definition);}
 addColumn('guest_lobby_links','purpose',"TEXT NOT NULL DEFAULT 'walkthrough'");
 addColumn('guest_lobby_sessions','pose','TEXT');
@@ -48,6 +56,7 @@ export function guestLobbyRequest(action:string,method:string,body:any,token:str
  // Deleting expired capabilities bounds stored personal data and invalidates sessions.
  db.prepare('DELETE FROM guest_lobby_sessions WHERE link_id IN (SELECT id FROM guest_lobby_links WHERE expires<=? OR revoked=1)').run(now);
  db.prepare('DELETE FROM guest_lobby_links WHERE expires<=?').run(now);
+ pruneGuestMessages(now);
  if(action==='redeem'&&method==='POST'){
   if(typeof body.invitation!=='string'||!/^[a-f0-9]{64}$/.test(body.invitation))throw fail('Invalid invitation',400);
   if(typeof body.name!=='string'||!body.name.trim()||body.name.trim().length>80)throw fail('Enter your name (up to 80 characters)',400);
@@ -78,6 +87,19 @@ export function guestLobbyRequest(action:string,method:string,body:any,token:str
   const session=db.prepare('SELECT pose,host_pose,host_pose_seen,follows_host FROM guest_lobby_sessions WHERE hash=?').get(hash(token)) as any;
   const hostPose=session.host_pose&&now-session.host_pose_seen<5000?JSON.parse(session.host_pose):null;
   return {data:{name:row.name,office:row.office,address:row.address,expires:row.expires,purpose:row.purpose,pose:session.pose?JSON.parse(session.pose):null,hostPose,guideActive:!!hostPose?.active,followingHost:!!session.follows_host,scope:'temporary-office-visit'}};
+ }
+ if(action==='message'&&method==='POST'){
+  const session=db.prepare('SELECT s.link_id,s.name,l.room_id,l.creator,l.expires,l.revoked FROM guest_lobby_sessions s JOIN guest_lobby_links l ON l.id=s.link_id WHERE s.hash=?').get(hash(token)) as any;if(!session||session.revoked||session.expires<=now)throw fail('Guest access has ended. Ask your host for a new link.',410);requireActive(session.creator,now);
+  const bodyText=typeof body.message==='string'?body.message.trim():'';if(!bodyText||bodyText.length>2000)throw fail('Write a message (up to 2000 characters)',400);
+  db.prepare('INSERT INTO shared_guest_messages(room_id,link_id,name,body,created) VALUES(?,?,?,?,?)').run(session.room_id,session.link_id,session.name,bodyText,now);
+  db.prepare('UPDATE guest_lobby_sessions SET seen=? WHERE hash=?').run(now,hash(token));
+  return {data:{ok:true}};
+ }
+ if(action==='conversation'&&method==='GET'){
+  const session=db.prepare('SELECT s.link_id,l.room_id,l.creator,l.expires,l.revoked FROM guest_lobby_sessions s JOIN guest_lobby_links l ON l.id=s.link_id WHERE s.hash=?').get(hash(token)) as any;if(!session||session.revoked||session.expires<=now)throw fail('Guest access has ended. Ask your host for a new link.',410);requireActive(session.creator,now);
+  db.prepare('UPDATE guest_lobby_sessions SET seen=? WHERE hash=?').run(now,hash(token));
+  const people=db.prepare("SELECT u.id,u.name,u.handle,m.role,max(p.seen) AS seen FROM shared_presence p JOIN shared_sessions s ON s.hash=p.session_hash JOIN shared_users u ON u.id=s.user_id JOIN shared_members m ON m.room_id=p.room_id AND m.user_id=u.id WHERE p.room_id=? AND p.seen>? AND s.expires>? AND NOT EXISTS(SELECT 1 FROM platform_access a WHERE a.user_id=u.id AND a.state IN ('suspended','revoked') AND (a.until_at IS NULL OR a.until_at>?)) GROUP BY u.id").all(session.room_id,now-45000,now,now);
+  return {data:{messages:roomConversation(session.room_id),people:[...people,...roomGuests(session.room_id,now)]}};
  }
  throw fail('Unknown guest action',404);
 }
