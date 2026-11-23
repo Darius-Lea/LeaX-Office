@@ -526,3 +526,20 @@ body[data-view='2d'] .desk-status{color:#6f8bb0}
    treatment, with marketing's violet accent for the glow. Found by live browser testing. */
 #marketing-lab{font-family:var(--lx-fb)}
 #marketing-lab>h2{font-family:var(--lx-fd);letter-spacing:.04em;color:#dff0ff;text-shadow:0 0 .8em rgba(176,123,255,.5)}
+
+/* ===== Office entry view: arriving in a room of the LeaX building =====
+   Every office opens on a cinematic lobby-style establishing view. The lobby
+   is the building's entrance room and each office is another room of the same
+   building, so arrival shows one glowing, suggestive option, "Office
+   overview", which leads into the working office. Bright text on dark glass
+   in the lobby's treatment; no grey on grey. */
+.office-entry{position:absolute;inset:0;z-index:4;display:flex;align-items:flex-end;justify-content:center;padding:0 16px 112px;pointer-events:none;background:radial-gradient(90% 65% at 50% 0%,transparent 55%,rgba(3,8,20,.38))}
+.office-entry[hidden]{display:none!important}
+.office-entry-card{pointer-events:auto;text-align:center;max-width:620px;padding:20px 30px 22px;border:1px solid var(--lx-edge-soft);border-radius:18px;background:var(--lx-glass);backdrop-filter:blur(13px) saturate(1.5);-webkit-backdrop-filter:blur(13px) saturate(1.5);box-shadow:var(--lx-shadow)}
+.office-entry-eyebrow{margin:0 0 8px;font-family:var(--lx-fm);font-size:11px;letter-spacing:.18em;color:var(--lx-cyan)}
+.office-entry-title{margin:0 0 8px;font-family:var(--lx-fd);font-size:30px;letter-spacing:.04em;color:#eaf6ff;text-shadow:0 0 .8em rgba(90,200,255,.5)}
+.office-entry-sub{margin:0 auto 16px;max-width:520px;font-family:var(--lx-fb);font-size:13px;line-height:1.55;color:#cfe6ff}
+.office-entry-cta{font-family:var(--lx-fd);font-size:15px;letter-spacing:.08em;color:#fff;background:linear-gradient(135deg,rgba(74,134,255,.85),rgba(88,214,255,.85));border:1.5px solid var(--lx-cyan);border-radius:12px;padding:13px 34px;cursor:pointer;box-shadow:0 0 1.2em rgba(88,214,255,.65),0 0 3em rgba(88,214,255,.3);animation:office-entry-pulse 2.2s ease-in-out infinite}
+.office-entry-cta:hover{background:linear-gradient(135deg,rgba(74,134,255,1),rgba(88,214,255,1));box-shadow:0 0 1.8em rgba(88,214,255,.9),0 0 4em rgba(88,214,255,.4)}
+@keyframes office-entry-pulse{50%{box-shadow:0 0 2em rgba(88,214,255,.95),0 0 4.5em rgba(88,214,255,.45)}}
+@media (prefers-reduced-motion:reduce){.office-entry-cta{animation:none}}
