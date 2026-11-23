@@ -1,3 +1,9 @@
+## 2026-11-23 — hosted AI fallback
+
+- `node --test test/hosted-ai.test.ts` — 5/5 passed: environment-only configuration with Groq defaults, refusal to run or fetch without `HQ_AI_API_KEY`, endpoint/Authorization/normalized-result checks against a fixture fetcher, truthful engine state in both configurations, and an end-to-end queue-to-completion run on the hosted marker while a configured local model still takes priority.
+- Full suite `npm test` — 219 passed, 0 failed.
+- No live Groq call, Render deployment or browser check was performed; hosted inference is verified against fixture responses only until `HQ_AI_API_KEY` is set on the deployment.
+
 ## 2026-11-23 — phone office invites (branch phone-office-invites)
 
 - Full suite: 212/212 passed on Node 24 (208 baseline + 4 new phone-invite backend tests), run after the invite backend, after the invite kind-marker fix, and after the meeting-timeout fixes. `node --check` passed for public/shared-phone.js, public/offices.js and public/room-meeting.js. `public/lobby.html` unchanged (SHA-256 bf4465eb3fe032a95722b7b3235e353deca8645547f509d538a6c0aab310d902).
