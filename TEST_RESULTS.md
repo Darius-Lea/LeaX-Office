@@ -1,3 +1,10 @@
+## 2026-11-23 — guest invite links + mobile touch walking (branch guest-invite-links)
+
+- `npm test` — 210/210 passed (208 baseline + 2 new guest-conversation tests: live conversation merge, people list, revoke/expiry purge, validation).
+- Playwright E2E (guestlink-e2e.mjs, two browser contexts, guest on 390px mobile): 27/28. The one failure was a leave race (an in-flight poll overwrote the leave message); fixed with a leaving flag and re-verified 3/3 in a focused leave test (guestlink-leave.mjs, 4/4).
+- Playwright mobile touch controls (guestlink-mobile.mjs): 21/21 feature checks passed — tap-to-spot, double-tap continuous walk with drag-to-steer, single-tap/double-tap/Stop-button stops, joystick, quick-jump spots, 390px/768px layout with no horizontal overflow. The lobby navigation step timed out under load in that run; a standalone lobby check passed 2/2 at 390px and 768px.
+- Movement distances in this VM are small (~0.5m per check) because the 3D scene renders at ~0.5 fps under SwiftShader and the physics step is clamped to 70ms/frame; on a real phone at 30-60fps the same code walks at 2.1 m/s. Media (guest video meetings) not re-verified here: UDP/mDNS are blocked in this VM, as before.
+
 ## 2026-11-06 — preview.48 release checkpoint
 
 Implemented shared member/guest four-person room calls, centralized ICE configuration, shared avatars/seats, screen-sharing controls, moderation, revisioned decisions/action items and explicitly shared-context local advisers. Windows CI passed all208 backend tests and production build. Four-browser end-to-end checks timed out at page/guest entry; no end-to-end media pass is claimed. Physical devices, external networks, production TURN, live Render deployment and Windows setup execution remain unverified. Hosted paired-worker meeting advisers remain setup-required. The owner explicitly requested publishing the current update before remaining session usage expires. See PR23 and docs/ROOM-MEETINGS.md; do not describe this as complete cross-network certification.
