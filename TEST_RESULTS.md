@@ -1,3 +1,9 @@
+## 2026-11-23 — hosted AI fallback
+
+- `node --test test/hosted-ai.test.ts` — 5/5 passed: environment-only configuration with Groq defaults, refusal to run or fetch without `HQ_AI_API_KEY`, endpoint/Authorization/normalized-result checks against a fixture fetcher, truthful engine state in both configurations, and an end-to-end queue-to-completion run on the hosted marker while a configured local model still takes priority.
+- Full suite `npm test` — 213 passed, 0 failed (baseline 208 plus the 5 new tests).
+- No live Groq call, Render deployment or browser check was performed; hosted inference is verified against fixture responses only until `HQ_AI_API_KEY` is set on the deployment.
+
 ## 2026-11-06 — preview.48 release checkpoint
 
 Implemented shared member/guest four-person room calls, centralized ICE configuration, shared avatars/seats, screen-sharing controls, moderation, revisioned decisions/action items and explicitly shared-context local advisers. Windows CI passed all208 backend tests and production build. Four-browser end-to-end checks timed out at page/guest entry; no end-to-end media pass is claimed. Physical devices, external networks, production TURN, live Render deployment and Windows setup execution remain unverified. Hosted paired-worker meeting advisers remain setup-required. The owner explicitly requested publishing the current update before remaining session usage expires. See PR23 and docs/ROOM-MEETINGS.md; do not describe this as complete cross-network certification.
