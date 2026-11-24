@@ -5,11 +5,15 @@
    type, Exo 2 body type. Existing !important station rules are matched with !important here.
    No markup, content or behaviour changes. ===== */
 #distribution-workspace{font-family:'Exo 2',system-ui,-apple-system,'Segoe UI',sans-serif}
+/* QA defect 4 (2026-11-23): the workspace is its own opaque dark panel, so the
+   pale heading and station text never sit on a light host surface. */
+#distribution-workspace{background:linear-gradient(165deg,#12294f,#081630 45%,#05070d);border:1px solid rgba(130,210,255,.24);border-radius:1em;padding:24px}
+#distribution-workspace>p{color:#d7e6f5}
 #distribution-workspace>h2{font-family:'Orbitron','Exo 2',system-ui,sans-serif;letter-spacing:.05em;color:#dff0ff;text-shadow:0 0 .8em rgba(90,200,255,.5)}
-.distribution-station{border:1px solid rgba(130,210,255,.24)!important;border-top:3px solid #58d6ff!important;background:linear-gradient(165deg,rgba(60,120,210,.3),rgba(10,24,54,.62) 40%,rgba(7,16,38,.7))!important;border-radius:1em;box-shadow:0 0 0 1px rgba(255,255,255,.05) inset,0 0 2.4em rgba(70,160,255,.22),0 1.6em 4em rgba(0,0,0,.45),inset 0 0 2.6em rgba(100,180,255,.1)}
+.distribution-station{border:1px solid rgba(130,210,255,.24)!important;border-top:3px solid #58d6ff!important;background:linear-gradient(165deg,#1b3a55,#0b1a2c 45%,#081120)!important;border-radius:1em;box-shadow:0 0 0 1px rgba(255,255,255,.05) inset,0 0 2.4em rgba(70,160,255,.22),0 1.6em 4em rgba(0,0,0,.45),inset 0 0 2.6em rgba(100,180,255,.1)}
 .distribution-station h3{color:#dff0ff;font-family:'Orbitron','Exo 2',system-ui,sans-serif;letter-spacing:.06em;text-shadow:0 0 .8em rgba(90,200,255,.5)}
-.distribution-station p{color:#9fb9d8}
+.distribution-station p{color:#d7e6f5}
 .distribution-station .distribution-product{background:rgba(5,16,40,.55);border:1px solid rgba(130,200,255,.3);color:#dcecff;border-radius:.7em;box-shadow:inset 0 0 1.4em rgba(80,170,255,.1)}
 .distribution-station .distribution-product:hover{border-color:#58d6ff;background:rgba(20,60,120,.45)}
-.distribution-station .distribution-product span{color:#6f8bb0;font-family:'Share Tech Mono',ui-monospace,Menlo,monospace}
-.distribution-inspection small{color:#6f8bb0}
+.distribution-station .distribution-product span{color:#b9cfe6;font-family:'Share Tech Mono',ui-monospace,Menlo,monospace}
+.distribution-inspection small{color:#b9cfe6}
