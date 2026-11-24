@@ -1,3 +1,10 @@
+## 2026-11-24 — Meeting room button clickable (QA defect 5)
+
+- `node --test test/meeting-room-button.test.ts` — 1/1 passed: the floor-label top (72px) clears the Live operations toggle bottom edge (about 60.5px at the default size), the toggle keeps its corner (right 24px, top 20px), and the pointer-events setup is intact (label none, button auto).
+- Headless Electron hit-test with the real stylesheet and the toggle present: before the fix `elementFromPoint` at the button centre returned `BUTTON#operations-toggle`; after the fix it returns `BUTTON#meeting-room-enter`, at both the default width and after the change. The 560px run shows the label hidden by the pre-existing `@media(max-width:650px)` rule, which is intentional mobile behaviour.
+- Full suite `npm test` — 223 passed, 0 failed (222 baseline + 1 new test). `public/lobby.html` unchanged (SHA-256 bf4465eb3fe032a95722b7b3235e353deca8645547f509d538a6c0aab310d902).
+- Not verified: live browser click on the hosted site after the redeploy; rendering claims are code-level only (no WebGL in this environment).
+
 ## 2026-11-23 — grey-on-grey contrast (QA defect 4)
 
 - `node --test test/contrast.test.ts` — 1/1 passed: campus card and Distribution Center station text contrast (computed WCAG ratios, 7:1 or better on the fixed pairs), white dock labels with disabled opacity 0.8, Live operations metric values in Exo 2 (no Orbitron slashed zero) with brightened labels, meeting remote disabled toggle opacity 0.85, and enlarged 3D desk name tags (2.6 x 0.5 world units) on both code paths.
