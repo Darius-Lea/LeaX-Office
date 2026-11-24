@@ -549,3 +549,16 @@ body[data-view='2d'] .desk-status{color:#6f8bb0}
 .first-person-cta{border:1.5px solid var(--lx-cyan)!important;color:#fff!important;background:linear-gradient(135deg,rgba(74,134,255,.85),rgba(88,214,255,.85))!important;box-shadow:0 0 1.2em rgba(88,214,255,.65),0 0 3em rgba(88,214,255,.3);animation:office-entry-pulse 2.2s ease-in-out infinite}
 .first-person-cta:hover{background:linear-gradient(135deg,rgba(74,134,255,1),rgba(88,214,255,1))!important;box-shadow:0 0 1.8em rgba(88,214,255,.9),0 0 4em rgba(88,214,255,.4)}
 @media (prefers-reduced-motion:reduce){.first-person-cta{animation:none}}
+
+/* QA defect 4 (2026-11-23): grey-on-grey contrast. Lobby language: dark glass
+   surfaces, white/cyan text. Card backgrounds are opaque dark so light text
+   never sits on a pale wash; dim subtext is brightened past 7:1. */
+.campus-card{background:linear-gradient(165deg,#142c49,#0a1826 45%,#081120)}
+.campus-card p{color:#d7e6f5}
+.campus-card small{color:#b9cfe6}
+.campus-card-marketing{background:linear-gradient(165deg,#2b2145,#0d1526 45%,#081120)}
+.office-dock button{color:#fff;font-weight:600}
+.office-dock button:disabled{opacity:.8}
+.operations-metrics strong{font-family:'Exo 2',system-ui,sans-serif;font-variant-numeric:tabular-nums}
+.operations-metrics span{color:#b9cfe6}
+.meeting-remote button:disabled{opacity:.85}

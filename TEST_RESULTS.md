@@ -1,3 +1,15 @@
+## 2026-11-23 — grey-on-grey contrast (QA defect 4)
+
+- `node --test test/contrast.test.ts` — 1/1 passed: campus card and Distribution Center station text contrast (computed WCAG ratios, 7:1 or better on the fixed pairs), white dock labels with disabled opacity 0.8, Live operations metric values in Exo 2 (no Orbitron slashed zero) with brightened labels, meeting remote disabled toggle opacity 0.85, and enlarged 3D desk name tags (2.6 x 0.5 world units) on both code paths.
+- Full suite `npm test` — 222 passed, 0 failed (221 baseline + 1 new test). `node --check` passed for public/office3d.js. `public/lobby.html` unchanged (SHA-256 bf4465eb3fe032a95722b7b3235e353deca8645547f509d538a6c0aab310d902).
+- Not verified: live browser look on the hosted site after the redeploy; rendering claims are code-level only (no WebGL in this environment).
+
+## 2026-11-23 — hosted offices report Connected (QA defect 3)
+
+- `node --test test/online-access.test.ts` — 2/2 passed: hosted access reports status Connected, connected true, with no call to the access server, and stays Connected through check() and start(); installed access still starts at Connecting until a check resolves it.
+- Full suite `npm test` — 221 passed, 0 failed (220 baseline + 1 new test). Live hosted-mode run (RENDER=true, local): /api/online/status returns status Connected, connected true, error null. `public/lobby.html` unchanged (SHA-256 bf4465eb3fe032a95722b7b3235e353deca8645547f509d538a6c0aab310d902).
+- Not verified: live browser check on the hosted site after the redeploy.
+
 ## 2026-11-23 — guest lobby backdrop no longer blocks the join (meeting-check #visitor fix)
 
 - Root cause (GitHub Actions run 45261972804, step 9, line 31): the guest page loaded the decorative lobby backdrop iframe (`#lobby-backdrop`, `/guest-lobby`, a full 3D lobby with Three.js + bloom post-processing) eagerly at page load, on the same main thread as the join form. On a slow runner its init blocked the thread so long that the join submit handler (redeem, state, enterOffice) could not run within the 30s `#visitor` visibility wait, so `#visitor` stayed hidden and the check timed out. The guest flow itself was never broken: once the thread was free, redeem took 32ms and state 60ms. The two 401 console errors on the guest client are the lobby iframe's own probes (`/api/updates/install-status`, `/api/shared/me`), harmless noise, not the cause. The heartbeat prune was already ruled out (120s server prune, 850ms client poll).
