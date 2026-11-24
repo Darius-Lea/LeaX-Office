@@ -1,3 +1,9 @@
+## 2026-11-24 — first-person Headquarters teal spheres removed (QA defect 7)
+
+- `node --test test/first-person-spheres.test.ts` — 1/1 passed: no lattice label, programmable-matter comment, `spinMatter`/`updateMatter`/`matterBusy`, teal node emissive (`#1a8f86`), old lattice position (-2.6, 0, 8.7) or `matter` action remains in `public/office3d.js`; the first-person spawn (0, 1.65, 8.5) is unchanged and the shared glow texture the holo table uses is kept.
+- `node --check public/office3d.js` passed. Full suite `npm test` — 226 passed, 0 failed (225 baseline + 1 new test). `public/lobby.html` unchanged (SHA-256 bf4465eb3fe032a95722b7b3235e353deca8645547f509d538a6c0aab310d902).
+- Not verified: live browser look on the hosted site after the redeploy; rendering claims are code-level only (no WebGL in this environment).
+
 ## 2026-11-24 — Return to office stays in the office (QA defect 6)
 
 - The Meeting room button ("Return to office") and the first-person "Return to office overview" button never navigated anywhere: they only call `exitMeetingRoom` / `exitExplore`, which only return the 3D camera to the office orbit view. The exit to the lobby root came from the background state poll: `refreshState()` runs every 5 seconds, and on any "Sign in" failure its catch navigated the whole office page to `/`, which serves lobby.html with its sign-in form. At QA time the session was dead because founder sessions lived only in the ephemeral sessions table, wiped by the mid-check redeploy (defect 2, fixed by signed sessions in PR #36); the poll fired while the user was leaving the meeting room / first-person view, so the exit looked like the cause. A dead session can still happen (8-hour token expiry, revoked token, re-created founder), so the redirect itself is the defect.
