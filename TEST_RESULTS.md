@@ -1,3 +1,9 @@
+## 2026-11-24 — meeting room figures fixed (QA defect 8)
+
+- `node --test test/meeting-room-figures.test.ts` — 3/3 passed: every meeting seat nameplate fits the default meeting view (camera at the CEO end chair, seats 0-1 empty, 1.5 x 0.30 tags at y 2.05, full 26-seat pinhole projection at 16:9 with 2 deg margin, worst usable seat ~13 deg margin); CEO forearms are tapered cylinders from the cuffs (0.37 m, ~0.05 m radius, `#26354e`, far end ~39 deg below horizontal, hands/cuffs/watch untouched); nameplates are smaller, lower and clamped to 30 deg angular width per frame.
+- `node --check public/office3d.js` passed. Full suite `npm test` — 229 passed, 0 failed (226 baseline + 3 new tests). `public/lobby.html` unchanged (SHA-256 bf4465eb3fe032a95722b7b3235e353deca8645547f509d538a6c0aab310d902).
+- Not verified: live browser look on the hosted site after the redeploy; rendering claims are code-level only (no WebGL in this environment).
+
 ## 2026-11-24 — first-person Headquarters teal spheres removed (QA defect 7)
 
 - `node --test test/first-person-spheres.test.ts` — 1/1 passed: no lattice label, programmable-matter comment, `spinMatter`/`updateMatter`/`matterBusy`, teal node emissive (`#1a8f86`), old lattice position (-2.6, 0, 8.7) or `matter` action remains in `public/office3d.js`; the first-person spawn (0, 1.65, 8.5) is unchanged and the shared glow texture the holo table uses is kept.
