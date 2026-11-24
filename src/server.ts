@@ -49,7 +49,7 @@ import {readFileSync,existsSync} from 'node:fs';
 import {randomBytes,timingSafeEqual} from 'node:crypto';
 import {backup} from 'node:sqlite';
 import {join} from 'node:path';
-import {db,directory,setup,login,authenticated,enqueue,snapshot,audit,clock,setting,setSetting,editTask} from './store.ts';
+import {db,directory,setup,login,authenticated,revokeSession,enqueue,snapshot,audit,clock,setting,setSetting,editTask} from './store.ts';
 import {solicitationState,searchSolicitations,normalizeSearchCriteria} from './solicitations.ts';
 import {contactState,researchContacts} from './contacts.ts';
 import {draftState,prepareContactDraft,prepareNoticeDraft,reviewDraft,composerLink} from './drafts.ts';
@@ -341,7 +341,7 @@ if(req.method==='POST'&&url.pathname==='/api/browser-access/grant'){
  audit(body.task,'Founder asked '+body.agent+' to retry the saved internal follow-up');return send(200,{ok:true});
  }
  if(req.method==='POST'&&url.pathname==='/api/backup'){const path=join(directory,'backup-'+Date.now()+'.sqlite');await backup(db,path);return send(200,{saved:path});}
- if(req.method==='POST'&&url.pathname==='/api/logout'){db.prepare('DELETE FROM sessions WHERE token=?').run(token);return send(200,{ok:true});}
+ if(req.method==='POST'&&url.pathname==='/api/logout'){revokeSession(token);return send(200,{ok:true});}
  send(404,{error:'Not found'});
  }catch(e){send(400,{error:String(e)});}
 });

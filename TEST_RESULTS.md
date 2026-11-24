@@ -6,6 +6,13 @@
 - Full suite `npm test` — 219 passed, 0 failed. `node --check` passed for public/guest.js. `public/lobby.html` unchanged.
 - Full `scripts/qa/room-meeting-browser-check.mjs` locally: line 31 (`#visitor` visible) passes, the guest lands with all four people in Here-now, and the guest client reports zero console errors (the two 401s are gone). The run stops later at line 33 (the camera checkbox `.check()` waiting for a stable element under SwiftShader load — the known animating-controls issue in this VM, flaky run to run; the pre-fix run had reached line 35, peers===4, which needs WebRTC peer connections this VM cannot form). Both later stops are test-environment limits, not the app. CI re-run pending on the next push.
 
+## 2026-11-23 — signed founder sessions
+
+- `node --test test/session-persistence.test.ts` — 1/1 passed: setup + login issues a v1 signed token; with all sessions rows deleted, /api/state and POST /api/campus/travel (to sales) still return 200; after a server restart with the sessions table still empty the session still works; a tampered token returns 401; logout revokes the token (state 401); a re-created founder invalidates the old token (state 401).
+- Full suite `npm test` — 220 passed, 0 failed (219 baseline + 1 new test).
+- `public/lobby.html` unchanged (SHA-256 bf4465eb3fe032a95722b7b3235e353deca8645547f509d538a6c0aab310d902).
+- Not verified: live browser sign-in, travel and reload on the hosted site after the redeploy; the hosted database itself is still ephemeral, so a full wipe would still require re-creating the founder account.
+
 ## 2026-11-23 — hosted AI fallback
 
 - `node --test test/hosted-ai.test.ts` — 5/5 passed: environment-only configuration with Groq defaults, refusal to run or fetch without `HQ_AI_API_KEY`, endpoint/Authorization/normalized-result checks against a fixture fetcher, truthful engine state in both configurations, and an end-to-end queue-to-completion run on the hosted marker while a configured local model still takes priority.

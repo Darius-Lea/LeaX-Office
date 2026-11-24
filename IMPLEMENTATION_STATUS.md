@@ -1,3 +1,10 @@
+## 2026-11-23 — signed founder sessions survive restarts and redeploys
+
+- Founder sign-in sessions no longer depend on the SQLite sessions table: login now issues a signed token (v1.id.expiry.fingerprint.signature, HMAC-SHA256) verified from the request alone. The signing key is seeded from HQ_SESSION_SECRET or the already-required HQ_SETUP_CODE and persisted as a 0600 .session-master.key file in the data directory, so it is identical across restarts, redeploys and data-directory replacement.
+- The token is bound to the current founder record by a fingerprint of its password hash, so a re-created founder invalidates previously issued tokens. Logout records the token id in a new revoked_sessions table (and still deletes the sessions row); tampered or expired tokens are rejected. Tokens issued before this change keep working while their sessions row exists, so no signed-in user is forced out by the deploy.
+- The office now returns a signed-out user to the lobby when the state poll reports a dead session, instead of showing the last loaded office as if still signed in.
+- This fixes the "Sign in required" travel failure (QA defect 2) and the reload sign-out (QA defect 11) at the same root cause: the hosted service's ephemeral filesystem could drop the sessions table on restart/redeploy. If a redeploy wipes the whole database, the founder account itself must still be re-created with the setup code; that needs a durable disk, which is not provisioned here. Full backend suite: 220 passed, 0 failed. Live browser verification after the redeploy is still required.
+
 ## 2026-11-23 — hosted AI fallback for the online office
 
 - Owner ordered working AI on the hosted site: a hosted inference route now answers AI assignments when no local model is installed on the server and no paired desktop worker is connected. It is a fallback only; a selected local model or a verified paired worker keeps priority, and each run still uses exactly one route.

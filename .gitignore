@@ -34,3 +34,5 @@ dist/
 .online-master.key
 .online-account.encrypted
 .online-account.encrypted.*.tmp
+
+.session-master.key
