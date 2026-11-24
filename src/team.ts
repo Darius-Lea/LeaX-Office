@@ -52,4 +52,4 @@ export function teamPulse(now=Date.now()){
  throw e;
 }
 }
-export function teamState(){return {notes:enrichBriefingNotes(db.prepare('SELECT * FROM office_notes ORDER BY id DESC LIMIT 100').all()),teamJobs:db.prepare('SELECT * FROM team_jobs').all(),prospects:db.prepare('SELECT * FROM prospects').all()};}
+export function teamState(){const notes=db.prepare('SELECT * FROM office_notes ORDER BY id DESC LIMIT 100').all() as any[];return {notes:enrichBriefingNotes(notes),notesTotal:Number((db.prepare('SELECT count(*) AS n FROM office_notes').get() as any).n),unreadNotes:Number((db.prepare('SELECT count(*) AS n FROM office_notes WHERE seen=0').get() as any).n),teamJobs:db.prepare('SELECT * FROM team_jobs').all(),prospects:db.prepare('SELECT * FROM prospects').all()};}
