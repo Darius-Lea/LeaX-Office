@@ -1,3 +1,9 @@
+## 2026-11-24 — "Take the next step" button stays above the dock (QA defect 9)
+
+- `node --test test/next-step-button.test.ts` — 1/1 passed: the next-step button lives in the guidance HUD under a dock at z-index 10 over the HUD's 6; the dock top edge is pinned at 99px above the workspace bottom (bottom 22px + 77px dock height from padding, border and the 59px button); the HUD is capped at `max-height: calc(100% - 137px)`, so its bottom stops 117px up, 18px clear of the dock top; the HUD is a flex column and the brief scrolls internally (`overflow-y: auto; min-height: 0`).
+- Full suite `npm test` — 230 passed, 0 failed (229 baseline + 1 new test). `public/lobby.html` unchanged (SHA-256 bf4465eb3fe032a95722b7b3235e353deca8645547f509d538a6c0aab310d902).
+- Not verified: live browser look on the hosted site after the redeploy; rendering claims are code-level only (no WebGL in this environment, and the headless Electron measurement could not run here).
+
 ## 2026-11-24 — meeting room figures fixed (QA defect 8)
 
 - `node --test test/meeting-room-figures.test.ts` — 3/3 passed: every meeting seat nameplate fits the default meeting view (camera at the CEO end chair, seats 0-1 empty, 1.5 x 0.30 tags at y 2.05, full 26-seat pinhole projection at 16:9 with 2 deg margin, worst usable seat ~13 deg margin); CEO forearms are tapered cylinders from the cuffs (0.37 m, ~0.05 m radius, `#26354e`, far end ~39 deg below horizontal, hands/cuffs/watch untouched); nameplates are smaller, lower and clamped to 30 deg angular width per frame.

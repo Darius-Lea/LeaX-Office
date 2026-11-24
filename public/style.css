@@ -107,6 +107,9 @@ html,body{background:#0b1620}
 .office-brief{padding:13px 14px}
 .office-brief h2{font-size:16px;line-height:1.25}
 .office-brief p{font-size:12px;line-height:1.5}
+/* QA defect 9: the guidance card had no height limit, so on a short viewport or with a long guide its bottom, including the "Take the next step" button, slid under the bottom dock (z-index 10 over the HUD's 6). Cap the card at the space above the dock and let the brief scroll inside it, so the button stays reachable. */
+.office-hud{max-height:calc(100% - 137px);display:flex;flex-direction:column}
+.office-brief{overflow-y:auto;min-height:0}
 @media(hover:hover){#office-section:hover .office-hud:not(:hover):not(:focus-within){opacity:.5}}
 .business-document-form{display:grid;gap:16px}.business-document-form label,#business-workspace label{display:grid;gap:6px}.business-document-form textarea{width:100%;resize:vertical}.business-document-form input[type=checkbox]{width:auto}#business-workspace section{margin:16px 0;padding:16px;border:1px solid #617487;border-radius:12px}#business-workspace select{max-width:100%}#focused-body pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit}
 
