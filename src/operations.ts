@@ -6,7 +6,7 @@ import {outcomeState} from './outcomes.ts';
 import {classifySolicitation} from './solicitations.ts';
 
 type Receipt={kind:string;id:string;label:string;status:string;canReward:boolean;canCorrect:boolean};
-type EmployeeOperation={id:string;name:string;role:string;status:string;currentAction:string;detail:string;receipt?:Receipt;nextActionAt?:number|null;actionRequired?:boolean;actionTarget?:{pane:string;section:string;item?:string};actionLabel?:string;actionRecordId?:string;retryTeamJob?:{task:string;agent:string};retryTaskId?:string;retryAIRunId?:string;productionAssignment?:boolean};
+type EmployeeOperation={id:string;name:string;role:string;status:string;currentAction:string;detail:string;receipt?:Receipt;nextActionAt?:number|null;lastPatrolAt?:number|null;actionRequired?:boolean;actionTarget?:{pane:string;section:string;item?:string};actionLabel?:string;actionRecordId?:string;retryTeamJob?:{task:string;agent:string};retryTaskId?:string;retryAIRunId?:string;productionAssignment?:boolean};
 const text=(value:unknown,max=280)=>String(value??'').replace(/\s+/g,' ').trim().slice(0,max);
 function friendlyFailure(value:unknown){const message=text(value,280);if(/fetch failed|network(?:error| request)?|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|ENOTFOUND|socket hang up|timed out|HTTP\s?(?:401|403|408|429|5\d\d)/i.test(message))return 'The connected AI or public source could not complete this request. The assignment is saved, but no new result was confirmed. Check the connection, then retry.';return message||'The request stopped before a result was saved. The assignment remains available to retry.';}
 const has=(table:string)=>!!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(table);
@@ -33,14 +33,17 @@ export function operationsState(options:{now?:number;plan?:any;learning?:any}={}
   const latestTask=(employee.id==='Alpha'?tasks.filter(row=>['Alpha','Bravo'].includes(row.agent)):ownTasks).find(row=>['Completed','Blocked'].includes(row.status));
   const latestAI=ownAI.find(row=>['Completed','Blocked'].includes(row.status));
   const fault=incidents.find(row=>row.agent===employee.id),websiteLead=employee.id==='Juliet'?leads.find(row=>row.status==='Needs confirmation'||row.status==='Needs website'):null;
-  let status='Waiting',currentAction='No eligible assignment is running',detail='No assignment is active for this role right now. Open this employee to see saved work, source pacing, setup or the next action.',nextActionAt:number|null=null,actionRequired=false,actionTarget:{pane:string;section:string;item?:string}|undefined,actionLabel:string|undefined,actionRecordId:string|undefined,retryTeamJob:{task:string;agent:string}|undefined,retryTaskId:string|undefined,retryAIRunId:string|undefined; const blockedStage=ownTeam.find(row=>row.status==='Blocked'||row.status==='Failed');
+  let status='Waiting',currentAction='No eligible assignment is running',detail='No assignment is active for this role right now. Open this employee to see saved work, source pacing, setup or the next action.',nextActionAt:number|null=null,lastPatrolAt:number|null=null,actionRequired=false,actionTarget:{pane:string;section:string;item?:string}|undefined,actionLabel:string|undefined,actionRecordId:string|undefined,retryTeamJob:{task:string;agent:string}|undefined,retryTaskId:string|undefined,retryAIRunId:string|undefined; const blockedStage=ownTeam.find(row=>row.status==='Blocked'||row.status==='Failed');
   if(task||stage||run||lead){
    status='Working';currentAction=task?text(task.goal,170):stage?text(stage.goal,170):run?'Local AI analysis: '+text(run.prompt,130):'Contact research: '+text(lead.company,130);
    detail=task?'Executing a saved source/review assignment.':stage?'Preparing the saved handoff output.':run?'A real local-model request is running.':text(lead.message);
   }else if(!clockedIn){status='Off duty';currentAction='Clocked out';detail='Saved work is retained. Automatic new work is paused.';}
   else if(employee.id==='Johnson'){
    status='Monitoring';currentAction=text(plan.summary||manager?.summary||'Checking queues and available work',170);
-   detail=manager?'Last recorded patrol '+new Date(manager.checkedAt).toLocaleTimeString()+'. '+text(plan.nextAction||'Next queue check is scheduled.'):'The first recorded patrol has not run yet.';nextActionAt=manager?.nextCheckAt??plan.nextActionAt??null;
+   // The patrol instant is passed through as an epoch; the browser formats it
+   // in the viewer's local time. Formatting it here would use the server's
+   // timezone (UTC on the host) next to client-formatted local times.
+   detail=manager?text(plan.nextAction||'Checking queues and available work',170):'The first recorded patrol has not run yet.';nextActionAt=manager?.nextCheckAt??plan.nextActionAt??null;lastPatrolAt=manager?.checkedAt??null;
   }else if(fault){status='Needs correction';currentAction='Recorded execution fault';detail=text(fault.reason);}
   else if(queuedTask||queuedStage||queuedAI||queuedLead){
    status='Queued';currentAction=queuedTask?text(queuedTask.goal,170):queuedStage?'Saved '+text(employee.role,100)+' handoff':queuedAI?'Local AI assignment queued':'Contact research: '+text(queuedLead.company,130);
@@ -59,7 +62,7 @@ export function operationsState(options:{now?:number;plan?:any;learning?:any}={}
   const eligible=receipts.filter((receipt:any)=>receipt.agent===employee.id).sort((a:any,b:any)=>(b.createdAt||0)-(a.createdAt||0));
   const chosen=(fault?eligible.find((receipt:any)=>receipt.kind==='incident'&&receipt.id===fault.id):null)||eligible.find((receipt:any)=>receipt.canReward||receipt.canCorrect);
   const receipt:Receipt|undefined=chosen?{kind:chosen.kind,id:chosen.id,label:text(chosen.label,180),status:text(chosen.status,80),canReward:chosen.canReward===true,canCorrect:chosen.canCorrect===true}:undefined;
-  return {id:employee.id,name:employee.name,role:employee.role,status,currentAction,detail,...(receipt?{receipt}:{}),...(nextActionAt?{nextActionAt}:{}),...(actionRequired?{actionRequired,actionTarget,actionLabel,actionRecordId}:{}),...(retryTeamJob?{retryTeamJob}:{}),...(retryTaskId?{retryTaskId}:{}),...(retryAIRunId?{retryAIRunId}:{}),productionAssignment:false};
+  return {id:employee.id,name:employee.name,role:employee.role,status,currentAction,detail,...(receipt?{receipt}:{}),...(nextActionAt?{nextActionAt}:{}),...(lastPatrolAt?{lastPatrolAt}:{}),...(actionRequired?{actionRequired,actionTarget,actionLabel,actionRecordId}:{}),...(retryTeamJob?{retryTeamJob}:{}),...(retryTaskId?{retryTaskId}:{}),...(retryAIRunId?{retryAIRunId}:{}),productionAssignment:false};
  });
  const contactRows=rows('contact_research',"SELECT contacts FROM contact_research WHERE status='Completed'");
  const emails=new Set<string>(),phones=new Set<string>();for(const row of contactRows){try{for(const contact of JSON.parse(row.contacts)){if(contact.type==='email')emails.add(String(contact.value).toLowerCase());if(contact.type==='phone')phones.add(String(contact.value).replace(/\D/g,''));}}catch{}}
