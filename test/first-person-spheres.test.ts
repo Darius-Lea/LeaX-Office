@@ -1,5 +1,5 @@
-import {test} from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import {join} from 'node:path';
-const root=new URL('..',import.meta.url).pathname,scene=readFileSync(join(root,'public/office3d.js'),'utf8');
+import {test} from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import {join} from 'node:path';import {fileURLToPath} from 'node:url';
+const root=fileURLToPath(new URL('..',import.meta.url)),scene=readFileSync(join(root,'public/office3d.js'),'utf8');
 // QA defect 7: first-person Headquarters was obscured by giant glossy teal spheres
 // joined by thin white lines, one with a black triangular hole.
 // Root cause: the decorative programmable-matter lattice sat at (-2.6, 0, 8.7), its

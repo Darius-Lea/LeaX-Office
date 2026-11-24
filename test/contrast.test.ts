@@ -1,5 +1,5 @@
-import {test} from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import {join} from 'node:path';
-const root=new URL('..',import.meta.url).pathname,style=readFileSync(join(root,'public/style.css'),'utf8'),distribution=readFileSync(join(root,'public/distribution.css'),'utf8'),office3d=readFileSync(join(root,'public/office3d.js'),'utf8');
+import {test} from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import {join} from 'node:path';import {fileURLToPath} from 'node:url';
+const root=fileURLToPath(new URL('..',import.meta.url)),style=readFileSync(join(root,'public/style.css'),'utf8'),distribution=readFileSync(join(root,'public/distribution.css'),'utf8'),office3d=readFileSync(join(root,'public/office3d.js'),'utf8');
 function lum(hex){const [r,g,b]=[0,2,4].map(i=>parseInt(hex.slice(i,i+2),16)/255).map(c=>c<=0.03928?c/12.92:Math.pow((c+0.055)/1.055,2.4));return 0.2126*r+0.7152*g+0.0722*b;}
 function ratio(fg,bg){const a=lum(fg),b=lum(bg);return (Math.max(a,b)+0.05)/(Math.min(a,b)+0.05);}
 // The last rule for a selector wins in the cascade, so the effective value is the last match.

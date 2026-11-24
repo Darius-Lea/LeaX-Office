@@ -1,5 +1,5 @@
-import {test} from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import {join} from 'node:path';
-const root=new URL('..',import.meta.url).pathname,style=readFileSync(join(root,'public/style.css'),'utf8'),index=readFileSync(join(root,'public/index.html'),'utf8');
+import {test} from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import {join} from 'node:path';import {fileURLToPath} from 'node:url';
+const root=fileURLToPath(new URL('..',import.meta.url)),style=readFileSync(join(root,'public/style.css'),'utf8'),index=readFileSync(join(root,'public/index.html'),'utf8');
 // The last rule for a selector wins in the cascade, so the effective value is the last match.
 // For properties the media queries override (dock bottom, HUD top), the base rule is the
 // first declaration, which is the default-viewport value the fix is sized against.

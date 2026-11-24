@@ -1,5 +1,5 @@
-import {test} from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import {join} from 'node:path';
-const root=new URL('..',import.meta.url).pathname,style=readFileSync(join(root,'public/style.css'),'utf8'),index=readFileSync(join(root,'public/index.html'),'utf8');
+import {test} from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import {join} from 'node:path';import {fileURLToPath} from 'node:url';
+const root=fileURLToPath(new URL('..',import.meta.url)),style=readFileSync(join(root,'public/style.css'),'utf8'),index=readFileSync(join(root,'public/index.html'),'utf8');
 // The base rule is the first declaration; later rules are media-query overrides that only
 // change individual properties, so the first match gives the default-viewport geometry.
 function firstValue(css,selector,property){const pattern=new RegExp(selector.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\{[^}]*?'+property+'\\s*:\\s*([^;!}]+)');const match=pattern.exec(css);return match?match[1].trim():null;}

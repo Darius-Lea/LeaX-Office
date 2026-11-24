@@ -1,5 +1,5 @@
-import {test} from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import {join} from 'node:path';
-const root=new URL('..',import.meta.url).pathname,scene=readFileSync(join(root,'public/office3d.js'),'utf8');
+import {test} from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import {join} from 'node:path';import {fileURLToPath} from 'node:url';
+const root=fileURLToPath(new URL('..',import.meta.url)),scene=readFileSync(join(root,'public/office3d.js'),'utf8');
 const d2r=Math.PI/180,r2d=180/Math.PI;
 // QA defect 8: in the meeting room the CEO forearms were long black ovals lying
 // on the table, and Delta's name tag was cut off at the screen edge.
