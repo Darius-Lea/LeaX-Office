@@ -126,8 +126,11 @@ html,body{background:#0b1620}
 .campus-explore-header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 7px}.campus-explore-header h3{margin:0}.campus-explore-controls .campus-explore-toggle{flex-shrink:0;margin:0;min-height:32px}.campus-explore-controls.collapsed{max-height:none}.campus-explore-controls.collapsed p,.campus-explore-controls.collapsed .campus-movement-pad,.campus-explore-controls.collapsed .campus-explore-actions{display:none!important}
 @media(max-width:650px){#campus-explore-controls{display:none!important}}
 #campus-explore-exit{position:fixed;right:12px;top:76px;z-index:1400;padding:10px 14px;min-height:44px;border-radius:12px;background:rgba(7,17,29,.82);color:#dff4ff;border:1px solid rgba(124,201,255,.5);backdrop-filter:blur(6px);font-weight:700}
-#phone-float{position:fixed;left:12px;bottom:96px;z-index:1400;display:none;padding:14px 18px;min-height:54px;border-radius:14px;background:linear-gradient(135deg,#1e7d5a,#145247);color:#fff;border:1px solid #7fe3b5;box-shadow:0 8px 24px #0009;font-size:16px;font-weight:700}
-@media(max-width:650px){#phone-float{display:block}#phone-open{display:none}}
+#phone-float{position:fixed;left:12px;bottom:96px;z-index:1400;display:block;padding:14px 18px;min-height:54px;border-radius:14px;background:linear-gradient(135deg,#1e7d5a,#145247);color:#fff;border:1px solid #7fe3b5;box-shadow:0 8px 24px #0009;font-size:16px;font-weight:700}
+#invite-float{position:fixed;left:12px;bottom:166px;z-index:1400;display:block;padding:14px 18px;min-height:54px;border-radius:14px;background:linear-gradient(135deg,#2b5ea7,#1c3d6e);color:#fff;border:1px solid #8fb8ef;box-shadow:0 8px 24px #0009;font-size:16px;font-weight:700}
+body:has(dialog[open]) #phone-float,body:has(dialog[open]) #invite-float{display:none}
+@media(max-width:650px){#phone-open{display:none}}
+@media(max-width:650px){#invite-open{display:none}}
 /* First-person ten-second journeys: append after existing campus styles. */
 .campus-travel-scene.campus-first-person{height:340px;background:#142b45;isolation:isolate;box-shadow:inset 0 0 0 1px #83aeba66}
 .campus-fp-sky{position:absolute;inset:0;background:linear-gradient(#17384f,#72a3ab 64%,#8ca8a2)}

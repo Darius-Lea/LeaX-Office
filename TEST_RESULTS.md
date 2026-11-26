@@ -1,3 +1,16 @@
+## 2026-11-25 — desk taps from the welcome screen
+
+- `node --test test/desk-tap-entry.test.ts` — 1/1 passed: pointerup tap branch covers entry mode; entry-mode desk tap exits the entry view before dispatch (meeting action excluded, it exits itself); touch-aware drag threshold (touch 8px, mouse 3px), old 2px threshold gone; hover feedback covers entry mode; `.office-entry` passes taps to the canvas.
+- Full suite `npm test` — 238 passed, 0 failed (237 baseline + 1 new test). `node --check public/office3d.js` passed.
+- Live local check (Playwright + local server, software-rendered): entry-mode desk tap exited entry view and opened inspect; empty tap kept the card; 5px-jitter touch tap still counted; orbit-mode desk tap opened inspect. Console errors were environment artifacts only (VM proxy blocks Google Fonts/CDN; no page errors).
+- Not verified: live browser look on the hosted site after the redeploy.
+
+## 2026-11-24 — invite from the main office, phone visibility, home-screen icon
+
+- `node --test test/invite-from-office.test.ts test/phone-visibility-and-app-icon.test.ts` — 3/3 passed: dock Invite button exists and navigates with `invite=1` (fallback `/offices?invite=1`); the offices page reads the param and auto-opens the guest invite panel on room entry; floating Invite button stacked above the floating Phone button, both always visible; floats hide while a dialog is open; manifest names the app (LeaX Office / LeaX, standalone, start `/`) with 192/512/maskable icons; all four icon files exist; the server allowlists and content-types the manifest and icons; the office, shared-offices and guest pages link the manifest, favicon and iOS icon.
+- Full suite `npm test` — 237 passed, 0 failed (234 baseline + 3 new tests). `node --check` passed for public/app.js and public/offices.js. `public/lobby.html` unchanged (SHA-256 bf4465eb3fe032a95722b7b3235e353deca8645547f509d538a6c0aab310d902).
+- Not verified: live browser look on the hosted site after the redeploy; rendering claims are code-level only (no WebGL in this environment).
+
 ## 2026-11-24 — "Take the next step" button stays above the dock (QA defect 9)
 
 - `node --test test/next-step-button.test.ts` — 1/1 passed: the next-step button lives in the guidance HUD under a dock at z-index 10 over the HUD's 6; the dock top edge is pinned at 99px above the workspace bottom (bottom 22px + 77px dock height from padding, border and the 59px button); the HUD is capped at `max-height: calc(100% - 137px)`, so its bottom stops 117px up, 18px clear of the dock top; the HUD is a flex column and the brief scrolls internally (`overflow-y: auto; min-height: 0`).
