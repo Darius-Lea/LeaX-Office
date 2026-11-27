@@ -2,10 +2,10 @@ import {test,beforeEach,afterEach} from 'node:test';import assert from 'node:ass
 import {mkdtempSync} from 'node:fs';import {join} from 'node:path';import {tmpdir} from 'node:os';
 process.env.HQ_DATA_DIR=mkdtempSync(join(tmpdir(),'hq-agent-room-'));
 const {setSetting}=await import('../src/store.ts');
-const {agentRoomConfig,agentRoomState,agentRoomSince,agentRoomSpeak,agentRoomEnter,agentRoomInvite,agentRoomAddAgent,agentRoomAgents,agentRoomSetDeepSeekKey,agentRoomDeepSeekActivate,agentRoomCharacters,agentRoomSetCharacter}=await import('../src/agent-room.ts');
+const {agentRoomConfig,agentRoomState,agentRoomSince,agentRoomSpeak,agentRoomEnter,agentRoomInvite,agentRoomAddAgent,agentRoomAgents,agentRoomSetDeepSeekKey,agentRoomDeepSeekActivate,agentRoomCharacters,agentRoomSetCharacter,agentRoomSetClothing,agentRoomRelayOpen,agentRoomRelayOutput,agentRoomRelayClose,agentRoomRelayStatus}=await import('../src/agent-room.ts');
 const KEY='test-agent-key-123';
 const saved={url:process.env.AGENT_PLATFORM_URL,key:process.env.AGENT_PLATFORM_KEY,place:process.env.AGENT_PLATFORM_PLACE,admin:process.env.AGENT_PLATFORM_ADMIN_KEY,auto:process.env.AGENT_PLATFORM_AUTO_REGISTER};
-beforeEach(()=>{process.env.AGENT_PLATFORM_URL='http://platform.test';delete process.env.AGENT_PLATFORM_KEY;delete process.env.AGENT_PLATFORM_PLACE;delete process.env.AGENT_PLATFORM_ADMIN_KEY;delete process.env.AGENT_PLATFORM_AUTO_REGISTER;setSetting('agent_platform_key','');setSetting('agent_platform_handle','');setSetting('agent_platform_agents','[]');setSetting('agent_platform_deepseek_key','');setSetting('agent_platform_character_assignments','{}');});
+beforeEach(()=>{process.env.AGENT_PLATFORM_URL='http://platform.test';delete process.env.AGENT_PLATFORM_KEY;delete process.env.AGENT_PLATFORM_PLACE;delete process.env.AGENT_PLATFORM_ADMIN_KEY;delete process.env.AGENT_PLATFORM_AUTO_REGISTER;setSetting('agent_platform_key','');setSetting('agent_platform_handle','');setSetting('agent_platform_agents','[]');setSetting('agent_platform_deepseek_key','');setSetting('agent_platform_character_assignments','{}');setSetting('agent_platform_relay_timothy','');setSetting('agent_platform_relay_claudey','');});
 afterEach(()=>{for(const [name,value] of [['AGENT_PLATFORM_URL',saved.url],['AGENT_PLATFORM_KEY',saved.key],['AGENT_PLATFORM_PLACE',saved.place],['AGENT_PLATFORM_ADMIN_KEY',saved.admin],['AGENT_PLATFORM_AUTO_REGISTER',saved.auto]]){if(value===undefined)delete process.env[name];else process.env[name]=value;}});
 function stubFetch(handler){const calls=[];const impl=async(input,init={})=>{calls.push({url:String(input),init});const result=handler(String(input),init);if(result instanceof Error)throw result;return {ok:result.status<400,status:result.status,json:async()=>result.data};};impl.calls=calls;return impl;}
 const statePayload={ok:true,me:{identity:{id:3,handle:'mike-tyson',display_name:'Mike Tyson',works_for:'Darius Lea'},presence:null},current_place:{id:1,name:'lobby',kind:'zone',access:'open',owner:{id:2,handle:'platform-owner',display_name:'Darius Lea'},my_permissions:{speak:true}},presence_map:[{identity_id:3,handle:'mike-tyson',display_name:'Mike Tyson',online:true,location:'lobby',status:'sitting',position:{x:0,y:0,z:0},moving:false,target:null,workspace:null,place:{id:1,name:'lobby',kind:'zone'},distance:0,nearby:true},{identity_id:4,handle:'deepseek',display_name:'DeepSeek',online:true,location:'lobby',status:'standing',position:{x:3,y:4,z:0},moving:false,target:null,workspace:{id:1,name:'MOTHER table'},place:{id:1,name:'lobby',kind:'zone'},distance:5,nearby:true}],workspaces:[{id:1,name:'MOTHER table',kind:'table',location:'lobby',position:{x:3,y:4,z:0},seated:[{id:4,handle:'deepseek',display_name:'DeepSeek',status:'sitting'}]}],recent_world_actions:[{id:9,type:'world.speak',actor:{id:4,handle:'deepseek'},payload:{text:'Session 17 is at step 33,100.'},location:'lobby',distance:5,created_at:'2026-11-26T17:00:00Z'},{id:8,type:'world.move',actor:{id:4,handle:'deepseek'},payload:{},location:'lobby',distance:5,created_at:'2026-11-26T16:59:00Z'}],cursor:9,radii:{near:10,hear:20,walk_speed:3}};
@@ -130,6 +130,7 @@ test('without a key the seat auto-registers, stores its key server-side, and con
  const register=fetchImpl.calls.find(c=>c.url.endsWith('/api/register'));
  const body=JSON.parse(register.init.body);
  assert.equal(body.kind,'agent');assert.equal(body.handle,'leax-office-seat');assert.match(body.declaration,/AI agent/);
+ assert.equal(body.display_name,'Darius — Owner','the seat shows the owner name, not "LeaX Office seat"');
  assert.ok(!register.init.headers.Authorization,'registration itself sends no key');
  const stateCall=fetchImpl.calls.find(c=>c.url.endsWith('/api/senses/state'));
  assert.equal(stateCall.init.headers.Authorization,'Bearer seat-key-789');
@@ -224,8 +225,9 @@ test('provider steps: chatgpt and grok get the MCP address, deepseek needs its k
  const fetchImpl=stubFetch(url=>url.endsWith('/api/register')?{status:201,data:{ok:true,identity:{id:23},api_key:'added-key-333'}}:{status:404,data:{ok:false,error:'nope'}});
  const chatgpt=await agentRoomAddAgent('Chatty','chatgpt',fetchImpl);
  assert.equal(chatgpt.step.kind,'mcp');assert.equal(chatgpt.step.mcpUrl,'http://platform.test/mcp');assert.match(chatgpt.step.instruction,/Developer Mode/);
+ assert.equal(chatgpt.step.relay,true,'web-chat providers are offered the relay door too');
  const grok=await agentRoomAddAgent('Groky','grok',fetchImpl);
- assert.equal(grok.step.kind,'mcp');assert.match(grok.step.instruction,/xAI API/);
+ assert.equal(grok.step.kind,'mcp');assert.match(grok.step.instruction,/xAI API/);assert.equal(grok.step.relay,true);
  const deepseek=await agentRoomAddAgent('Deepy','deepseek',fetchImpl);
  assert.deepEqual(deepseek.step,{kind:'needs-deepseek-key'});
  assert.equal(agentRoomAgents().deepseek.hasKey,false);
@@ -270,18 +272,97 @@ test('MOTHER never appears while offline, but shows when actually present',async
 test('character assignments are stored server-side per handle and validated',async()=>{
  assert.deepEqual(agentRoomCharacters().assignments,{});
  const saved=agentRoomSetCharacter('Helper-One','char-07',3,'  Helper  ');
- assert.deepEqual(saved.assignment,{character:'char-07',outfit:3,name:'Helper'});
+ assert.deepEqual(saved.assignment,{character:'char-07',outfit:3,hair:1,name:'Helper'});
  const roster=agentRoomCharacters();
- assert.equal(roster.characterCount,24);assert.equal(roster.outfitCount,6);
- assert.deepEqual(roster.assignments['helper-one'],{character:'char-07',outfit:3,name:'Helper'});
- const changed=agentRoomSetCharacter('helper-one','char-12',5,'');
- assert.deepEqual(changed.assignment,{character:'char-12',outfit:5});
+ assert.equal(roster.characterCount,36);assert.equal(roster.outfitCount,6);assert.equal(roster.hairCount,6);
+ assert.deepEqual(roster.assignments['helper-one'],{character:'char-07',outfit:3,hair:1,name:'Helper'});
+ const changed=agentRoomSetCharacter('helper-one','char-12',5,'',undefined,4);
+ assert.deepEqual(changed.assignment,{character:'char-12',outfit:5,hair:4});
  assert.throws(()=>agentRoomSetCharacter('','char-01',1,''),/Pick an agent/);
  assert.throws(()=>agentRoomSetCharacter('x','char-99',1,''),/roster/);
  assert.throws(()=>agentRoomSetCharacter('x','bogus',1,''),/roster/);
  assert.throws(()=>agentRoomSetCharacter('x','char-01',9,''),/outfit/);
+ assert.throws(()=>agentRoomSetCharacter('x','char-01',1,'',undefined,9),/hairstyle/);
  process.env.AGENT_PLATFORM_KEY=KEY;
  const fetchImpl=stubFetch(url=>url.endsWith('/api/senses/state')?{status:200,data:statePayload}:{status:404,data:{ok:false,error:'nope'}});
  const state=await agentRoomState(fetchImpl);
- assert.deepEqual(state.assignments['helper-one'],{character:'char-12',outfit:5});
+ assert.deepEqual(state.assignments['helper-one'],{character:'char-12',outfit:5,hair:4});
+});
+function relayFetch(){
+ return stubFetch(url=>{
+  if(url.endsWith('/api/register'))return {status:201,data:{ok:true,identity:{id:31},api_key:'relay-agent-key-555'}};
+  if(url.endsWith('/api/relay/session'))return {status:201,data:{ok:true,session_id:'rs_test123',brief_text:'AGENT PLATFORM — RELAY SESSION BRIEF\nACTION {"action":"speak","text":"Hello room"}'}};
+  if(url.endsWith('/api/senses/state'))return {status:200,data:statePayload};
+  if(url.endsWith('/api/relay/session/rs_test123/output'))return {status:200,data:{ok:true,session_id:'rs_test123',actions_found:1,actions_executed:1,results:[{n:1,action:'speak',ok:true,status:200}],results_text:'RESULT 1 OK speak'}};
+  if(url.includes('/api/senses/since'))return {status:200,data:{ok:true,events:[{id:10,type:'world.speak',actor:{id:3,handle:'mike-tyson'},payload:{text:'Welcome, Timothy.'},location:'lobby',distance:0,created_at:'2026-11-26T20:00:00Z'}],cursor:10,latest:10}};
+  if(url.endsWith('/api/relay/session/rs_test123/close'))return {status:200,data:{ok:true,closed:'rs_test123',actions_executed:1,transcript_wiped:true}};
+  return {status:404,data:{ok:false,error:'nope'}};
+ });
+}
+test('relay open uses the added agent key server-side and returns the brief',async()=>{
+ const fetchImpl=relayFetch();
+ await agentRoomAddAgent('Timothy','chatgpt',fetchImpl);
+ const opened=await agentRoomRelayOpen('timothy',fetchImpl);
+ assert.equal(opened.ok,true);assert.equal(opened.handle,'timothy');assert.equal(opened.provider,'chatgpt');
+ assert.match(opened.brief,/RELAY SESSION BRIEF/);
+ assert.ok(!JSON.stringify(opened).includes('relay-agent-key-555'),'agent key must not appear in relay output');
+ const open=fetchImpl.calls.find(c=>c.url.endsWith('/api/relay/session'));
+ assert.equal(open.init.headers.Authorization,'Bearer relay-agent-key-555');
+ assert.deepEqual(agentRoomRelayStatus().sessions,{timothy:true});
+ assert.deepEqual(agentRoomRelayStatus().providers,['chatgpt','gemini','grok']);
+ await assert.rejects(agentRoomRelayOpen('nobody',fetchImpl),/Pick an agent/);
+});
+test('relay output executes actions and the next brief carries results plus new room events',async()=>{
+ const fetchImpl=relayFetch();
+ await agentRoomAddAgent('Timothy','chatgpt',fetchImpl);
+ await agentRoomRelayOpen('timothy',fetchImpl);
+ const sent=await agentRoomRelayOutput('timothy','ACTION {"action":"speak","text":"Hello from Timothy"}',fetchImpl);
+ assert.equal(sent.ok,true);assert.equal(sent.actions_found,1);assert.equal(sent.actions_executed,1);
+ assert.deepEqual(sent.results,[{n:1,action:'speak',ok:true}]);
+ assert.match(sent.next_brief,/RESULT 1 OK speak/);
+ assert.match(sent.next_brief,/NEW IN THE ROOM SINCE YOUR LAST TURN/);
+ assert.match(sent.next_brief,/@mike-tyson: Welcome, Timothy\./);
+ assert.ok(!JSON.stringify(sent).includes('relay-agent-key-555'),'agent key must not appear in relay output');
+ const output=fetchImpl.calls.find(c=>c.url.endsWith('/output'));
+ assert.equal(output.init.headers.Authorization,'Bearer relay-agent-key-555');
+ assert.equal(JSON.parse(output.init.body).output,'ACTION {"action":"speak","text":"Hello from Timothy"}');
+ const since=fetchImpl.calls.find(c=>c.url.includes('/api/senses/since'));
+ assert.ok(since.url.includes('cursor=9'),'since starts from the cursor captured at open');
+ await assert.rejects(agentRoomRelayOutput('timothy','   ',fetchImpl),/Paste the AI's reply/);
+ await assert.rejects(agentRoomRelayOutput('timothy','x'.repeat(100001),fetchImpl),/too long/);
+});
+test('relay output without a session, an expired session, and close all behave plainly',async()=>{
+ const fetchImpl=relayFetch();
+ await agentRoomAddAgent('Timothy','chatgpt',fetchImpl);
+ assert.deepEqual(await agentRoomRelayOutput('timothy','ACTION {"action":"sit"}',fetchImpl),{ok:false,reason:'no-session'});
+ await agentRoomRelayOpen('timothy',fetchImpl);
+ const expiredFetch=stubFetch(url=>url.endsWith('/output')?{status:410,data:{ok:false,error:'relay session expired and was wiped'}}:{status:404,data:{ok:false,error:'nope'}});
+ assert.deepEqual(await agentRoomRelayOutput('timothy','ACTION {"action":"sit"}',expiredFetch),{ok:false,reason:'expired'});
+ assert.deepEqual(agentRoomRelayStatus().sessions,{},'expired session record is cleared');
+ await agentRoomRelayOpen('timothy',fetchImpl);
+ assert.deepEqual(agentRoomRelayStatus().sessions,{timothy:true});
+ assert.deepEqual(await agentRoomRelayClose('timothy',fetchImpl),{ok:true,closed:true});
+ assert.deepEqual(agentRoomRelayStatus().sessions,{});
+ assert.deepEqual(await agentRoomRelayClose('timothy',fetchImpl),{ok:true,closed:false});
+});
+test('relay is only for web-chat providers',async()=>{
+ const fetchImpl=relayFetch();
+ await agentRoomAddAgent('Claudey','claude',fetchImpl);
+ await assert.rejects(agentRoomRelayOpen('claudey',fetchImpl),/web-chat AIs/);
+ await assert.rejects(agentRoomRelayOutput('claudey','ACTION {"action":"sit"}',fetchImpl),/Pick an agent|web-chat/);
+});
+test('mix-and-match clothing is validated, merged, and stored server-side',async()=>{
+ const saved=agentRoomSetCharacter('dresser','char-09',2,'',{top:'polo',topColor:'#2f5d8a',bottom:'shorts',bottomColor:'#b09a72',shoes:'boots',shoeColor:'#5b4632',accessory:'bowtie',accessoryColor:'#8a2f2f'},2);
+ assert.deepEqual(saved.assignment.clothing,{top:'polo',topColor:'#2f5d8a',bottom:'shorts',bottomColor:'#b09a72',shoes:'boots',shoeColor:'#5b4632',accessory:'bowtie',accessoryColor:'#8a2f2f'});
+ assert.equal(saved.assignment.hair,2);
+ const tweaked=agentRoomSetClothing('dresser',{top:'hoodie',topColor:'#not-a-color',accessory:'spacesuit'});
+ assert.equal(tweaked.assignment.clothing.top,'hoodie');
+ assert.equal(tweaked.assignment.clothing.topColor,'#2f5d8a','invalid colors are dropped, not stored');
+ assert.equal(tweaked.assignment.clothing.accessory,'bowtie','invalid pieces are dropped, not stored');
+ assert.equal(tweaked.assignment.clothing.bottom,'shorts','untouched pieces survive a merge');
+ assert.throws(()=>agentRoomSetClothing('','x'),/Pick an agent/);
+ assert.throws(()=>agentRoomSetClothing('dresser',null),/clothing piece/);
+ const fresh=agentRoomSetClothing('new-agent',{top:'sweater'});
+ assert.equal(fresh.assignment.character,'char-01');
+ assert.equal(fresh.assignment.clothing.top,'sweater');
 });

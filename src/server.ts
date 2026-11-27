@@ -6,7 +6,7 @@ import {marketingState,saveMarketing,runMarketingCheck,advanceMarketing} from '.
 import {companyVisibilityRequests,approveCompanyVisibility} from './shared-phone.ts';
 import {platformState,setUserAccess,platformSettings,reviewSecurity,quarantineRateLimit} from './platform-access.ts';
 import {sharedUser} from './shared-offices.ts';
-import {sharedOfficeRequest} from './shared-offices.ts';
+import {sharedOfficeRequest,founderSharedSession} from './shared-offices.ts';
 import {storeGuideState,storeGuideDetail,saveStoreGuideProgress} from './store-guide.ts';
 import {storefrontState,saveStorefrontConnection,disconnectStorefrontConnection,verifyStorefront,saveStorefrontPolicy,prepareStorefrontPublication,publishStorefrontListing,reconcileStorefrontPublication,recoverInterruptedStorefronts} from './storefronts.ts';
 import {distributionState,distributionProof,distributionProofHTML,distributionJobPrepHTML} from './distribution.ts';
@@ -19,7 +19,7 @@ import {createAIInvitation,invitationJobStatus} from './commerce-design-ai.ts';
 import {relayState,workerHeartbeat,claimAIWork,completeAIWork,enableLocalAIWorker} from './ai-relay.ts';
 import {availableAIWorker} from './ai-routing.ts';
 import {aiMeetingState,aiMeetingDetail,createAIMeeting,inviteAIMeeting,askAIMeeting,closeAIMeeting} from './ai-meetings.ts';
-import {agentRoomState,agentRoomSince,agentRoomSpeak,agentRoomEnter,agentRoomInvite,agentRoomAddAgent,agentRoomAgents,agentRoomSetDeepSeekKey,agentRoomDeepSeekActivate,agentRoomCharacters,agentRoomSetCharacter} from './agent-room.ts';
+import {agentRoomState,agentRoomSince,agentRoomSpeak,agentRoomEnter,agentRoomInvite,agentRoomAddAgent,agentRoomAgents,agentRoomSetDeepSeekKey,agentRoomDeepSeekActivate,agentRoomCharacters,agentRoomSetCharacter,agentRoomSetClothing,agentRoomRelayOpen,agentRoomRelayOutput,agentRoomRelayClose,agentRoomRelayStatus} from './agent-room.ts';
 import {miningState,checkMiningStatus} from './mining-status.ts';
 import {joinCall,pollCall,signalCall,leaveCall} from './calls.ts';
 import {initializeSync,syncState,createPairCode,acceptPair,syncAuthorized,exchange,connectSync,runSync,disconnectSync,revokeSyncDevice,resolveSyncConflict} from './sync.ts';
@@ -114,14 +114,15 @@ const server=createServer(async(req,res)=>{
  }
  if(['GET','HEAD'].includes(req.method||'') && ['/', '/login','/lobby','/lobby-adapters.js','/guest','/guest.js','/guest-media.js','/room-meeting.js','/room-meeting.css','/room-advisor.js','/shared-presence.js','/guest.css','/embed','/embed.css', '/offices', '/offices.js','/offices.css','/shared-phone.js','/platform-admin.js','/browser','/browser.js','/browser.css','/robot.js', '/download','/download.css','/download.js','/ccl-app.html','/ccl-app.css','/ccl-app.js','/app.js','/business.js','/mail.js','/sync.js','/calls.js','/campus.js','/commerce.js','/ai-meetings.js','/agent-room.js','/agent-room-3d.js','/mining.js','/updates.js','/local-engines.js','/stores.js','/distribution.js','/distribution.css','/distribution-scene.js','/store-connections.js','/store-connections.css','/rollouts.js','/control-center.js','/control-center.css','/approval-attention.js','/speech.js','/office.js','/online-client.js','/office3d.js','/marketing-scene.js','/marketing-installations.js','/marketing-workflow.js','/style.css','/report.css','/report.js','/manifest.webmanifest','/icons/icon-192.png','/icons/icon-512.png','/icons/apple-touch-icon.png','/icons/leax-icon.svg'].includes(url.pathname)){const file=url.pathname==='/'?(lobbyPage?'lobby.html':'index.html'):['/login','/lobby'].includes(url.pathname)?'lobby.html':url.pathname==='/guest'?'guest.html':url.pathname==='/embed'?'embed.html':url.pathname==='/download'?'download.html':url.pathname==='/offices'?'offices.html':url.pathname==='/browser'?'browser.html':url.pathname.slice(1);res.setHeader('Content-Type',file.endsWith('html')?'text/html':file.endsWith('js')?'text/javascript':file.endsWith('webmanifest')?'application/manifest+json':file.endsWith('png')?'image/png':file.endsWith('svg')?'image/svg+xml':'text/css');res.end(req.method==='HEAD'?undefined:file==='index.html'?readFileSync(new URL('../public/'+file,import.meta.url),'utf8').replace('__HQ_APP_VERSION__',versionInfo().version):readFileSync(new URL('../public/'+file,import.meta.url)));return;}
  if(req.method==='GET'&&['/vendor/three.module.js','/vendor/three.core.js'].includes(url.pathname)){res.setHeader('Content-Type','text/javascript');res.setHeader('Cache-Control','public, max-age=86400');res.end(vendorFile(url.pathname.split('/').pop()!,'build/'+url.pathname.split('/').pop()));return;}
- if(req.method==='GET'&&url.pathname.startsWith('/avatars/')){const rel=url.pathname.slice('/avatars/'.length);if(!/^(?:[a-z0-9-]+\.(?:png|jpg)|characters\/char-\d{2}\/outfit-\d\.jpg|characters\/manifest\.json)$/.test(rel))return send(404,{error:'Not found'});const file=new URL('../public/avatars/'+rel,import.meta.url);if(!existsSync(file))return send(404,{error:'Not found'});res.setHeader('Content-Type',rel.endsWith('.json')?'application/json':rel.endsWith('.jpg')?'image/jpeg':'image/png');res.setHeader('Cache-Control','public, max-age=86400');res.end(readFileSync(file));return;}
+ if(req.method==='GET'&&url.pathname.startsWith('/avatars/')){const rel=url.pathname.slice('/avatars/'.length);if(!/^(?:[a-z0-9-]+\.(?:png|jpg)|characters\/char-\d{2}\/(?:outfit|hair)-\d\.jpg|characters\/manifest\.json)$/.test(rel))return send(404,{error:'Not found'});const file=new URL('../public/avatars/'+rel,import.meta.url);if(!existsSync(file))return send(404,{error:'Not found'});res.setHeader('Content-Type',rel.endsWith('.json')?'application/json':rel.endsWith('.jpg')?'image/jpeg':'image/png');res.setHeader('Cache-Control','public, max-age=86400');res.end(readFileSync(file));return;}
  if(req.method==='GET'&&['/vendor/FontLoader.js','/vendor/TextGeometry.js','/vendor/office-font.json'].includes(url.pathname)){const paths:Record<string,string>={'/vendor/FontLoader.js':'loaders/FontLoader.js','/vendor/TextGeometry.js':'geometries/TextGeometry.js','/vendor/office-font.json':'../fonts/helvetiker_regular.typeface.json'};const raw=vendorFile(url.pathname.split('/').pop()!,'examples/jsm/'+paths[url.pathname]).toString('utf8');res.setHeader('Content-Type',url.pathname.endsWith('json')?'application/json':'text/javascript');res.end(raw.replace(/from 'three'/g,"from '/vendor/three.module.js'"));return;}
+ if(req.method==='GET'&&url.pathname.startsWith('/textures/')){const rel=url.pathname.slice('/textures/'.length);if(!/^[a-z0-9-]+\.jpg$/.test(rel))return send(404,{error:'Not found'});const file=new URL('../public/textures/'+rel,import.meta.url);if(!existsSync(file))return send(404,{error:'Not found'});res.setHeader('Content-Type','image/jpeg');res.setHeader('Cache-Control','public, max-age=86400');res.end(readFileSync(file));return;}
  if(['GET','HEAD'].includes(req.method||'')&&['/download/windows','/download/windows.sha256'].includes(url.pathname)){serveWindowsDownload(req,res,process.env.HQ_INSTALLER_PATH||new URL('../downloads/AI-Headquarters-Setup.exe',import.meta.url),url.pathname.endsWith('.sha256'));return;}
  if(req.method==='GET' && url.pathname==='/api/status'){const ai=managedAISetupState();return send(200,{product:'ai-headquarters',setupRequired:!db.prepare('SELECT id FROM founder').get(),aiReady:(ai?.inferenceVerified===true&&!!setting('ollama_model'))||!!availableAIWorker()||hostedAIConfig().configured,...(!publicBinding&&ai?.inferenceVerified===true?{aiModel:setting('ollama_model')||null}:{})});}
  const localPort=(server.address() as any)?.port||port;
  const allowedOrigins=publicBinding?[publicOrigin]:[`http://127.0.0.1:${localPort}`,`http://localhost:${localPort}`,...(publicOrigin?[publicOrigin]:[])];
  if(req.method==='POST' && !allowedOrigins.includes(req.headers.origin)&&!(!req.headers.origin&&['/api/sync/pair','/api/sync/exchange','/api/ai-worker/heartbeat','/api/ai-worker/claim','/api/ai-worker/complete','/api/browser-bridge/stop-native','/api/browser-bridge/assistant'].includes(url.pathname)))return send(403,{error:'Invalid origin'});
- let body:any={};if(req.method==='POST'){let raw='';for await(const part of req){raw+=part;if(raw.length>(url.pathname==='/api/sync/exchange'?3000000:(/\/api\/shared\/(?:room\/lx-[a-f0-9]{24}\/meeting\/signal|guest\/meeting-signal)$/.test(url.pathname)?true:false)||['/api/shared/guest/media-signal','/api/shared/guest-admin/media-signal','/api/ai-worker/complete'].includes(url.pathname)?40000:url.pathname==='/api/commerce/campaigns/save'?40000:url.pathname==='/api/mail/configure'?65536:url.pathname==='/api/business/profile'?32768:16384))return send(413,{error:'Request too large'});}body=JSON.parse(raw||'{}');}
+ let body:any={};if(req.method==='POST'){let raw='';for await(const part of req){raw+=part;if(raw.length>(url.pathname==='/api/agent-room/relay/output'?131072:url.pathname==='/api/sync/exchange'?3000000:(/\/api\/shared\/(?:room\/lx-[a-f0-9]{24}\/meeting\/signal|guest\/meeting-signal)$/.test(url.pathname)?true:false)||['/api/shared/guest/media-signal','/api/shared/guest-admin/media-signal','/api/ai-worker/complete'].includes(url.pathname)?40000:url.pathname==='/api/commerce/campaigns/save'?40000:url.pathname==='/api/mail/configure'?65536:url.pathname==='/api/business/profile'?32768:16384))return send(413,{error:'Request too large'});}body=JSON.parse(raw||'{}');}
  if(req.method==='GET'&&url.pathname==='/api/online/status')return send(200,onlineAccess.state());
  if(req.method==='POST'&&url.pathname==='/api/online/connect')return send(200,await onlineAccess.connect(body));
  if(req.method==='POST'&&url.pathname==='/api/online/reconnect')return send(200,await onlineAccess.check());
@@ -228,8 +229,25 @@ const server=createServer(async(req,res)=>{
  if(req.method==='POST'&&url.pathname==='/api/agent-room/add-agent')return send(200,await agentRoomAddAgent(body.name,body.provider));
  if(req.method==='POST'&&url.pathname==='/api/agent-room/deepseek-key')return send(200,agentRoomSetDeepSeekKey(body.key));
  if(req.method==='POST'&&url.pathname==='/api/agent-room/deepseek-activate')return send(200,await agentRoomDeepSeekActivate(body.handle));
+ if(req.method==='GET'&&url.pathname==='/api/agent-room/relay/status')return send(200,agentRoomRelayStatus());
+ if(req.method==='POST'&&url.pathname==='/api/agent-room/relay/open')return send(200,await agentRoomRelayOpen(body.handle));
+ if(req.method==='POST'&&url.pathname==='/api/agent-room/relay/output')return send(200,await agentRoomRelayOutput(body.handle,body.output));
+ if(req.method==='POST'&&url.pathname==='/api/agent-room/relay/close')return send(200,await agentRoomRelayClose(body.handle));
+ // Phone/Invite from the headquarters: the founder is already signed in
+ // here, so make sure their shared-office phone identity exists and hand
+ // the browser its session instead of landing on account creation.
+ if(req.method==='POST'&&url.pathname==='/api/founder/shared-session'){
+  if(onlineAccess.state().required)return send(200,{ok:false,online:true});
+  const existingToken=(req.headers.cookie||'').split(';').map(v=>v.trim()).find(v=>v.startsWith('lx_shared='))?.slice(10)||'';
+  const existing=existingToken?sharedUser(existingToken):null;
+  if(existing){const me=sharedOfficeRequest('me','GET',{},existingToken,req.socket.remoteAddress||'local');return send(200,{ok:true,address:me.data.offices?.[0]?.address||null});}
+  const session=founderSharedSession();
+  res.setHeader('Set-Cookie',`lx_shared=${session.token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=604800${publicOrigin?'; Secure':''}`);
+  return send(200,{ok:true,address:session.address});
+ }
  if(req.method==='GET'&&url.pathname==='/api/agent-room/characters')return send(200,agentRoomCharacters());
- if(req.method==='POST'&&url.pathname==='/api/agent-room/character')return send(200,agentRoomSetCharacter(body.handle,body.character,body.outfit,body.name));
+ if(req.method==='POST'&&url.pathname==='/api/agent-room/character')return send(200,agentRoomSetCharacter(body.handle,body.character,body.outfit,body.name,body.clothing,body.hair));
+ if(req.method==='POST'&&url.pathname==='/api/agent-room/clothing')return send(200,agentRoomSetClothing(body.handle,body.clothing));
  if(req.method==='GET'&&url.pathname==='/api/updates')return send(200,updateStatus());
  if(req.method==='POST'&&url.pathname==='/api/updates/check')return send(200,await checkForUpdates({force:body.force===true}));
  if(req.method==='GET'&&url.pathname==='/api/local-engines/state')return send(200,localEngineState());

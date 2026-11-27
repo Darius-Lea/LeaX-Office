@@ -14,8 +14,11 @@ test('inviting from the main office: dock button, mobile float and auto-open inv
  assert.ok(index.includes('<button id="invite-open"'),'invite button exists in the office dock');
  // The handler takes the user straight to their shared office with the invite
  // panel requested, and falls back to the offices page with the same request.
- assert.ok(app.includes("location.href='/offices?office='+office.address+'&invite=1'"),'invite opens the shared office with invite=1');
- assert.ok(app.includes("location.href='/offices?invite=1'"),'invite falls back to the offices page with invite=1');
+ // The founder's shared session is ensured first (founderOfficeAddress), so a
+ // signed-in founder never lands on the account-creation page.
+ assert.ok(app.includes("fetch('/api/founder/shared-session'"),'invite ensures the founder shared session first');
+ assert.ok(app.includes("'/offices?office='+address+'&invite=1'"),'invite opens the shared office with invite=1');
+ assert.ok(app.includes("'/offices?invite=1'"),'invite falls back to the offices page with invite=1');
  // A floating Invite button shows on every screen size, stacked above the
  // floating Phone button, so inviting is never buried in the scrolling dock.
  assert.ok(app.includes("inviteFloat.id='invite-float'"),'floating invite button is created');

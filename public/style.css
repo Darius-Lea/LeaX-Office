@@ -600,6 +600,15 @@ body[data-view='2d'] .desk-status{color:#6f8bb0}
 .agent-room-outfit img{width:52px;height:52px;object-fit:cover;border-radius:8px;display:block}
 .agent-room-outfit small{font-size:10px;color:#7d9183}
 .agent-room-outfit.selected{border-color:#285d4c;box-shadow:0 0 0 2px #285d4c55}
+.agent-room-clothing{margin-top:10px;border-top:1px solid #dfe9dc;padding-top:8px}
+.agent-room-clothing-section{margin:8px 0}
+.agent-room-clothing-section p{margin:0 0 5px;font-size:12px;font-weight:600;color:#285d4c}
+.agent-room-piece-row{display:flex;flex-wrap:wrap;gap:5px}
+.agent-room-piece{font-size:11px;padding:5px 9px;border-radius:999px;background:#f7faf6;border:1px solid #dfe9dc;color:var(--ink);cursor:pointer}
+.agent-room-piece.selected{background:#285d4c;color:#e9f6f1;border-color:#285d4c}
+.agent-room-swatch-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.agent-room-swatch{width:20px;height:20px;border-radius:50%;border:2px solid #dfe9dc;cursor:pointer;padding:0}
+.agent-room-swatch.selected{border-color:#285d4c;box-shadow:0 0 0 2px #285d4c55}
 .agent-room-avatar{flex:0 0 auto;width:44px;height:44px;border-radius:50%;overflow:hidden;background:#285d4c;display:flex;align-items:center;justify-content:center}
 .agent-room-avatar img{width:100%;height:100%;object-fit:cover;display:block}
 .agent-room-avatar-initials{color:#e9f6f1;font-weight:700;font-size:18px}
@@ -637,5 +646,14 @@ body[data-view='2d'] .desk-status{color:#6f8bb0}
 .agent-room-invite input{width:100%;margin:8px 0}
 .agent-room-invite textarea{width:100%;margin:8px 0}
 .agent-room-invite-code{font-size:15px;font-weight:700;color:#285d4c}
+.agent-room-relay-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid #e6efe3}
+.agent-room-relay-row:last-child{border-bottom:none}
+.agent-room-relay-row span{font-size:13px;color:var(--ink)}
+.agent-room-relay textarea{width:100%;margin:6px 0 10px;font-size:12px;line-height:1.45}
+#agent-room-relay-panel{margin-top:12px;border-top:1px solid #dfe9dc;padding-top:12px}
+#agent-room-relay-panel h4{margin:0 0 8px;font-size:13px;color:#285d4c}
+#agent-room-relay-panel p{margin:8px 0 4px}
+#agent-room-relay-copy,#agent-room-relay-send{margin:0 8px 8px 0}
+#agent-room-relay-end{margin-left:8px}
 @media(max-width:900px){.agent-room-layout{grid-template-columns:1fr}.agent-room-sidebar{position:static}}
 @media(max-width:650px){.agent-room-grid{grid-template-columns:1fr}.agent-room-3d-host{min-height:240px}}

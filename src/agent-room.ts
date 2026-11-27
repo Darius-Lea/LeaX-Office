@@ -31,11 +31,11 @@ export function agentRoomConfig(){
  const place=String(process.env.AGENT_PLATFORM_PLACE||'lobby').slice(0,64)||'lobby';
  return {url,place,configured:seatAvailable(),adminConfigured:String(process.env.AGENT_PLATFORM_ADMIN_KEY||'').length>0};
 }
-async function rawPlatform(path:string,options:{method?:string,body?:any}={},fetchImpl:FetchImpl=fetch,key=''){
+async function rawPlatform(path:string,options:{method?:string,body?:any,timeoutMs?:number}={},fetchImpl:FetchImpl=fetch,key=''){
  const {url}=agentRoomConfig();
  let response:any;
  try{
-  response=await fetchImpl(url+path,{method:options.method||'GET',headers:{...(key?{Authorization:'Bearer '+key}:{}),...(options.body?{'Content-Type':'application/json'}:{})},body:options.body?JSON.stringify(options.body):undefined,signal:AbortSignal.timeout(TIMEOUT_MS)});
+  response=await fetchImpl(url+path,{method:options.method||'GET',headers:{...(key?{Authorization:'Bearer '+key}:{}),...(options.body?{'Content-Type':'application/json'}:{})},body:options.body?JSON.stringify(options.body):undefined,signal:AbortSignal.timeout(options.timeoutMs||TIMEOUT_MS)});
  }catch(error){throw Error('Agent Platform is unreachable: '+String((error as Error)?.message||error));}
  let data:any=null;try{data=await response.json();}catch{/* non-JSON error body */}
  return {status:response.status,ok:response.ok,data};
@@ -51,7 +51,7 @@ async function registerSeat(fetchImpl:FetchImpl=fetch){
  const handles=['leax-office-seat','leax-office-seat-'+randomBytes(2).toString('hex'),'leax-office-seat-'+randomBytes(3).toString('hex')];
  let lastError='';
  for(const handle of handles){
-  const result=await rawPlatform('/api/register',{method:'POST',body:{kind:'agent',handle,display_name:'LeaX Office seat',declaration:'I am the LeaX Office seat, an AI agent operated by Darius Lea (LeaX Technologies) inside his LeaX Office app. Darius speaks to the room through this seat.',works_for:'Darius Lea'}},fetchImpl);
+  const result=await rawPlatform('/api/register',{method:'POST',body:{kind:'agent',handle,display_name:'Darius — Owner',declaration:'I am the LeaX Office seat, an AI agent operated by Darius Lea (LeaX Technologies) inside his LeaX Office app. Darius speaks to the room through this seat.',works_for:'Darius Lea'}},fetchImpl);
   const apiKey=String(result.data?.api_key||'');
   if(result.ok&&apiKey){setSetting(SEAT_KEY_SETTING,apiKey);setSetting(SEAT_HANDLE_SETTING,handle);return apiKey;}
   lastError=String(result.data?.error||('Agent Platform returned HTTP '+result.status));
@@ -121,6 +121,7 @@ export async function agentRoomState(fetchImpl:FetchImpl=fetch){
    offline:allPresence.filter((row:any)=>!isHere(row)&&row.handle!=='mother').map((row:any)=>({identity_id:row.identity_id,handle:row.handle,display_name:row.display_name})),
    assignments:characterAssignments(),
    addedAgents:addedAgents(),
+   relay:agentRoomRelayStatus().sessions,
    workspaces:(Array.isArray(state?.workspaces)?state.workspaces:[]).map((ws:any)=>({id:ws.id,name:ws.name,kind:ws.kind,location:ws.location,position:ws.position,seated:(ws.seated||[]).map((s:any)=>({id:s.id,handle:s.handle,display_name:s.display_name,status:s.status}))})),
    speech,activity,
    cursor:Number(state?.cursor)||0,
@@ -220,9 +221,12 @@ function providerStep(provider:string){
   if(!String(process.env.AGENT_PLATFORM_ADMIN_KEY||'').length)return {kind:'standing'};
   return {kind:'bridge-ready'};
  }
- if(provider==='chatgpt')return {kind:'mcp',mcpUrl,instruction:'In ChatGPT, open Settings, then Connectors, then Advanced, turn on Developer Mode, and add a connector with this address. Then tell ChatGPT to join the room.'};
- if(provider==='gemini')return {kind:'mcp',mcpUrl,instruction:'In the Gemini CLI, add this address as an MCP server (gemini mcp add), then tell Gemini to join the room.'};
- return {kind:'mcp',mcpUrl,instruction:'Grok connects through the xAI API: add this address as a remote MCP server in your xAI API setup. That needs your own xAI API key on your side.'};
+ // Web-chat providers get two doors: the relay (works on any plan through
+ // the normal website chat — the easy default) and the MCP connector (needs
+ // a paid plan or API setup on the provider's side).
+ if(provider==='chatgpt')return {kind:'mcp',mcpUrl,relay:true,instruction:'In ChatGPT, open Settings, then Connectors, then Advanced, turn on Developer Mode, and add a connector with this address. Then tell ChatGPT to join the room.'};
+ if(provider==='gemini')return {kind:'mcp',mcpUrl,relay:true,instruction:'In the Gemini CLI, add this address as an MCP server (gemini mcp add), then tell Gemini to join the room.'};
+ return {kind:'mcp',mcpUrl,relay:true,instruction:'Grok connects through the xAI API: add this address as a remote MCP server in your xAI API setup. That needs your own xAI API key on your side.'};
 }
 export function agentRoomAgents(){
  return {agents:addedAgents(),deepseek:{hasKey:String(setting(DEEPSEEK_KEY_SETTING)||'').length>0,adminReady:String(process.env.AGENT_PLATFORM_ADMIN_KEY||'').length>0}};
@@ -277,6 +281,89 @@ export async function agentRoomDeepSeekActivate(handle:unknown,fetchImpl:FetchIm
  return deepSeekAct(clean,'Say hello in the room and introduce yourself in one short sentence.',fetchImpl);
 }
 
+// ---- Relay route (web-chat AIs) -----------------------------------------
+// A web-chat AI (ChatGPT first) joins the room through its normal website
+// chat — no connectors, no paid plan. The platform's ephemeral relay
+// sessions do the work: this server opens a session under the added
+// agent's own stored key, hands Darius a plain-text room brief to paste
+// into the AI's chat, and executes the ACTION lines in the AI's pasted
+// reply. Each round returns the results plus what is new in the room, so
+// one paste back keeps the AI in the conversation. The agent's key never
+// leaves this server; the session id and event cursor are stored here too.
+const RELAY_PROVIDERS=['chatgpt','gemini','grok'];
+const RELAY_OUTPUT_MAX=100000;
+const RELAY_TIMEOUT_MS=30000;
+function relaySetting(handle:string){return 'agent_platform_relay_'+handle;}
+function relaySessionRecord(handle:string){
+ try{const value=JSON.parse(String(setting(relaySetting(handle))||'null'));return value&&typeof value.session_id==='string'&&value.session_id?value:null;}catch{return null;}
+}
+function relayAgent(handle:unknown){
+ const clean=typeof handle==='string'?handle.trim().toLowerCase():'';
+ if(!clean)return null;
+ const row=addedAgents().find(agent=>agent.handle===clean);
+ if(!row)return null;
+ const key=String(setting(agentKeySetting(clean))||'');
+ if(!key)return null;
+ return {...row,key};
+}
+export function agentRoomRelayStatus(){
+ const sessions:Record<string,boolean>={};
+ for(const row of addedAgents())if(RELAY_PROVIDERS.includes(row.provider)&&relaySessionRecord(row.handle))sessions[row.handle]=true;
+ return {sessions,providers:RELAY_PROVIDERS};
+}
+export async function agentRoomRelayOpen(handle:unknown,fetchImpl:FetchImpl=fetch){
+ const agent=relayAgent(handle);
+ if(!agent)throw Error('Pick an agent you added first.');
+ if(!RELAY_PROVIDERS.includes(agent.provider))throw Error('Relay is for web-chat AIs like ChatGPT, Gemini and Grok.');
+ const existing=relaySessionRecord(agent.handle);
+ if(existing){try{await rawPlatform('/api/relay/session/'+existing.session_id+'/close',{method:'POST',body:{},timeoutMs:RELAY_TIMEOUT_MS},fetchImpl,agent.key);}catch{/* stale session; opening fresh anyway */}}
+ const data=await platform('/api/relay/session',{method:'POST',body:{},timeoutMs:RELAY_TIMEOUT_MS},fetchImpl,agent.key);
+ let cursor=0;
+ try{const state=await platform('/api/senses/state',{timeoutMs:RELAY_TIMEOUT_MS},fetchImpl,agent.key);cursor=Number(state?.cursor)||0;}catch{/* next brief will simply include recent events */}
+ setSetting(relaySetting(agent.handle),JSON.stringify({session_id:String(data.session_id||''),cursor,opened_at:new Date().toISOString()}));
+ return {ok:true,handle:agent.handle,display_name:agent.display_name,provider:agent.provider,brief:String(data.brief_text||'')};
+}
+function relayEventLine(event:any){
+ const who='@'+String(event?.actor?.handle||'someone');
+ const text=typeof event?.payload?.text==='string'?event.payload.text:null;
+ if(event?.type==='world.speak'&&text)return who+': '+text;
+ return who+' · '+String(event?.type||'activity');
+}
+export async function agentRoomRelayOutput(handle:unknown,output:unknown,fetchImpl:FetchImpl=fetch){
+ const agent=relayAgent(handle);
+ if(!agent)throw Error('Pick an agent you added first.');
+ if(!RELAY_PROVIDERS.includes(agent.provider))throw Error('Relay is for web-chat AIs like ChatGPT, Gemini and Grok.');
+ if(typeof output!=='string'||!output.trim())throw Error("Paste the AI's reply first.");
+ if(output.length>RELAY_OUTPUT_MAX)throw Error('That reply is too long. Paste a shorter reply.');
+ const record=relaySessionRecord(agent.handle);
+ if(!record)return {ok:false,reason:'no-session'};
+ const result=await rawPlatform('/api/relay/session/'+record.session_id+'/output',{method:'POST',body:{output},timeoutMs:RELAY_TIMEOUT_MS},fetchImpl,agent.key);
+ if(result.status===404||result.status===410){setSetting(relaySetting(agent.handle),'');return {ok:false,reason:'expired'};}
+ const data=unwrap(result);
+ let cursor=Number(record.cursor)||0,newText='';
+ try{
+  const since=await platform('/api/senses/since?cursor='+cursor,{timeoutMs:RELAY_TIMEOUT_MS},fetchImpl,agent.key);
+  const events=Array.isArray(since?.events)?since.events:[];
+  cursor=Number(since?.cursor)||cursor;
+  if(events.length)newText='\n\nNEW IN THE ROOM SINCE YOUR LAST TURN:\n'+events.map(relayEventLine).join('\n');
+ }catch{/* the results still go back; the AI can ask for a catchup */}
+ setSetting(relaySetting(agent.handle),JSON.stringify({...record,cursor}));
+ return {ok:true,handle:agent.handle,
+  actions_found:Number(data.actions_found)||0,
+  actions_executed:Number(data.actions_executed)||0,
+  results:(Array.isArray(data.results)?data.results:[]).map((row:any)=>({n:row.n,action:row.action||null,ok:row.ok===true,...(row.error?{error:String(row.error)}:{})})),
+  next_brief:String(data.results_text||'')+newText};
+}
+export async function agentRoomRelayClose(handle:unknown,fetchImpl:FetchImpl=fetch){
+ const agent=relayAgent(handle);
+ if(!agent)throw Error('Pick an agent you added first.');
+ const record=relaySessionRecord(agent.handle);
+ setSetting(relaySetting(agent.handle),'');
+ if(!record)return {ok:true,closed:false};
+ try{await rawPlatform('/api/relay/session/'+record.session_id+'/close',{method:'POST',body:{},timeoutMs:RELAY_TIMEOUT_MS},fetchImpl,agent.key);}catch{/* already gone platform-side */}
+ return {ok:true,closed:true};
+}
+
 // ---- Character picker ---------------------------------------------------
 // Every agent can be given a character (one of the roster portraits under
 // public/avatars/characters/), an outfit, and a display name shown in LeaX.
@@ -284,25 +371,45 @@ export async function agentRoomDeepSeekActivate(handle:unknown,fetchImpl:FetchIm
 // never stores them. The roster manifest (characters/manifest.json) is the
 // source of truth for which characters/outfits exist on disk.
 const ASSIGNMENTS_SETTING='agent_platform_character_assignments';
-const CHARACTER_COUNT=24,OUTFIT_COUNT=6;
+const CHARACTER_COUNT=36,OUTFIT_COUNT=6,HAIR_COUNT=6;
+// Mix-and-match clothing for the 3D characters. The face stays the chosen
+// portrait; the body wears these pieces. Validated server-side so only known
+// pieces and palette colors are ever stored.
+const CLOTHING_TOPS=['t-shirt','polo','button-up','hoodie','blazer','sweater'];
+const CLOTHING_BOTTOMS=['jeans','dress-pants','khakis','shorts'];
+const CLOTHING_SHOES=['sneakers','dress-shoes','boots'];
+const CLOTHING_ACCESSORIES=['none','tie','bowtie','cap'];
+const CLOTHING_COLORS=['#24344d','#1f2430','#e8e8e8','#6b7280','#8a2f2f','#2f6b4f','#2f5d8a','#b09a72','#5b4632','#5b3a6b','#1f5f56','#c9a227'];
+function cleanClothing(input:any,existing:any={}){
+ const out={...existing};
+ if(!input||typeof input!=='object')return out;
+ const pick=(value:any,allowed:string[],key:string)=>{const v=String(value||'');if(allowed.includes(v))out[key]=v;};
+ pick(input.top,CLOTHING_TOPS,'top');pick(input.bottom,CLOTHING_BOTTOMS,'bottom');
+ pick(input.shoes,CLOTHING_SHOES,'shoes');pick(input.accessory,CLOTHING_ACCESSORIES,'accessory');
+ const pickColor=(value:any,key:string)=>{const v=String(value||'').toLowerCase();if(CLOTHING_COLORS.includes(v))out[key]=v;};
+ pickColor(input.topColor,'topColor');pickColor(input.bottomColor,'bottomColor');
+ pickColor(input.shoeColor,'shoeColor');pickColor(input.accessoryColor,'accessoryColor');
+ return out;
+}
 export function characterAssignments(){
  try{
   const parsed=JSON.parse(String(setting(ASSIGNMENTS_SETTING)||'{}'));
   if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))return {};
   const clean:Record<string,any>={};
   for(const [handle,row] of Object.entries(parsed)){
-   const character=String((row as any)?.character||''),outfit=Number((row as any)?.outfit)||1,name=String((row as any)?.name||'').trim().slice(0,40);
+   const character=String((row as any)?.character||''),outfit=Number((row as any)?.outfit)||1,hair=Number((row as any)?.hair)||1,name=String((row as any)?.name||'').trim().slice(0,40);
    if(/^char-\d{2}$/.test(character)){
-    clean[handle]={character,outfit:Math.max(1,Math.min(OUTFIT_COUNT,outfit)),...(name?{name}:{})};
+    const clothing=cleanClothing((row as any)?.clothing);
+    clean[handle]={character,outfit:Math.max(1,Math.min(OUTFIT_COUNT,outfit)),hair:Math.max(1,Math.min(HAIR_COUNT,hair)),...(name?{name}:{}),...(Object.keys(clothing).length?{clothing}:{})};
    }
   }
   return clean;
  }catch{return {};}
 }
 export function agentRoomCharacters(){
- return {assignments:characterAssignments(),characterCount:CHARACTER_COUNT,outfitCount:OUTFIT_COUNT};
+ return {assignments:characterAssignments(),characterCount:CHARACTER_COUNT,outfitCount:OUTFIT_COUNT,hairCount:HAIR_COUNT};
 }
-export function agentRoomSetCharacter(handle:unknown,character:unknown,outfit:unknown,name:unknown){
+export function agentRoomSetCharacter(handle:unknown,character:unknown,outfit:unknown,name:unknown,clothing?:unknown,hair?:unknown){
  const cleanHandle=typeof handle==='string'?handle.trim().toLowerCase():'';
  if(!cleanHandle||cleanHandle.length>64)throw Error('Pick an agent first.');
  const cleanCharacter=String(character||'');
@@ -310,9 +417,23 @@ export function agentRoomSetCharacter(handle:unknown,character:unknown,outfit:un
  if(!match||Number(match[1])<1||Number(match[1])>CHARACTER_COUNT)throw Error('Pick a character from the roster.');
  const cleanOutfit=Math.round(Number(outfit)||1);
  if(cleanOutfit<1||cleanOutfit>OUTFIT_COUNT)throw Error('Pick an outfit for the character.');
+ const cleanHair=Math.round(Number(hair)||1);
+ if(cleanHair<1||cleanHair>HAIR_COUNT)throw Error('Pick a hairstyle for the character.');
  const cleanName=typeof name==='string'?name.trim().slice(0,40):'';
  const assignments=characterAssignments();
- assignments[cleanHandle]={character:cleanCharacter,outfit:cleanOutfit,...(cleanName?{name:cleanName}:{})};
+ const mergedClothing=cleanClothing(clothing,assignments[cleanHandle]?.clothing||{});
+ assignments[cleanHandle]={character:cleanCharacter,outfit:cleanOutfit,hair:cleanHair,...(cleanName?{name:cleanName}:{}),...(Object.keys(mergedClothing).length?{clothing:mergedClothing}:{})};
  setSetting(ASSIGNMENTS_SETTING,JSON.stringify(assignments));
  return {ok:true,handle:cleanHandle,assignment:assignments[cleanHandle]};
+}
+export function agentRoomSetClothing(handle:unknown,clothing:unknown){
+ const cleanHandle=typeof handle==='string'?handle.trim().toLowerCase():'';
+ if(!cleanHandle||cleanHandle.length>64)throw Error('Pick an agent first.');
+ if(!clothing||typeof clothing!=='object')throw Error('Pick a clothing piece first.');
+ const assignments=characterAssignments();
+ const current=assignments[cleanHandle]||{character:'char-01',outfit:1};
+ current.clothing=cleanClothing(clothing,current.clothing||{});
+ assignments[cleanHandle]=current;
+ setSetting(ASSIGNMENTS_SETTING,JSON.stringify(assignments));
+ return {ok:true,handle:cleanHandle,assignment:current};
 }

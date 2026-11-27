@@ -30,6 +30,34 @@ export function sharedUser(token:string,now=Date.now()) {return db.prepare('SELE
 function roomFor(user:any,address:string){const room=db.prepare('SELECT r.id,r.address,r.name,r.owner_id,m.role FROM shared_rooms r JOIN shared_members m ON m.room_id=r.id WHERE r.address=? AND m.user_id=?').get(address,user.id) as any;if(!room)throw bad('Office not found or invitation required',404);return room;}
 function createRoom(userId:string,name:string,now:number){const roomId=id(),address='lx-'+randomBytes(12).toString('hex');db.prepare('INSERT INTO shared_rooms VALUES(?,?,?,?,?)').run(roomId,address,name,userId,now);db.prepare('INSERT INTO shared_members VALUES(?,?,?)').run(roomId,userId,'owner');return address;}
 function newSession(userId:string,now:number){const token=secret();db.prepare('INSERT INTO shared_sessions VALUES(?,?,?)').run(digest(token),userId,now+7*86400000);return token;}
+// The founder's own phone identity. The phone lives in the shared-office
+// world, which uses its own accounts; without one, clicking Phone in the
+// headquarters dropped the signed-in founder on the account-creation page.
+// This ensures a shared account linked to the founder (recorded in
+// settings at creation) and mints a session for it. It only ever mints
+// sessions for the account it created and recorded — never for a
+// pre-existing account that happens to share a handle — and it is only
+// reachable through the founder-authenticated server route, so guest and
+// colleague registration is unchanged.
+export function founderSharedSession(now=Date.now()):{token:string,address:string,handle:string}{
+ prune(now);
+ const linkedId=(db.prepare("SELECT value FROM settings WHERE key='founder_shared_user_id'").get() as any)?.value;
+ let user=linkedId?db.prepare('SELECT id,handle FROM shared_users WHERE id=?').get(linkedId) as any:null;
+ if(!user){
+  let handle='founder';
+  for(let n=2;db.prepare('SELECT id FROM shared_users WHERE handle=?').get(handle);n++)handle=n===2?'founder-hq':'founder-hq-'+n;
+  const userId=id(),salt=secret(),hash=scryptSync(secret(),salt,64).toString('hex');
+  const address=transaction(()=>{
+   db.prepare('INSERT INTO shared_users VALUES(?,?,?,?,?,?)').run(userId,handle,'Founder',salt,hash,now);
+   const created=createRoom(userId,'Founder’s office',now);
+   db.prepare("INSERT INTO settings(key,value) VALUES('founder_shared_user_id',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(userId);
+   return created;
+  });
+  return {token:newSession(userId,now),address,handle};
+ }
+ const office=db.prepare('SELECT r.address FROM shared_rooms r JOIN shared_members m ON m.room_id=r.id WHERE m.user_id=? ORDER BY r.created LIMIT 1').get(user.id) as any;
+ return {token:newSession(user.id,now),address:office?.address||createRoom(user.id,'Founder’s office',now),handle:user.handle};
+}
 export function sharedOfficeRequest(path:string,method:string,body:any,token:string,ip:string,now=Date.now()):{status?:number,data:any,token?:string} {
  prune(now);
  if(path.startsWith('guest/')){if(path==='guest/redeem')rate('guest-redeem:'+ip,20,now);if(path==='guest/message')rate('guest-message:'+ip,30,now);return guestLobbyRequest(path.slice(6),method,body,token,now);}
