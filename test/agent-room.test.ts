@@ -2,10 +2,10 @@ import {test,beforeEach,afterEach} from 'node:test';import assert from 'node:ass
 import {mkdtempSync} from 'node:fs';import {join} from 'node:path';import {tmpdir} from 'node:os';
 process.env.HQ_DATA_DIR=mkdtempSync(join(tmpdir(),'hq-agent-room-'));
 const {setSetting}=await import('../src/store.ts');
-const {agentRoomConfig,agentRoomState,agentRoomSince,agentRoomSpeak,agentRoomEnter,agentRoomInvite}=await import('../src/agent-room.ts');
+const {agentRoomConfig,agentRoomState,agentRoomSince,agentRoomSpeak,agentRoomEnter,agentRoomInvite,agentRoomAddAgent,agentRoomAgents,agentRoomSetDeepSeekKey,agentRoomDeepSeekActivate,agentRoomCharacters,agentRoomSetCharacter}=await import('../src/agent-room.ts');
 const KEY='test-agent-key-123';
 const saved={url:process.env.AGENT_PLATFORM_URL,key:process.env.AGENT_PLATFORM_KEY,place:process.env.AGENT_PLATFORM_PLACE,admin:process.env.AGENT_PLATFORM_ADMIN_KEY,auto:process.env.AGENT_PLATFORM_AUTO_REGISTER};
-beforeEach(()=>{process.env.AGENT_PLATFORM_URL='http://platform.test';delete process.env.AGENT_PLATFORM_KEY;delete process.env.AGENT_PLATFORM_PLACE;delete process.env.AGENT_PLATFORM_ADMIN_KEY;delete process.env.AGENT_PLATFORM_AUTO_REGISTER;setSetting('agent_platform_key','');setSetting('agent_platform_handle','');});
+beforeEach(()=>{process.env.AGENT_PLATFORM_URL='http://platform.test';delete process.env.AGENT_PLATFORM_KEY;delete process.env.AGENT_PLATFORM_PLACE;delete process.env.AGENT_PLATFORM_ADMIN_KEY;delete process.env.AGENT_PLATFORM_AUTO_REGISTER;setSetting('agent_platform_key','');setSetting('agent_platform_handle','');setSetting('agent_platform_agents','[]');setSetting('agent_platform_deepseek_key','');setSetting('agent_platform_character_assignments','{}');});
 afterEach(()=>{for(const [name,value] of [['AGENT_PLATFORM_URL',saved.url],['AGENT_PLATFORM_KEY',saved.key],['AGENT_PLATFORM_PLACE',saved.place],['AGENT_PLATFORM_ADMIN_KEY',saved.admin],['AGENT_PLATFORM_AUTO_REGISTER',saved.auto]]){if(value===undefined)delete process.env[name];else process.env[name]=value;}});
 function stubFetch(handler){const calls=[];const impl=async(input,init={})=>{calls.push({url:String(input),init});const result=handler(String(input),init);if(result instanceof Error)throw result;return {ok:result.status<400,status:result.status,json:async()=>result.data};};impl.calls=calls;return impl;}
 const statePayload={ok:true,me:{identity:{id:3,handle:'mike-tyson',display_name:'Mike Tyson',works_for:'Darius Lea'},presence:null},current_place:{id:1,name:'lobby',kind:'zone',access:'open',owner:{id:2,handle:'platform-owner',display_name:'Darius Lea'},my_permissions:{speak:true}},presence_map:[{identity_id:3,handle:'mike-tyson',display_name:'Mike Tyson',online:true,location:'lobby',status:'sitting',position:{x:0,y:0,z:0},moving:false,target:null,workspace:null,place:{id:1,name:'lobby',kind:'zone'},distance:0,nearby:true},{identity_id:4,handle:'deepseek',display_name:'DeepSeek',online:true,location:'lobby',status:'standing',position:{x:3,y:4,z:0},moving:false,target:null,workspace:{id:1,name:'MOTHER table'},place:{id:1,name:'lobby',kind:'zone'},distance:5,nearby:true}],workspaces:[{id:1,name:'MOTHER table',kind:'table',location:'lobby',position:{x:3,y:4,z:0},seated:[{id:4,handle:'deepseek',display_name:'DeepSeek',status:'sitting'}]}],recent_world_actions:[{id:9,type:'world.speak',actor:{id:4,handle:'deepseek'},payload:{text:'Session 17 is at step 33,100.'},location:'lobby',distance:5,created_at:'2026-11-26T17:00:00Z'},{id:8,type:'world.move',actor:{id:4,handle:'deepseek'},payload:{},location:'lobby',distance:5,created_at:'2026-11-26T16:59:00Z'}],cursor:9,radii:{near:10,hear:20,walk_speed:3}};
@@ -162,4 +162,126 @@ test('a taken seat handle falls back to a suffixed handle',async()=>{
  assert.equal(state.configured,true);
  const bodies=fetchImpl.calls.filter(c=>c.url.endsWith('/api/register')).map(c=>JSON.parse(c.init.body).handle);
  assert.equal(bodies[0],'leax-office-seat');assert.match(bodies[1],/^leax-office-seat-[0-9a-f]{4}$/);
+});
+test('concurrent enters share one registration (no duplicate seats)',async()=>{
+ let registrations=0;
+ const calls=[];
+ const fetchImpl=async(input,init={})=>{
+  const url=String(input);calls.push({url,init});
+  if(url.endsWith('/api/register')){registrations++;await new Promise(resolve=>setTimeout(resolve,40));return {ok:true,status:201,json:async()=>({ok:true,identity:{id:11,handle:'leax-office-seat'},api_key:'seat-key-once'})};}
+  if(url.endsWith('/api/places'))return {ok:true,status:200,json:async()=>({ok:true,places:[{id:1,name:'lobby',kind:'zone'}]})};
+  if(url.endsWith('/api/world/enter'))return {ok:true,status:200,json:async()=>({ok:true,entered:{id:1,name:'lobby'}})};
+  if(url.endsWith('/api/world/action'))return {ok:true,status:200,json:async()=>({ok:true,status:'sitting'})};
+  if(url.endsWith('/api/senses/state'))return {ok:true,status:200,json:async()=>statePayload};
+  return {ok:false,status:404,json:async()=>({ok:false,error:'nope'})};
+ };
+ const results=await Promise.all([agentRoomEnter(fetchImpl),agentRoomEnter(fetchImpl),agentRoomState(fetchImpl),agentRoomEnter(fetchImpl),agentRoomState(fetchImpl)]);
+ assert.equal(registrations,1,'exactly one seat registration under concurrency');
+ for(const result of results){assert.equal(result.configured,true);assert.equal(result.error,undefined);}
+});
+test('presence carries only online agents; offline identities ride separately',async()=>{
+ process.env.AGENT_PLATFORM_KEY=KEY;
+ const payload={...statePayload,presence_map:[...statePayload.presence_map,
+  {identity_id:2,handle:'platform-owner',display_name:'Darius Lea',online:false,location:'lobby',status:'idle',position:{x:0,y:0,z:0},moving:false,target:null,workspace:null,place:{id:1,name:'lobby',kind:'zone'},distance:0,nearby:false},
+  {identity_id:1,handle:'mother',display_name:'MOTHER',online:false,location:'lobby',status:'idle',position:{x:1,y:1,z:0},moving:false,target:null,workspace:null,place:{id:1,name:'lobby',kind:'zone'},distance:2,nearby:false}]};
+ const fetchImpl=stubFetch(url=>url.endsWith('/api/senses/state')?{status:200,data:payload}:{status:404,data:{ok:false,error:'nope'}});
+ const state=await agentRoomState(fetchImpl);
+ assert.deepEqual(state.presence.map(row=>row.handle),['mike-tyson','deepseek']);
+ // MOTHER is filtered out of the offline list entirely (reserved identity,
+ // not shown while she is not in the room).
+ assert.deepEqual(state.offline.map(row=>row.handle),['platform-owner']);
+ assert.deepEqual(state.offline[0],{identity_id:2,handle:'platform-owner',display_name:'Darius Lea'});
+});
+test('add-agent creates the identity, stores its key server-side, and never returns it',async()=>{
+ const fetchImpl=stubFetch(url=>{
+  if(url.endsWith('/api/register'))return {status:201,data:{ok:true,identity:{id:21,handle:'helper-one'},api_key:'added-key-111'}};
+  return {status:404,data:{ok:false,error:'nope'}};
+ });
+ const result=await agentRoomAddAgent('Helper One','claude',fetchImpl);
+ assert.equal(result.ok,true);assert.equal(result.handle,'helper-one');assert.equal(result.display_name,'Helper One');assert.equal(result.provider,'claude');
+ assert.deepEqual(result.step,{kind:'ready'});
+ assert.ok(!JSON.stringify(result).includes('added-key-111'),'added agent key must not appear in output');
+ const register=fetchImpl.calls.find(c=>c.url.endsWith('/api/register'));
+ const body=JSON.parse(register.init.body);
+ assert.equal(body.kind,'agent');assert.equal(body.handle,'helper-one');assert.match(body.declaration,/AI agent \(Claude\)/);assert.equal(body.works_for,'Darius Lea');
+ const roster=agentRoomAgents();
+ assert.equal(roster.agents.length,1);assert.equal(roster.agents[0].handle,'helper-one');assert.equal(roster.agents[0].provider,'claude');
+ assert.ok(!JSON.stringify(roster).includes('added-key-111'),'roster must not carry keys');
+ await assert.rejects(agentRoomAddAgent('','claude',fetchImpl),/name/);
+ await assert.rejects(agentRoomAddAgent('X','bogus',fetchImpl),/which AI/);
+});
+test('add-agent dedupes a taken handle',async()=>{
+ let registrations=0;
+ const fetchImpl=stubFetch(url=>{
+  if(url.endsWith('/api/register')){registrations++;return registrations===1?{status:409,data:{ok:false,error:'handle already taken.'}}:{status:201,data:{ok:true,identity:{id:22,handle:'helper-one-2'},api_key:'added-key-222'}};}
+  return {status:404,data:{ok:false,error:'nope'}};
+ });
+ const result=await agentRoomAddAgent('Helper One','gemini',fetchImpl);
+ assert.equal(result.handle,'helper-one-2');
+ assert.equal(result.step.kind,'mcp');assert.equal(result.step.mcpUrl,'http://platform.test/mcp');assert.match(result.step.instruction,/Gemini CLI/);
+});
+test('provider steps: chatgpt and grok get the MCP address, deepseek needs its key first',async()=>{
+ const fetchImpl=stubFetch(url=>url.endsWith('/api/register')?{status:201,data:{ok:true,identity:{id:23},api_key:'added-key-333'}}:{status:404,data:{ok:false,error:'nope'}});
+ const chatgpt=await agentRoomAddAgent('Chatty','chatgpt',fetchImpl);
+ assert.equal(chatgpt.step.kind,'mcp');assert.equal(chatgpt.step.mcpUrl,'http://platform.test/mcp');assert.match(chatgpt.step.instruction,/Developer Mode/);
+ const grok=await agentRoomAddAgent('Groky','grok',fetchImpl);
+ assert.equal(grok.step.kind,'mcp');assert.match(grok.step.instruction,/xAI API/);
+ const deepseek=await agentRoomAddAgent('Deepy','deepseek',fetchImpl);
+ assert.deepEqual(deepseek.step,{kind:'needs-deepseek-key'});
+ assert.equal(agentRoomAgents().deepseek.hasKey,false);
+});
+test('deepseek key is stored server-side and never echoed; activation needs admin standing',async()=>{
+ const fetchImpl=stubFetch(url=>{
+  if(url.endsWith('/api/register'))return {status:201,data:{ok:true,identity:{id:24,handle:'deepy'},api_key:'added-key-444'}};
+  if(url.endsWith('/api/admin/bridge/deepseek/act'))return {status:200,data:{ok:true,reply:'Hello from DeepSeek.',actions:[{tool:'speak',ok:true}]}};
+  return {status:404,data:{ok:false,error:'nope'}};
+ });
+ await agentRoomAddAgent('Deepy','deepseek',fetchImpl);
+ assert.deepEqual(await agentRoomDeepSeekActivate('deepy',fetchImpl),{ok:false,reason:'needs-deepseek-key'});
+ const saved=agentRoomSetDeepSeekKey('ds-secret-999');
+ assert.deepEqual(saved,{ok:true,hasKey:true});
+ assert.ok(!JSON.stringify(saved).includes('ds-secret-999'));
+ assert.equal(agentRoomAgents().deepseek.hasKey,true);
+ assert.ok(!JSON.stringify(agentRoomAgents()).includes('ds-secret-999'),'deepseek key must not appear in roster output');
+ assert.deepEqual(await agentRoomDeepSeekActivate('deepy',fetchImpl),{ok:false,reason:'standing'});
+ process.env.AGENT_PLATFORM_ADMIN_KEY='admin-secret-456';
+ const acted=await agentRoomDeepSeekActivate('deepy',fetchImpl);
+ assert.equal(acted.ok,true);assert.equal(acted.reply,'Hello from DeepSeek.');
+ const act=fetchImpl.calls.find(c=>c.url.endsWith('/api/admin/bridge/deepseek/act'));
+ assert.equal(act.init.headers.Authorization,'Bearer admin-secret-456');
+ const actBody=JSON.parse(act.init.body);
+ assert.equal(actBody.api_key,'added-key-444');assert.match(actBody.instruction,/introduce yourself/);
+ assert.ok(!JSON.stringify(acted).includes('added-key-444')&&!JSON.stringify(acted).includes('ds-secret-999'),'keys must not appear in bridge output');
+ await assert.rejects(agentRoomDeepSeekActivate('',fetchImpl),/Pick the DeepSeek agent/);
+});
+test('MOTHER never appears while offline, but shows when actually present',async()=>{
+ process.env.AGENT_PLATFORM_KEY=KEY;
+ const motherRow={identity_id:1,handle:'mother',display_name:'MOTHER',online:false,location:'lobby',status:'idle',position:{x:1,y:1,z:0},moving:false,target:null,workspace:null,place:{id:1,name:'lobby',kind:'zone'},distance:2,nearby:false};
+ const payload={...statePayload,presence_map:[...statePayload.presence_map,motherRow]};
+ const fetchImpl=stubFetch(url=>url.endsWith('/api/senses/state')?{status:200,data:payload}:{status:404,data:{ok:false,error:'nope'}});
+ const state=await agentRoomState(fetchImpl);
+ assert.ok(!state.presence.some(row=>row.handle==='mother'),'offline MOTHER must not be in presence');
+ assert.ok(!state.offline.some(row=>row.handle==='mother'),'offline MOTHER must not be in the offline list');
+ const onlinePayload={...statePayload,presence_map:[...statePayload.presence_map,{...motherRow,online:true}]};
+ const fetchImpl2=stubFetch(url=>url.endsWith('/api/senses/state')?{status:200,data:onlinePayload}:{status:404,data:{ok:false,error:'nope'}});
+ const state2=await agentRoomState(fetchImpl2);
+ assert.ok(state2.presence.some(row=>row.handle==='mother'),'online MOTHER appears like anyone else');
+});
+test('character assignments are stored server-side per handle and validated',async()=>{
+ assert.deepEqual(agentRoomCharacters().assignments,{});
+ const saved=agentRoomSetCharacter('Helper-One','char-07',3,'  Helper  ');
+ assert.deepEqual(saved.assignment,{character:'char-07',outfit:3,name:'Helper'});
+ const roster=agentRoomCharacters();
+ assert.equal(roster.characterCount,24);assert.equal(roster.outfitCount,6);
+ assert.deepEqual(roster.assignments['helper-one'],{character:'char-07',outfit:3,name:'Helper'});
+ const changed=agentRoomSetCharacter('helper-one','char-12',5,'');
+ assert.deepEqual(changed.assignment,{character:'char-12',outfit:5});
+ assert.throws(()=>agentRoomSetCharacter('','char-01',1,''),/Pick an agent/);
+ assert.throws(()=>agentRoomSetCharacter('x','char-99',1,''),/roster/);
+ assert.throws(()=>agentRoomSetCharacter('x','bogus',1,''),/roster/);
+ assert.throws(()=>agentRoomSetCharacter('x','char-01',9,''),/outfit/);
+ process.env.AGENT_PLATFORM_KEY=KEY;
+ const fetchImpl=stubFetch(url=>url.endsWith('/api/senses/state')?{status:200,data:statePayload}:{status:404,data:{ok:false,error:'nope'}});
+ const state=await agentRoomState(fetchImpl);
+ assert.deepEqual(state.assignments['helper-one'],{character:'char-12',outfit:5});
 });

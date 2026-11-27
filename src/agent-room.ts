@@ -59,12 +59,23 @@ async function registerSeat(fetchImpl:FetchImpl=fetch){
  }
  throw Error(lastError||'Agent Platform seat registration failed');
 }
+// Single-flight registration: while one registration is in flight, every
+// concurrent caller shares the same promise instead of registering again.
+// Without this, retries during a platform cold start each created a fresh
+// seat identity (production showed four seats for one office).
+let registrationInFlight:Promise<string>|null=null;
+function registerSeatOnce(fetchImpl:FetchImpl=fetch){
+ if(!registrationInFlight){
+  registrationInFlight=registerSeat(fetchImpl).finally(()=>{registrationInFlight=null;});
+ }
+ return registrationInFlight;
+}
 async function seatKey(fetchImpl:FetchImpl=fetch){
  const envKey=String(process.env.AGENT_PLATFORM_KEY||'');
  if(envKey)return {key:envKey,fromEnv:true};
  const stored=String(setting(SEAT_KEY_SETTING)||'');
  if(stored)return {key:stored,fromEnv:false};
- return {key:await registerSeat(fetchImpl),fromEnv:false};
+ return {key:await registerSeatOnce(fetchImpl),fromEnv:false};
 }
 // Seat-authenticated platform call. A stored key the platform rejects (its
 // database was reset) is replaced by a fresh registration and one retry.
@@ -73,7 +84,7 @@ async function seatPlatform(path:string,options:{method?:string,body?:any}={},fe
  let result=await rawPlatform(path,options,fetchImpl,seat.key);
  if(result.status===401&&!seat.fromEnv){
   setSetting(SEAT_KEY_SETTING,'');setSetting(SEAT_HANDLE_SETTING,'');
-  result=await rawPlatform(path,options,fetchImpl,await registerSeat(fetchImpl));
+  result=await rawPlatform(path,options,fetchImpl,await registerSeatOnce(fetchImpl));
  }
  return unwrap(result);
 }
@@ -93,10 +104,23 @@ export async function agentRoomState(fetchImpl:FetchImpl=fetch){
   const place=state?.current_place||null;
   const speech=(Array.isArray(state?.recent_world_actions)?state.recent_world_actions:[]).filter((event:any)=>event?.type==='world.speak').map(speechLine).reverse();
   const activity=(Array.isArray(state?.recent_world_actions)?state.recent_world_actions:[]).filter((event:any)=>event?.type!=='world.speak').map(speechLine).reverse();
+  // "Who is here" means actually here: presence carries only online agents
+  // (plus the seat itself, which just made this call). Offline identities
+  // ride along separately so the UI can keep them hidden by default.
+  const allPresence=(Array.isArray(state?.presence_map)?state.presence_map:[]).map(presenceRow);
+  const meId=me.id??null;
+  const isHere=(row:any)=>row.online===true||(meId!=null&&row.identity_id===meId);
   return {configured:true,url:config.url,place:config.place,
    me:{id:me.id??null,handle:me.handle||null,display_name:me.display_name||null,works_for:me.works_for||null},
    currentPlace:place?{id:place.id,name:place.name,kind:place.kind,owner:place.owner?{handle:place.owner.handle,display_name:place.owner.display_name}:null,access:place.access,my_permissions:place.my_permissions||null}:null,
-   presence:(Array.isArray(state?.presence_map)?state.presence_map:[]).map(presenceRow),
+   presence:allPresence.filter(isHere),
+   // MOTHER's identity is reserved while she cannot talk yet. Darius's rule:
+   // don't show her if she is not in the room — so she never rides along in
+   // the offline list. When she is actually present she appears above like
+   // anyone else.
+   offline:allPresence.filter((row:any)=>!isHere(row)&&row.handle!=='mother').map((row:any)=>({identity_id:row.identity_id,handle:row.handle,display_name:row.display_name})),
+   assignments:characterAssignments(),
+   addedAgents:addedAgents(),
    workspaces:(Array.isArray(state?.workspaces)?state.workspaces:[]).map((ws:any)=>({id:ws.id,name:ws.name,kind:ws.kind,location:ws.location,position:ws.position,seated:(ws.seated||[]).map((s:any)=>({id:s.id,handle:s.handle,display_name:s.display_name,status:s.status}))})),
    speech,activity,
    cursor:Number(state?.cursor)||0,
@@ -161,4 +185,134 @@ export async function agentRoomEnter(fetchImpl:FetchImpl=fetch){
   const state=await agentRoomState(fetchImpl);
   return {...state,entered:entered?.entered?{id:entered.entered.id,name:entered.entered.name}:null,placeFound:!!target};
  }catch(error){return {configured:true,url:config.url,place:config.place,error:String((error as Error)?.message||error)};}
+}
+
+// ---- Add an agent -------------------------------------------------------
+// Darius names an agent and picks which AI it is. The platform identity is
+// created here, its API key is stored server-side only (never returned to
+// the browser or logged), and the reply carries ONE plain-English next step
+// for that provider. Providers whose app cannot call the platform directly
+// (ChatGPT, Gemini, Grok) connect through the platform MCP endpoint from
+// their own side; DeepSeek acts through the platform bridge, which needs
+// Darius's DeepSeek API key saved here once and the owner admin key.
+const PROVIDERS=['claude','chatgpt','deepseek','gemini','grok'];
+const PROVIDER_LABELS:Record<string,string>={claude:'Claude',chatgpt:'ChatGPT',deepseek:'DeepSeek',gemini:'Gemini',grok:'Grok'};
+const AGENTS_SETTING='agent_platform_agents';
+const DEEPSEEK_KEY_SETTING='agent_platform_deepseek_key';
+function agentKeySetting(handle:string){return 'agent_platform_agent_key_'+handle;}
+function addedAgents(){
+ try{
+  const rows=JSON.parse(String(setting(AGENTS_SETTING)||'[]'));
+  return (Array.isArray(rows)?rows:[]).map((row:any)=>({handle:String(row?.handle||''),display_name:String(row?.display_name||''),provider:String(row?.provider||''),created_at:row?.created_at??null})).filter((row:any)=>row.handle);
+ }catch{return [];}
+}
+function deriveHandle(name:string){
+ let base=name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,32);
+ if(base.length<3)base=(base+'-agent').slice(0,32);
+ return base;
+}
+function providerStep(provider:string){
+ const config=agentRoomConfig();
+ const mcpUrl=config.url+'/mcp';
+ if(provider==='claude')return {kind:'ready'};
+ if(provider==='deepseek'){
+  if(!String(setting(DEEPSEEK_KEY_SETTING)||'').length)return {kind:'needs-deepseek-key'};
+  if(!String(process.env.AGENT_PLATFORM_ADMIN_KEY||'').length)return {kind:'standing'};
+  return {kind:'bridge-ready'};
+ }
+ if(provider==='chatgpt')return {kind:'mcp',mcpUrl,instruction:'In ChatGPT, open Settings, then Connectors, then Advanced, turn on Developer Mode, and add a connector with this address. Then tell ChatGPT to join the room.'};
+ if(provider==='gemini')return {kind:'mcp',mcpUrl,instruction:'In the Gemini CLI, add this address as an MCP server (gemini mcp add), then tell Gemini to join the room.'};
+ return {kind:'mcp',mcpUrl,instruction:'Grok connects through the xAI API: add this address as a remote MCP server in your xAI API setup. That needs your own xAI API key on your side.'};
+}
+export function agentRoomAgents(){
+ return {agents:addedAgents(),deepseek:{hasKey:String(setting(DEEPSEEK_KEY_SETTING)||'').length>0,adminReady:String(process.env.AGENT_PLATFORM_ADMIN_KEY||'').length>0}};
+}
+export function agentRoomSetDeepSeekKey(key:unknown){
+ if(typeof key!=='string'||!key.trim())throw Error('Paste your DeepSeek API key first.');
+ if(key.trim().length>512)throw Error('That key looks too long. Check it and try again.');
+ setSetting(DEEPSEEK_KEY_SETTING,key.trim());
+ return {ok:true,hasKey:true};
+}
+export async function agentRoomAddAgent(name:unknown,provider:unknown,fetchImpl:FetchImpl=fetch){
+ const displayName=typeof name==='string'?name.trim().slice(0,40):'';
+ const prov=String(provider||'').toLowerCase();
+ if(!displayName)throw Error('Give the agent a name first.');
+ if(!PROVIDERS.includes(prov))throw Error('Pick which AI this agent is.');
+ const base=deriveHandle(displayName);
+ const candidates=[base,base+'-2',base+'-3',base+'-4',base+'-'+randomBytes(2).toString('hex')];
+ let lastError='';
+ for(const handle of candidates){
+  const result=await rawPlatform('/api/register',{method:'POST',body:{kind:'agent',handle,display_name:displayName,declaration:'I am '+displayName+', an AI agent ('+PROVIDER_LABELS[prov]+') operated by Darius Lea (LeaX Technologies) inside his LeaX Office app.',works_for:'Darius Lea'}},fetchImpl);
+  const apiKey=String(result.data?.api_key||'');
+  if(result.ok&&apiKey){
+   setSetting(agentKeySetting(handle),apiKey);
+   const roster=addedAgents();roster.push({handle,display_name:displayName,provider:prov,created_at:new Date().toISOString()});setSetting(AGENTS_SETTING,JSON.stringify(roster));
+   const step=providerStep(prov);
+   let bridge:any=null;
+   if(step.kind==='bridge-ready')bridge=await deepSeekAct(handle,'Say hello in the room and introduce yourself in one short sentence.',fetchImpl);
+   return {ok:true,handle,display_name:displayName,provider:prov,step,bridge};
+  }
+  lastError=String(result.data?.error||('Agent Platform returned HTTP '+result.status));
+  if(result.status!==409)break;
+ }
+ throw Error(lastError||'The agent could not be added. Try again in a moment.');
+}
+// Ask the platform bridge to let a DeepSeek agent act once. Needs the owner
+// admin key here and the DeepSeek key saved above; without either, the
+// caller shows the same plain standing message the invite flow uses.
+async function deepSeekAct(handle:string,instruction:string,fetchImpl:FetchImpl=fetch){
+ if(!String(setting(DEEPSEEK_KEY_SETTING)||'').length)return {ok:false,reason:'needs-deepseek-key'};
+ const adminKey=String(process.env.AGENT_PLATFORM_ADMIN_KEY||'');
+ if(!adminKey)return {ok:false,reason:'standing'};
+ const apiKey=String(setting(agentKeySetting(handle))||'');
+ if(!apiKey)return {ok:false,reason:'no-agent'};
+ try{
+  const data=await platform('/api/admin/bridge/deepseek/act',{method:'POST',body:{api_key:apiKey,instruction}},fetchImpl,adminKey);
+  return {ok:true,reply:String(data?.reply||'')};
+ }catch(error){return {ok:false,reason:'error',error:String((error as Error)?.message||error)};}
+}
+export async function agentRoomDeepSeekActivate(handle:unknown,fetchImpl:FetchImpl=fetch){
+ const clean=typeof handle==='string'?handle.trim().toLowerCase():'';
+ if(!clean)throw Error('Pick the DeepSeek agent first.');
+ return deepSeekAct(clean,'Say hello in the room and introduce yourself in one short sentence.',fetchImpl);
+}
+
+// ---- Character picker ---------------------------------------------------
+// Every agent can be given a character (one of the roster portraits under
+// public/avatars/characters/), an outfit, and a display name shown in LeaX.
+// Assignments live server-side only, keyed by platform handle; the browser
+// never stores them. The roster manifest (characters/manifest.json) is the
+// source of truth for which characters/outfits exist on disk.
+const ASSIGNMENTS_SETTING='agent_platform_character_assignments';
+const CHARACTER_COUNT=24,OUTFIT_COUNT=6;
+export function characterAssignments(){
+ try{
+  const parsed=JSON.parse(String(setting(ASSIGNMENTS_SETTING)||'{}'));
+  if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))return {};
+  const clean:Record<string,any>={};
+  for(const [handle,row] of Object.entries(parsed)){
+   const character=String((row as any)?.character||''),outfit=Number((row as any)?.outfit)||1,name=String((row as any)?.name||'').trim().slice(0,40);
+   if(/^char-\d{2}$/.test(character)){
+    clean[handle]={character,outfit:Math.max(1,Math.min(OUTFIT_COUNT,outfit)),...(name?{name}:{})};
+   }
+  }
+  return clean;
+ }catch{return {};}
+}
+export function agentRoomCharacters(){
+ return {assignments:characterAssignments(),characterCount:CHARACTER_COUNT,outfitCount:OUTFIT_COUNT};
+}
+export function agentRoomSetCharacter(handle:unknown,character:unknown,outfit:unknown,name:unknown){
+ const cleanHandle=typeof handle==='string'?handle.trim().toLowerCase():'';
+ if(!cleanHandle||cleanHandle.length>64)throw Error('Pick an agent first.');
+ const cleanCharacter=String(character||'');
+ const match=cleanCharacter.match(/^char-(\d{2})$/);
+ if(!match||Number(match[1])<1||Number(match[1])>CHARACTER_COUNT)throw Error('Pick a character from the roster.');
+ const cleanOutfit=Math.round(Number(outfit)||1);
+ if(cleanOutfit<1||cleanOutfit>OUTFIT_COUNT)throw Error('Pick an outfit for the character.');
+ const cleanName=typeof name==='string'?name.trim().slice(0,40):'';
+ const assignments=characterAssignments();
+ assignments[cleanHandle]={character:cleanCharacter,outfit:cleanOutfit,...(cleanName?{name:cleanName}:{})};
+ setSetting(ASSIGNMENTS_SETTING,JSON.stringify(assignments));
+ return {ok:true,handle:cleanHandle,assignment:assignments[cleanHandle]};
 }
