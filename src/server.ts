@@ -20,6 +20,7 @@ import {relayState,workerHeartbeat,claimAIWork,completeAIWork,enableLocalAIWorke
 import {availableAIWorker} from './ai-routing.ts';
 import {aiMeetingState,aiMeetingDetail,createAIMeeting,inviteAIMeeting,askAIMeeting,closeAIMeeting} from './ai-meetings.ts';
 import {agentRoomState,agentRoomSince,agentRoomSpeak,agentRoomEnter,agentRoomInvite,agentRoomAddAgent,agentRoomAgents,agentRoomSetDeepSeekKey,agentRoomDeepSeekActivate,agentRoomCharacters,agentRoomSetCharacter,agentRoomSetClothing,agentRoomRelayOpen,agentRoomRelayOutput,agentRoomRelayClose,agentRoomRelayStatus} from './agent-room.ts';
+import {meetingAgentsState,meetingAgentsSpeak,meetingAgentsConnectApi,meetingAgentsRespond,meetingAgentsExport} from './meeting-agents.ts';
 import {miningState,checkMiningStatus} from './mining-status.ts';
 import {joinCall,pollCall,signalCall,leaveCall} from './calls.ts';
 import {initializeSync,syncState,createPairCode,acceptPair,syncAuthorized,exchange,connectSync,runSync,disconnectSync,revokeSyncDevice,resolveSyncConflict} from './sync.ts';
@@ -248,6 +249,13 @@ const server=createServer(async(req,res)=>{
  if(req.method==='GET'&&url.pathname==='/api/agent-room/characters')return send(200,agentRoomCharacters());
  if(req.method==='POST'&&url.pathname==='/api/agent-room/character')return send(200,agentRoomSetCharacter(body.handle,body.character,body.outfit,body.name,body.clothing,body.hair));
  if(req.method==='POST'&&url.pathname==='/api/agent-room/clothing')return send(200,agentRoomSetClothing(body.handle,body.clothing));
+ // Meeting-room hookup: platform agents as meeting participants with faces,
+ // speak both ways, API-key connect, and the exportable meeting log.
+ if(req.method==='GET'&&url.pathname==='/api/meeting-agents/state')return send(200,await meetingAgentsState());
+ if(req.method==='POST'&&url.pathname==='/api/meeting-agents/speak')return send(200,await meetingAgentsSpeak(body.text));
+ if(req.method==='POST'&&url.pathname==='/api/meeting-agents/connect-api')return send(200,await meetingAgentsConnectApi(body));
+ if(req.method==='POST'&&url.pathname==='/api/meeting-agents/respond')return send(200,await meetingAgentsRespond(body.handle));
+ if(req.method==='GET'&&url.pathname==='/api/meeting-agents/export'){res.setHeader('Content-Type','text/plain; charset=utf-8');res.setHeader('Content-Disposition','attachment; filename="leax-meeting-log.txt"');res.setHeader('Cache-Control','private, no-store');res.setHeader('X-Content-Type-Options','nosniff');res.end(meetingAgentsExport());return;}
  if(req.method==='GET'&&url.pathname==='/api/updates')return send(200,updateStatus());
  if(req.method==='POST'&&url.pathname==='/api/updates/check')return send(200,await checkForUpdates({force:body.force===true}));
  if(req.method==='GET'&&url.pathname==='/api/local-engines/state')return send(200,localEngineState());

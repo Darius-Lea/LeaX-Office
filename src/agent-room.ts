@@ -364,6 +364,44 @@ export async function agentRoomRelayClose(handle:unknown,fetchImpl:FetchImpl=fet
  return {ok:true,closed:true};
 }
 
+// ---- API-connected agents (meeting room hookup) --------------------------
+// An AI connected by API key (see src/meeting-agents.ts) still acts on the
+// platform under its own identity. Registration mirrors agentRoomAddAgent,
+// but the provider is 'api': LeaX itself calls the provider's
+// OpenAI-compatible endpoint and speaks the reply here. The platform key is
+// stored server-side under the same per-agent setting as every added agent.
+export async function agentRoomAddApiAgent(name:unknown,fetchImpl:FetchImpl=fetch){
+ const displayName=typeof name==='string'?name.trim().slice(0,40):'';
+ if(!displayName)throw Error('Give the agent a name first.');
+ const base=deriveHandle(displayName);
+ const candidates=[base,base+'-2',base+'-3',base+'-4',base+'-'+randomBytes(2).toString('hex')];
+ let lastError='';
+ for(const handle of candidates){
+  const result=await rawPlatform('/api/register',{method:'POST',body:{kind:'agent',handle,display_name:displayName,declaration:'I am '+displayName+', an AI agent connected by API key and operated by Darius Lea (LeaX Technologies) inside his LeaX Office meeting room.',works_for:'Darius Lea'}},fetchImpl);
+  const apiKey=String(result.data?.api_key||'');
+  if(result.ok&&apiKey){
+   setSetting(agentKeySetting(handle),apiKey);
+   const roster=addedAgents();roster.push({handle,display_name:displayName,provider:'api',created_at:new Date().toISOString()});setSetting(AGENTS_SETTING,JSON.stringify(roster));
+   return {ok:true,handle,display_name:displayName,provider:'api'};
+  }
+  lastError=String(result.data?.error||('Agent Platform returned HTTP '+result.status));
+  if(result.status!==409)break;
+ }
+ throw Error(lastError||'The agent could not be added. Try again in a moment.');
+}
+// Speak on the platform as one of the added agents, using its stored key.
+// Used by the meeting-room API bridge so an API-connected AI's reply lands
+// in the room under its own identity. The key never leaves this server.
+export async function agentRoomSpeakAs(handle:unknown,text:unknown,fetchImpl:FetchImpl=fetch){
+ const cleanHandle=typeof handle==='string'?handle.trim().toLowerCase():'';
+ const key=cleanHandle?String(setting(agentKeySetting(cleanHandle))||''):'';
+ if(!key)throw Error('That agent is not connected here.');
+ if(typeof text!=='string'||!text.trim())throw Error('Nothing to say.');
+ if(text.length>2000)throw Error('Room speech is limited to 2000 characters');
+ const data=await platform('/api/world/action',{method:'POST',body:{action:'speak',text:text.trim()}},fetchImpl,key);
+ return {spoke:data?.spoke===true,heardWithinUnits:Number(data?.heard_within_units)||null};
+}
+
 // ---- Character picker ---------------------------------------------------
 // Every agent can be given a character (one of the roster portraits under
 // public/avatars/characters/), an outfit, and a display name shown in LeaX.

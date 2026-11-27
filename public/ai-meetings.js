@@ -6,6 +6,98 @@ function meetingTurnMessage(turn,turns=[]){if(turn.text)return turn.text;if(/fet
 let api,refresh,openComputer,active=null;
 const MAX_PARTICIPANTS=26;
 function present(detail){window.dispatchEvent(new CustomEvent('hq-meeting-presentation',{detail}));}
+// ---- Agent Platform agents in the meeting room -----------------------------
+// Connected platform AIs (the two Muses and any other agent) sit in this
+// same meeting room: they appear as participants with their character
+// faces, their speech lands in the meeting conversation, and Darius talks
+// to them from here. Long technical messages (training logs, loss numbers,
+// probe output) are never cut off: long ones collapse behind a "Show full
+// message" button with the complete text one tap away, and the whole
+// conversation can be downloaded as a plain-text log. All platform text is
+// rendered with textContent only.
+const MOTHER_BRIEF_FALLBACK='Help troubleshoot MOTHER, Darius Lea\'s from-scratch language model: swap training logs, loss curves, overflow diagnoses, and probe outputs, and work through training problems together in this room.';
+function platformLineElement(line){
+ const wrap=el('div');wrap.className='meeting-agent-line';
+ const face=el('img');face.className='meeting-agent-face';face.src=line.face||'';face.alt='';face.loading='lazy';wrap.append(face);
+ const body=el('div');body.className='meeting-agent-body';
+ const head=el('div');head.append(el('strong',line.name||line.handle||'Agent'),el('small',' @'+(line.handle||'')+(line.kind==='owner'?' · you':' · room agent')));body.append(head);
+ const text=String(line.text||'');
+ const para=el('p');para.className='meeting-agent-text'+(text.includes('\n')?' meeting-agent-mono':'');
+ if(text.length>700){
+  para.textContent=text.slice(0,700)+'…';
+  const toggle=button('Show full message ('+text.length+' characters)',()=>{const open=para.dataset.open==='1';para.dataset.open=open?'':'1';para.textContent=open?text.slice(0,700)+'…':text;toggle.textContent=open?'Show full message ('+text.length+' characters)':'Show less';});
+  toggle.className='meeting-agent-expand';
+  body.append(para,toggle);
+ }else{para.textContent=text;body.append(para);}
+ wrap.append(body);
+ return wrap;
+}
+function platformChip(person){
+ const chip=el('span');chip.className='meeting-agent-chip'+(person.online?'':' meeting-agent-offline');
+ const face=el('img');face.className='meeting-agent-face';face.src=person.face||'';face.alt='';face.loading='lazy';
+ const label=el('span',(person.isSeat?'You · ':'')+(person.name||person.handle||'Agent')+(person.seated?' · seated':person.online?' · here':' · away'));
+ chip.append(face,label);
+ return chip;
+}
+async function openConnectPanel(){
+ const body=el('div');body.className='meeting-connect-panel';
+ const status=el('p');status.className='fine-print';
+ const list=el('div');list.className='meeting-connect-list';
+ body.append(el('h4','AIs connected to the room'),list,status);
+ const renderList=state=>{
+  list.replaceChildren();
+  const people=[...(state?.participants||[]),...(state?.offline||[])];
+  if(!state?.configured){list.append(el('p','The Agent Platform is not connected yet.'));return;}
+  if(state?.error){list.append(el('p','The room is out of reach right now. Your saved meeting log is still here.'));return;}
+  if(!people.length){list.append(el('p','No AIs are in the room yet. Connect one below, or invite one.'));}
+  for(const person of people)list.append(platformChip(person));
+  for(const agent of state?.apiAgents||[]){
+   const row=el('div');row.className='meeting-connect-row';
+   row.append(el('span',(agent.name||agent.handle)+' · connected by API key ('+(agent.model||'')+')'+(agent.online?' · in the room':' · away')));
+   const ask=button('Ask '+(agent.name||agent.handle)+' to respond',async()=>{ask.disabled=true;try{await api('meeting-agents/respond',{handle:agent.handle});status.textContent=(agent.name||agent.handle)+' is answering in the room.';}catch(error){status.textContent=error.message;}finally{ask.disabled=false;}});
+   row.append(ask);list.append(row);
+  }
+ };
+ let state=null;
+ try{state=await api('meeting-agents/state');}catch(error){status.textContent=error.message;}
+ renderList(state);
+ // API-key connect: paste a key once; it stays on this server.
+ const form=el('form');form.className='business-document-form meeting-connect-form';
+ form.append(el('h4','Connect an AI with an API key'),el('p','For AIs you pay by the message (DeepSeek, OpenAI, Groq and similar). Paste the key once — it stays on this server and is never shown again. The AI then sits in this room and answers here.'));
+ const presetLabel=el('label','Service');const preset=el('select');preset.setAttribute('aria-label','AI service');
+ for(const [value,label]of[['deepseek','DeepSeek'],['openai','OpenAI'],['groq','Groq'],['custom','Another service (type the address)']]){const option=el('option',label);option.value=value;preset.append(option);}
+ presetLabel.append(preset);
+ const nameLabel=el('label','Name for this AI in the room');const name=el('input');name.maxLength=40;name.placeholder='e.g. DeepSeek helper';name.autocomplete='off';nameLabel.append(name);
+ const urlLabel=el('label','Service address');const url=el('input');url.maxLength=300;url.autocomplete='off';urlLabel.append(url);
+ const modelLabel=el('label','Model');const model=el('input');model.maxLength=120;model.autocomplete='off';modelLabel.append(model);
+ const keyLabel=el('label','API key (saved once, never shown again)');const key=el('input');key.type='password';key.autocomplete='off';key.placeholder='Paste the key here';keyLabel.append(key);
+ const PRESETS={deepseek:{url:'https://api.deepseek.com',model:'deepseek-chat'},openai:{url:'https://api.openai.com/v1',model:'gpt-4o-mini'},groq:{url:'https://api.groq.com/openai/v1',model:'llama-3.3-70b-versatile'},custom:{url:'',model:''}};
+ const applyPreset=()=>{const p=PRESETS[preset.value]||PRESETS.custom;url.value=p.url;model.value=p.model;};
+ preset.onchange=applyPreset;applyPreset();
+ const feedback=el('p'),connect=el('button','Connect this AI');connect.type='submit';
+ form.append(presetLabel,nameLabel,urlLabel,modelLabel,keyLabel,feedback,connect);
+ form.onsubmit=async event=>{event.preventDefault();connect.disabled=true;connect.textContent='Connecting…';try{const data=await api('meeting-agents/connect-api',{name:name.value,baseUrl:url.value,model:model.value,key:key.value});key.value='';feedback.textContent=(data.display_name||name.value)+' is connected and in the room.';state=await api('meeting-agents/state');renderList(state);}catch(error){feedback.textContent=error.message;}finally{connect.disabled=false;connect.textContent='Connect this AI';}};
+ body.append(form);
+ // Invite another AI (for example the other Muse) with a ready message.
+ const inviteForm=el('form');inviteForm.className='business-document-form meeting-connect-form';
+ inviteForm.append(el('h4','Invite another AI'),el('p','Make an invite, copy the message, and paste it to any AI. It joins this room and catches up on the work.'));
+ const briefLabel=el('label','What should the invited AI work on?');const brief=el('textarea');brief.maxLength=1000;brief.rows=4;brief.value=state?.motherBrief||MOTHER_BRIEF_FALLBACK;briefLabel.append(brief);
+ const inviteFeedback=el('p');
+ const inviteResult=el('div');inviteResult.hidden=true;
+ const codeLine=el('p');const linkLine=el('p');linkLine.className='fine-print';
+ const message=el('textarea');message.readOnly=true;message.rows=4;message.setAttribute('aria-label','Message to paste to the AI');
+ const copy=button('Copy the message',async()=>{try{await navigator.clipboard.writeText(message.value);copy.textContent='Copied ✓';setTimeout(()=>{copy.textContent='Copy the message';},2000);}catch{message.select();}});
+ inviteResult.append(codeLine,linkLine,message,copy);
+ const invite=el('button','Make an invite');invite.type='submit';
+ inviteForm.append(briefLabel,inviteFeedback,invite,inviteResult);
+ inviteForm.onsubmit=async event=>{event.preventDefault();invite.disabled=true;invite.textContent='Making your invite…';try{const data=await api('agent-room/invite',{brief:brief.value});if(!data?.ok){inviteResult.hidden=true;inviteFeedback.textContent=data?.reason==='standing'?"Your seat can't invite yet. The room owner has to allow it first — ask the owner to turn on invites for this room.":'The invite could not be made. Try again in a moment.';return;}inviteFeedback.textContent='';inviteResult.hidden=false;codeLine.textContent='Invite code: '+data.code;linkLine.textContent='Join link: '+data.joinUrl;message.value=data.message||'';}catch(error){inviteFeedback.textContent=error.message;}finally{invite.disabled=false;invite.textContent='Make an invite';}};
+ body.append(inviteForm);
+ const logRow=el('div');logRow.className='meeting-connect-row';
+ const download=el('a','Download the meeting log');download.href='/api/meeting-agents/export';download.download='leax-meeting-log.txt';download.className='meeting-connect-download';
+ logRow.append(el('span','Everything said in this room, saved as plain text:'),download);
+ body.append(logRow);
+ window.hqPopup.open({title:'Connect an AI to the meeting room',contentNode:body,readable:false});
+}
 export function initAIMeetings(options){
  ({api,refresh,openComputer}=options);
  const tab=button('Meet with AI agents',()=>{openComputer('ai-meetings');renderAIMeetings(window.hqState);});
@@ -18,7 +110,7 @@ export function renderAIMeetings(state){
  const signature=JSON.stringify({meetings:state?.aiMeetings,relay:state?.aiRelay,configured:state?.aiConfigured});
  if(pane.dataset.signature===signature)return;pane.dataset.signature=signature;
  pane.replaceChildren(el('h2','Meet your office agents'),el('p','This is an internal AI work session. Agents answer from saved company records and available research tools. Replies run one at a time on the selected model; they cannot send email, submit bids or claim a contact was verified unless the source check saved it. Spoken questions are transcribed by your browser; replies use voices installed on this device.'));
- pane.append(button('Start an agent meeting',startForm),button('Open meeting room remote',openMeetingRemote));
+ pane.append(button('Start an agent meeting',startForm),button('Open meeting room remote',openMeetingRemote),button('Connect an AI',()=>void openConnectPanel()));
  const relay=state?.aiRelay;
  pane.append(el('p',relay?.available?'Paired AI available: '+relay.worker.name+' / '+relay.worker.model:state?.aiConfigured?'Local model selected; the connection is checked when a request runs.':'AI setup required. No replies will be fabricated.'));
  const worker=button(relay?.local?.enabled?'Stop sharing this desktop AI':'Use this desktop AI for my paired web/mobile office',async()=>{try{await api('ai-worker/configure',{enabled:!relay?.local?.enabled,confirmed:true});await refresh();renderAIMeetings(window.hqState);}catch(e){window.hqPopup.open({title:'Local AI worker setup',intro:e.message,body:'On the desktop app, finish local model setup and pair it with your web office. Then enable this worker. Your desktop must stay running for web/mobile inference.',readable:false});}});
@@ -85,19 +177,36 @@ async function launch(id){
  const inviteMore=button('Invite more agents',()=>inviteAgentsForm(meeting,updated=>{meeting=updated;display();},status));
  const readLabel=el('label','Read agent replies aloud'),read=el('input');read.type='checkbox';read.checked=true;readLabel.prepend(read);
  const leave=button('Leave room',()=>state.leave()),finish=button('Close saved meeting',()=>void closeMeeting());finish.disabled=meeting.status!=='Open';
- panel.append(heading,status,log,voice,voiceHelp,inviteMore,form,readLabel,leave,finish);document.body.append(panel);
- let stopped=false,timer,lastSignature='',entered=false,spoken=new Set(),speechQueue=[],speaking=false,recognition=null,voiceEnabled=false,voiceRestartTimer=0,questionQueue=[],sending=false;
+ // Platform AIs in this room: who is here (with faces), a box to talk to
+ // them, and the Connect panel. Their speech merges into the log below.
+ const agentsStrip=el('div');agentsStrip.className='meeting-agent-strip';agentsStrip.setAttribute('aria-label','AIs in the room');
+ const roomForm=el('form');roomForm.className='meeting-room-form';
+ const roomQuestion=el('textarea');roomQuestion.maxLength=2000;roomQuestion.required=true;roomQuestion.placeholder='Say something to the AIs in the room…';roomQuestion.setAttribute('aria-label','Message for the room AIs');
+ const roomSend=el('button','Say to the room');roomSend.type='submit';roomForm.append(roomQuestion,roomSend);
+ const connectBtn=button('Connect an AI',()=>void openConnectPanel());connectBtn.id='meeting-connect-button';
+ const downloadLog=el('a','Download meeting log');downloadLog.href='/api/meeting-agents/export';downloadLog.download='leax-meeting-log.txt';downloadLog.className='meeting-connect-download';
+ panel.append(heading,status,agentsStrip,log,roomForm,voice,voiceHelp,inviteMore,connectBtn,downloadLog,form,readLabel,leave,finish);document.body.append(panel);
+ let stopped=false,timer,agentsTimer=null,platformState=null,lastSignature='',entered=false,spoken=new Set(),speechQueue=[],speaking=false,recognition=null,voiceEnabled=false,voiceRestartTimer=0,questionQueue=[],sending=false;
  const voiceLabel=()=>{voice.textContent=voiceEnabled?'🎙 Stop listening':'🎙 Start listening';voice.setAttribute('aria-pressed',voiceEnabled?'true':'false');};
  function scheduleVoiceRestart(){clearTimeout(voiceRestartTimer);if(!stopped&&voiceEnabled&&!speaking&&(!read.checked||!speechQueue.length))voiceRestartTimer=setTimeout(beginRecognition,500);}
  const speakNext=()=>{if(stopped||speaking||!read.checked||!speechQueue.length){scheduleVoiceRestart();return;}speaking=true;try{recognition?.stop();}catch{}const item=speechQueue.shift();void readToMe(item.line,{voiceIndex:Math.max(0,(meeting.participants||[]).indexOf(item.agent)),onStatus:event=>{if(['complete','error','unsupported','unavailable','stopped'].includes(event.status)){speaking=false;if(!stopped)setTimeout(()=>{speakNext();scheduleVoiceRestart();},60);}}});};
- const state={leave:()=>{if(stopped)return;stopped=true;voiceEnabled=false;clearTimeout(timer);clearTimeout(voiceRestartTimer);try{recognition?.abort();}catch{}recognition=null;stopReading();panel.remove();present({active:false,source:'ai',sessionId:id});active=null;window.hqActiveAIMeeting=null;},openRemote:openMeetingRemote,focus:()=>{panel.tabIndex=-1;panel.focus();panel.scrollIntoView({block:'nearest'});}};
+ const state={leave:()=>{if(stopped)return;stopped=true;voiceEnabled=false;clearTimeout(timer);clearTimeout(agentsTimer);clearTimeout(voiceRestartTimer);try{recognition?.abort();}catch{}recognition=null;stopReading();panel.remove();present({active:false,source:'ai',sessionId:id});active=null;window.hqActiveAIMeeting=null;},openRemote:openMeetingRemote,focus:()=>{panel.tabIndex=-1;panel.focus();panel.scrollIntoView({block:'nearest'});}};
  active=state;window.hqActiveAIMeeting=state;
+ let lastStripSignature='';
  const display=()=>{
-  const signature=JSON.stringify(meeting.turns);
-  if(signature!==lastSignature){lastSignature=signature;log.replaceChildren();for(const turn of meeting.turns){const who=turn.role==='user'?'You':window.hqState?.employees?.find(employee=>employee.id===turn.agent)?.name||turn.agent;log.append(el('strong',who),el('p',meetingTurnMessage(turn,meeting.turns)));if(turn.role==='agent'&&turn.text&&turn.runId){if(turn.qualityFeedback){log.append(el('small',turn.qualityFeedback.rating==='useful'?(turn.qualityFeedback.trainingEligible?'Your 👍 vote is saved as a training-ready example.':'Your 👍 vote is saved for review only; this older reply has no captured evidence context.'):(turn.qualityFeedback.trainingEligible?'Your 👎 correction is saved as a training-ready example.':'Your 👎 vote is saved for review only; a corrected answer needs captured evidence context.'),'meeting-feedback-saved'));}else{const vote=el('div');vote.className='meeting-feedback-vote';vote.append(button('👍 Useful',()=>qualityFeedbackForm(turn,'useful')),button('👎 Needs work',()=>qualityFeedbackForm(turn,'needs_work')));log.append(vote);}}if(read.checked&&turn.role==='agent'&&turn.text&&!spoken.has(turn.id)){spoken.add(turn.id);speechQueue.push({agent:turn.agent,line:who+': '+turn.text});speakNext();}}log.scrollTop=log.scrollHeight;}
-  const participants=(meeting.participants||[]).map(agentId=>{const employee=window.hqState?.employees?.find(item=>item.id===agentId);return {id:agentId,name:employee?.name||agentId,role:employee?.role||'AI agent'};});
-  const last=meeting.turns.filter(turn=>turn.text).slice(-2);
-  present({active:true,source:'ai',sessionId:id,enter:!entered,title:meeting.title,status:meeting.pending?'Agent replies are queued for the configured AI model':meeting.status==='Closed'?'Saved meeting':'Ready for your question',lines:last.map(turn=>(turn.role==='user'?'You':turn.agent)+': '+turn.text),participants,video:null,videos:[]});entered=true;
+  const platformLines=platformState?.lines||[];
+  const stripSignature=JSON.stringify(platformState?.participants||[])+'|'+(platformState?.error||'')+'|'+(platformState?.configured===false?'off':'on');
+  if(stripSignature!==lastStripSignature){lastStripSignature=stripSignature;agentsStrip.replaceChildren(el('span','In the room:'));
+   if(!platformState)agentsStrip.append(el('span','checking…'));
+   else if(platformState.error)agentsStrip.append(el('span','room out of reach'));
+   else if(!platformState.configured)agentsStrip.append(el('span','platform not connected'));
+   else if(!platformState.participants?.length)agentsStrip.append(el('span','no AIs here yet'));
+   else for(const person of platformState.participants)agentsStrip.append(platformChip(person));}
+  const signature=JSON.stringify(meeting.turns)+'|'+platformLines.map(line=>line.id).join(',');
+  if(signature!==lastSignature){lastSignature=signature;log.replaceChildren();const items=[...meeting.turns.map(turn=>({time:turn.createdAt||0,turn})),...platformLines.map(line=>({time:line.recordedAt||0,line}))].sort((a,b)=>a.time-b.time);for(const item of items){if(item.line){log.append(platformLineElement(item.line));continue;}const turn=item.turn;const who=turn.role==='user'?'You':window.hqState?.employees?.find(employee=>employee.id===turn.agent)?.name||turn.agent;log.append(el('strong',who),el('p',meetingTurnMessage(turn,meeting.turns)));if(turn.role==='agent'&&turn.text&&turn.runId){if(turn.qualityFeedback){log.append(el('small',turn.qualityFeedback.rating==='useful'?(turn.qualityFeedback.trainingEligible?'Your 👍 vote is saved as a training-ready example.':'Your 👍 vote is saved for review only; this older reply has no captured evidence context.'):(turn.qualityFeedback.trainingEligible?'Your 👎 correction is saved as a training-ready example.':'Your 👎 vote is saved for review only; a corrected answer needs captured evidence context.'),'meeting-feedback-saved'));}else{const vote=el('div');vote.className='meeting-feedback-vote';vote.append(button('👍 Useful',()=>qualityFeedbackForm(turn,'useful')),button('👎 Needs work',()=>qualityFeedbackForm(turn,'needs_work')));log.append(vote);}}if(read.checked&&turn.role==='agent'&&turn.text&&!spoken.has(turn.id)){spoken.add(turn.id);speechQueue.push({agent:turn.agent,line:who+': '+turn.text});speakNext();}}log.scrollTop=log.scrollHeight;}
+  const participants=[...(meeting.participants||[]).map(agentId=>{const employee=window.hqState?.employees?.find(item=>item.id===agentId);return {id:agentId,name:employee?.name||agentId,role:employee?.role||'AI agent'};}),...(platformState?.participants||[]).filter(person=>!person.isSeat).map(person=>({id:'platform-'+person.handle,name:String(person.name||person.handle).slice(0,40),role:'AI agent',kind:'ai'}))].slice(0,26);
+  const last=[...meeting.turns.filter(turn=>turn.text).map(turn=>({time:turn.createdAt||0,text:(turn.role==='user'?'You':turn.agent)+': '+turn.text})),...platformLines.map(line=>({time:line.recordedAt||0,text:(line.name||line.handle)+': '+line.text}))].sort((a,b)=>a.time-b.time).slice(-2);
+  present({active:true,source:'ai',sessionId:id,enter:!entered,title:meeting.title,status:meeting.pending?'Agent replies are queued for the configured AI model':meeting.status==='Closed'?'Saved meeting':'Ready for your question',lines:last.map(item=>item.text),participants,video:null,videos:[]});entered=true;
   status.textContent=voiceEnabled?(meeting.pending?'Microphone on. Agent replies are processing one at a time; your next spoken question can queue.':'Microphone on. Speak a question or ask an agent to join.'):(meeting.pending?'The selected agents are waiting in line for the configured AI model. Replies return one at a time.':meeting.notice);
   send.disabled=sending||meeting.status!=='Open';voice.disabled=meeting.status!=='Open';voiceLabel();finish.disabled=meeting.status!=='Open';
  };
@@ -123,6 +232,8 @@ async function launch(id){
  async function poll(){if(stopped)return;try{meeting=await api('ai-meetings/'+encodeURIComponent(id));display();if(!meeting.pending&&!sending&&questionQueue.length&&meeting.status==='Open'){const next=questionQueue.shift();question.value=next;void submitQuestion(next);}}catch(error){status.textContent=error.message;}finally{if(!stopped)timer=setTimeout(poll,meeting.pending?350:1500);}}
  async function closeMeeting(){try{meeting=await api('ai-meetings/close',{id,expectedRevision:meeting.revision});await refresh();state.leave();}catch(error){status.textContent=error.message;}}
  form.onsubmit=event=>{event.preventDefault();const text=question.value.trim();if(!text)return;question.value='';if(meeting.pending||sending){queueQuestion(text);return;}void submitQuestion(text);};read.addEventListener('change',()=>{if(read.checked)speakNext();else scheduleVoiceRestart();});
- display();timer=setTimeout(poll,meeting.pending?350:1500);leave.onclick=state.leave;finish.onclick=()=>void closeMeeting();
+ roomForm.onsubmit=async event=>{event.preventDefault();const text=roomQuestion.value.trim();if(!text)return;roomQuestion.value='';roomSend.disabled=true;try{await api('meeting-agents/speak',{text});void pollAgents();}catch(error){status.textContent=error.message;}finally{roomSend.disabled=false;}};
+ async function pollAgents(){if(stopped)return;clearTimeout(agentsTimer);try{platformState=await api('meeting-agents/state');display();}catch(error){/* keep the last good room state; the office meeting still works */}finally{if(!stopped)agentsTimer=setTimeout(pollAgents,3000);}}
+ display();timer=setTimeout(poll,meeting.pending?350:1500);void pollAgents();leave.onclick=state.leave;finish.onclick=()=>void closeMeeting();
  window.hqMeetingRemote=state.openRemote;
 }
