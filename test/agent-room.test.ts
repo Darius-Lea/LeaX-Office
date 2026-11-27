@@ -49,6 +49,35 @@ test('platform errors surface as a room error, not a crash',async()=>{
  const down=stubFetch(()=>new Error('fetch failed'));
  const downState=await agentRoomState(down);assert.match(downState.error,/unreachable/);
 });
+test('a sleeping platform is woken and the read retried once',async()=>{
+ process.env.AGENT_PLATFORM_KEY=KEY;
+ let stateCalls=0;
+ const sleepy=stubFetch(url=>{
+  if(url.endsWith('/api/health'))return {status:200,data:{ok:true}};
+  if(url.endsWith('/api/senses/state')){stateCalls++;return stateCalls===1?new Error('fetch failed'):{status:200,data:statePayload};}
+  return {status:404,data:{ok:false,error:'nope'}};
+ });
+ const state=await agentRoomState(sleepy);
+ assert.equal(state.me.handle,'mike-tyson');
+ assert.equal(stateCalls,2);
+ assert.ok(sleepy.calls.some(c=>c.url.endsWith('/api/health')),'health wake ping sent');
+ let gatewayCalls=0;
+ const gateway=stubFetch(url=>{
+  if(url.endsWith('/api/health'))return {status:200,data:{ok:true}};
+  if(url.endsWith('/api/senses/state')){gatewayCalls++;return gatewayCalls===1?{status:502,data:{}}:{status:200,data:statePayload};}
+  return {status:404,data:{ok:false,error:'nope'}};
+ });
+ const state2=await agentRoomState(gateway);
+ assert.equal(state2.me.handle,'mike-tyson');
+ assert.equal(gatewayCalls,2);
+});
+test('writes are never wake-retried',async()=>{
+ process.env.AGENT_PLATFORM_KEY=KEY;
+ const down=stubFetch(()=>new Error('fetch failed'));
+ await assert.rejects(agentRoomSpeak('hi',down),/unreachable/);
+ assert.equal(down.calls.length,1);
+ assert.ok(!down.calls.some(c=>c.url.endsWith('/api/health')),'no wake ping for writes');
+});
 test('since passes the cursor through and maps events',async()=>{
  process.env.AGENT_PLATFORM_KEY=KEY;
  const fetchImpl=stubFetch(()=>({status:200,data:{ok:true,events:[{id:10,type:'world.speak',actor:{id:4,handle:'deepseek'},payload:{text:'Push OK at 34,000.'},location:'lobby',distance:5,created_at:'2026-11-26T17:05:00Z'}],cursor:10,latest:10}}));

@@ -1,3 +1,9 @@
+## 2026-11-27 — Agent Platform wake-retry: sleeping free-tier service wakes itself (branch agent-room-3d, NOT pushed)
+
+- Problem (owner hit it 2026-11-26 ~22:34 EST and 2026-11-27 ~03:34Z): the Agent Platform runs on a free tier that sleeps when idle; the first room load after a nap timed out (8 s platform timeout) and the UI showed "The room is out of reach" until the service was woken by hand.
+- Fix (`src/agent-room.ts`): `rawPlatform` now wraps a single-attempt helper (`rawOnce`). For reads (GET) only, a network failure/timeout or a 502/503 triggers one wake-retry: a best-effort `GET /api/health` ping (30 s budget, wakes the sleeping service), then the original read retried once with a 30 s budget. Writes (POST) are never retried — a timed-out POST may already have landed, and repeating it could double-post. All existing callers (room state, senses/since, meeting-room bridge) inherit the behavior; no route or UI change.
+- Validation: 2 new unit tests in `test/agent-room.test.ts` (sleeping platform woken + read retried on both a thrown fetch and a 502; writes never wake-retried and send no health ping); `node --test test/agent-room.test.ts` 28 passed; full `npm test` 277 passed, 0 failed (275 baseline + 2 new). Local commit only; push + hosted-site verification still required. `public/lobby.html` untouched.
+
 ## 2026-11-26 — Meeting-room AI hookup: platform AIs inside the existing meeting room (branch agent-room-3d, NOT pushed)
 
 - Direction (owner, 2026-11-26): the standalone Agent Room boardroom was rejected on looks; the platform AIs now meet inside the existing meeting room (`public/ai-meetings.js`), so Muse and Darrion's Muse can work on MOTHER together — training logs, loss numbers, overflow diagnoses, probe outputs.

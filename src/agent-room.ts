@@ -31,14 +31,33 @@ export function agentRoomConfig(){
  const place=String(process.env.AGENT_PLATFORM_PLACE||'lobby').slice(0,64)||'lobby';
  return {url,place,configured:seatAvailable(),adminConfigured:String(process.env.AGENT_PLATFORM_ADMIN_KEY||'').length>0};
 }
-async function rawPlatform(path:string,options:{method?:string,body?:any,timeoutMs?:number}={},fetchImpl:FetchImpl=fetch,key=''){
+const WAKE_TIMEOUT_MS=30000;
+async function rawOnce(path:string,options:{method?:string,body?:any,timeoutMs?:number},fetchImpl:FetchImpl,key:string,timeoutMs:number){
  const {url}=agentRoomConfig();
  let response:any;
  try{
-  response=await fetchImpl(url+path,{method:options.method||'GET',headers:{...(key?{Authorization:'Bearer '+key}:{}),...(options.body?{'Content-Type':'application/json'}:{})},body:options.body?JSON.stringify(options.body):undefined,signal:AbortSignal.timeout(options.timeoutMs||TIMEOUT_MS)});
+  response=await fetchImpl(url+path,{method:options.method||'GET',headers:{...(key?{Authorization:'Bearer '+key}:{}),...(options.body?{'Content-Type':'application/json'}:{})},body:options.body?JSON.stringify(options.body):undefined,signal:AbortSignal.timeout(timeoutMs)});
  }catch(error){throw Error('Agent Platform is unreachable: '+String((error as Error)?.message||error));}
  let data:any=null;try{data=await response.json();}catch{/* non-JSON error body */}
  return {status:response.status,ok:response.ok,data};
+}
+// The platform runs on a free tier that sleeps when idle; the first call
+// after a nap can time out or 502 while the service wakes. For reads
+// (GET), wake it with a health ping and retry once so the room loads
+// instead of showing "out of reach". Writes are never retried: a timed-out
+// POST may already have landed, and repeating it could double-post.
+async function rawPlatform(path:string,options:{method?:string,body?:any,timeoutMs?:number}={},fetchImpl:FetchImpl=fetch,key=''){
+ const timeoutMs=options.timeoutMs||TIMEOUT_MS;
+ const isGet=(options.method||'GET')==='GET';
+ try{
+  const first=await rawOnce(path,options,fetchImpl,key,timeoutMs);
+  if(!isGet||(first.status!==502&&first.status!==503))return first;
+ }catch(error){
+  if(!isGet)throw error;
+ }
+ const {url}=agentRoomConfig();
+ try{await fetchImpl(url+'/api/health',{signal:AbortSignal.timeout(WAKE_TIMEOUT_MS)});}catch{/* wake ping is best-effort */}
+ return rawOnce(path,options,fetchImpl,key,Math.max(timeoutMs,WAKE_TIMEOUT_MS));
 }
 function unwrap(result:{status:number,ok:boolean,data:any}){
  if(!result.ok||result.data?.ok===false)throw Error(String(result.data?.error||('Agent Platform returned HTTP '+result.status)));

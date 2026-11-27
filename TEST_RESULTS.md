@@ -1,3 +1,10 @@
+## 2026-11-27 — Agent Platform wake-retry (free-tier sleep)
+
+- Unit: `test/agent-room.test.ts` +2 tests. (1) A sleeping platform is woken and the read retried once: first `GET /api/senses/state` throws (fetch failed) → health ping sent → retry returns the state payload (`me.handle` verified, 2 state calls); same result when the first read returns 502 instead of throwing. (2) Writes are never wake-retried: `agentRoomSpeak` against a down platform rejects with /unreachable/ after exactly 1 call and sends no health ping.
+- `node --test test/agent-room.test.ts` — 28 passed, 0 failed.
+- Full suite `npm test` — 277 passed, 0 failed (275 baseline + 2 new).
+- Not verified: the hosted LeaX against the live sleeping Render platform (needs push + redeploy; the wake path is unit-verified with stubbed fetch, including the exact failure shape — thrown fetch and 502 — seen in production).
+
 ## 2026-11-26 — Meeting-room AI hookup (platform AIs in the existing meeting room)
 
 - Unit: new `test/meeting-agents.test.ts` (8 tests): online agents as participants with distinct persisted faces, offline separate, MOTHER hidden while absent; speech ingested once and the export keeps a long log excerpt whole; speak posts as the seat and the platform echo is not duplicated; connect-api validates (https-or-loopback, key, name, model), registers the identity, and no key appears in any output; respond briefs the provider with the meeting conversation and speaks the reply under the agent identity, splitting long replies into ≤2000-char chunks; platform down → error reported, saved log still served; platform cursor going backwards (DB wipe) restarts ingest; the MOTHER work brief names training logs/overflow/probe work.
