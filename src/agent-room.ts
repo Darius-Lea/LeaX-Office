@@ -9,18 +9,25 @@
 //                        invites (the platform lets only a place owner, a
 //                        member with standing, or administration invite)
 //   AGENT_PLATFORM_AUTO_REGISTER set to 0 to disable seat auto-registration
-// Seat key resolution, in order: AGENT_PLATFORM_KEY, then the key stored in
-// this server's own database, then a fresh registration of the LeaX Office
-// seat identity (handle leax-office-seat) whose key is stored server-side.
-// That keeps Darius out of developer work: no key ever has to be copied by
-// hand, and a platform database reset is healed by re-registering on the
-// next 401. Keys are never returned to the browser or logged.
-import {randomBytes} from 'node:crypto';
+// Seat key resolution, in order: AGENT_PLATFORM_KEY (preferred only while
+// it works — once the platform rejects it, its fingerprint is remembered
+// and the stored key takes over), then the key stored in this server's own
+// database, then a fresh registration of the LeaX Office seat identity
+// (handle leax-office-seat) whose key is stored server-side. That keeps
+// Darius out of developer work: no key ever has to be copied by hand, and
+// a platform database reset is healed by re-registering on the next 401 —
+// for the seat and for added agents alike (same handle, fresh key). Keys
+// are never returned to the browser or logged.
+import {randomBytes,createHash} from 'node:crypto';
 import {setting,setSetting} from './store.ts';
 const DEFAULT_URL='https://agent-platform-s031.onrender.com';
 const TIMEOUT_MS=8000;
 const SEAT_KEY_SETTING='agent_platform_key';
 const SEAT_HANDLE_SETTING='agent_platform_handle';
+const ENV_KEY_DEAD_SETTING='agent_platform_env_key_dead';
+// Fingerprint of a key (never the key itself), used to remember that the
+// environment seat key was rejected so it is not retried on every call.
+function keyFingerprint(key:string){return createHash('sha256').update(key).digest('hex').slice(0,16);}
 type FetchImpl=(input:string,init?:any)=>Promise<any>;
 function autoRegisterEnabled(){return String(process.env.AGENT_PLATFORM_AUTO_REGISTER||'')!=='0';}
 function seatAvailable(){
@@ -32,6 +39,12 @@ export function agentRoomConfig(){
  return {url,place,configured:seatAvailable(),adminConfigured:String(process.env.AGENT_PLATFORM_ADMIN_KEY||'').length>0};
 }
 const WAKE_TIMEOUT_MS=30000;
+// Best-effort health ping that wakes the sleeping free-tier service. The
+// response is ignored; callers proceed either way.
+async function wakePlatform(fetchImpl:FetchImpl){
+ const {url}=agentRoomConfig();
+ try{await fetchImpl(url+'/api/health',{signal:AbortSignal.timeout(WAKE_TIMEOUT_MS)});}catch{/* wake ping is best-effort */}
+}
 async function rawOnce(path:string,options:{method?:string,body?:any,timeoutMs?:number},fetchImpl:FetchImpl,key:string,timeoutMs:number){
  const {url}=agentRoomConfig();
  let response:any;
@@ -55,8 +68,7 @@ async function rawPlatform(path:string,options:{method?:string,body?:any,timeout
  }catch(error){
   if(!isGet)throw error;
  }
- const {url}=agentRoomConfig();
- try{await fetchImpl(url+'/api/health',{signal:AbortSignal.timeout(WAKE_TIMEOUT_MS)});}catch{/* wake ping is best-effort */}
+ await wakePlatform(fetchImpl);
  return rawOnce(path,options,fetchImpl,key,Math.max(timeoutMs,WAKE_TIMEOUT_MS));
 }
 function unwrap(result:{status:number,ok:boolean,data:any}){
@@ -69,8 +81,21 @@ async function platform(path:string,options:{method?:string,body?:any}={},fetchI
 async function registerSeat(fetchImpl:FetchImpl=fetch){
  const handles=['leax-office-seat','leax-office-seat-'+randomBytes(2).toString('hex'),'leax-office-seat-'+randomBytes(3).toString('hex')];
  let lastError='';
+ // Registration can be the first call after the platform's free-tier nap
+ // (no stored key after a LeaX redeploy, or a heal with no prior GET), so
+ // wake the service before posting; a 502/503/timeout gets one wake +
+ // retry. If a POST landed but its response was lost, the retry sees 409
+ // and the suffixed-handle fallback below applies.
+ await wakePlatform(fetchImpl);
  for(const handle of handles){
-  const result=await rawPlatform('/api/register',{method:'POST',body:{kind:'agent',handle,display_name:'Darius — Owner',declaration:'I am the LeaX Office seat, an AI agent operated by Darius Lea (LeaX Technologies) inside his LeaX Office app. Darius speaks to the room through this seat.',works_for:'Darius Lea'}},fetchImpl);
+  const body={kind:'agent',handle,display_name:'Darius — Owner',declaration:'I am the LeaX Office seat, an AI agent operated by Darius Lea (LeaX Technologies) inside his LeaX Office app. Darius speaks to the room through this seat.',works_for:'Darius Lea'};
+  let result:any=null,thrown='';
+  try{result=await rawOnce('/api/register',{method:'POST',body},fetchImpl,'',WAKE_TIMEOUT_MS);}catch(error){thrown=String((error as Error)?.message||error);}
+  if(thrown||result.status===502||result.status===503){
+   await wakePlatform(fetchImpl);
+   try{result=await rawOnce('/api/register',{method:'POST',body},fetchImpl,'',WAKE_TIMEOUT_MS);thrown='';}catch(error){thrown=String((error as Error)?.message||error);}
+  }
+  if(thrown){lastError=thrown;break;}
   const apiKey=String(result.data?.api_key||'');
   if(result.ok&&apiKey){setSetting(SEAT_KEY_SETTING,apiKey);setSetting(SEAT_HANDLE_SETTING,handle);return apiKey;}
   lastError=String(result.data?.error||('Agent Platform returned HTTP '+result.status));
@@ -91,19 +116,32 @@ function registerSeatOnce(fetchImpl:FetchImpl=fetch){
 }
 async function seatKey(fetchImpl:FetchImpl=fetch){
  const envKey=String(process.env.AGENT_PLATFORM_KEY||'');
- if(envKey)return {key:envKey,fromEnv:true};
+ // The env key is preferred only while it works: once the platform has
+ // rejected it (its fingerprint is remembered), the stored key takes over
+ // instead of re-registering a fresh seat on every call. A changed env key
+ // has a different fingerprint and is tried again.
+ if(envKey&&String(setting(ENV_KEY_DEAD_SETTING)||'')!==keyFingerprint(envKey))return {key:envKey,fromEnv:true};
  const stored=String(setting(SEAT_KEY_SETTING)||'');
  if(stored)return {key:stored,fromEnv:false};
  return {key:await registerSeatOnce(fetchImpl),fromEnv:false};
 }
-// Seat-authenticated platform call. A stored key the platform rejects (its
-// database was reset) is replaced by a fresh registration and one retry.
+// Seat-authenticated platform call. A key the platform rejects (its
+// database was reset) is replaced by a fresh registration and a retry —
+// whatever the key's source, as long as auto-register is enabled. Up to
+// two heals per call cover a second reset landing between the register
+// and the retry. With auto-register off, the 401 stays a plain error. A
+// 401 means the call never executed, so retrying writes is safe.
 async function seatPlatform(path:string,options:{method?:string,body?:any}={},fetchImpl:FetchImpl=fetch){
  const seat=await seatKey(fetchImpl);
- let result=await rawPlatform(path,options,fetchImpl,seat.key);
- if(result.status===401&&!seat.fromEnv){
+ let key=seat.key,fromEnv=seat.fromEnv;
+ let result=await rawPlatform(path,options,fetchImpl,key);
+ let heals=0;
+ while(result.status===401&&autoRegisterEnabled()&&heals<2){
+  heals++;
+  if(fromEnv)setSetting(ENV_KEY_DEAD_SETTING,keyFingerprint(key));
   setSetting(SEAT_KEY_SETTING,'');setSetting(SEAT_HANDLE_SETTING,'');
-  result=await rawPlatform(path,options,fetchImpl,await registerSeatOnce(fetchImpl));
+  key=await registerSeatOnce(fetchImpl);fromEnv=false;
+  result=await rawPlatform(path,options,fetchImpl,key);
  }
  return unwrap(result);
 }
@@ -299,6 +337,39 @@ export async function agentRoomDeepSeekActivate(handle:unknown,fetchImpl:FetchIm
  if(!clean)throw Error('Pick the DeepSeek agent first.');
  return deepSeekAct(clean,'Say hello in the room and introduce yourself in one short sentence.',fetchImpl);
 }
+// Re-register an added agent under the SAME handle (free again after a
+// platform database reset) and store its fresh key server-side. The
+// agent's relay record is cleared too: any session it names died with the
+// old identity. Returns the new key, or '' when registration did not
+// produce one — notably on 409 (the handle is held by a live identity,
+// so this was not a reset): the stored key is then left untouched.
+async function reRegisterAgent(handle:string,fetchImpl:FetchImpl){
+ const row=addedAgents().find(agent=>agent.handle===handle);
+ const displayName=row?.display_name||handle;
+ const provider=row?.provider||'';
+ const declaration=provider==='api'
+  ?'I am '+displayName+', an AI agent connected by API key and operated by Darius Lea (LeaX Technologies) inside his LeaX Office meeting room.'
+  :'I am '+displayName+', an AI agent ('+(PROVIDER_LABELS[provider]||'AI')+') operated by Darius Lea (LeaX Technologies) inside his LeaX Office app.';
+ const result=await rawPlatform('/api/register',{method:'POST',body:{kind:'agent',handle,display_name:displayName,declaration,works_for:'Darius Lea'}},fetchImpl);
+ const apiKey=String(result.data?.api_key||'');
+ if(result.ok&&apiKey){setSetting(agentKeySetting(handle),apiKey);setSetting(relaySetting(handle),'');return apiKey;}
+ return '';
+}
+// Added-agent platform call with the same heal the seat gets: on 401 the
+// agent is re-registered under its own handle and the call retried once
+// with the fresh key. When re-registration does not produce a key (409 —
+// not a reset), the original result stands and the caller surfaces the
+// existing plain error. Returns the raw result so callers that read
+// statuses (relay output's 404/410) keep working.
+async function agentPlatform(handle:string,path:string,options:{method?:string,body?:any,timeoutMs?:number}={},fetchImpl:FetchImpl=fetch){
+ const key=String(setting(agentKeySetting(handle))||'');
+ let result=await rawPlatform(path,options,fetchImpl,key);
+ if(result.status===401){
+  const newKey=await reRegisterAgent(handle,fetchImpl);
+  if(newKey)result=await rawPlatform(path,options,fetchImpl,newKey);
+ }
+ return result;
+}
 
 // ---- Relay route (web-chat AIs) -----------------------------------------
 // A web-chat AI (ChatGPT first) joins the room through its normal website
@@ -336,9 +407,9 @@ export async function agentRoomRelayOpen(handle:unknown,fetchImpl:FetchImpl=fetc
  if(!RELAY_PROVIDERS.includes(agent.provider))throw Error('Relay is for web-chat AIs like ChatGPT, Gemini and Grok.');
  const existing=relaySessionRecord(agent.handle);
  if(existing){try{await rawPlatform('/api/relay/session/'+existing.session_id+'/close',{method:'POST',body:{},timeoutMs:RELAY_TIMEOUT_MS},fetchImpl,agent.key);}catch{/* stale session; opening fresh anyway */}}
- const data=await platform('/api/relay/session',{method:'POST',body:{},timeoutMs:RELAY_TIMEOUT_MS},fetchImpl,agent.key);
+ const data=unwrap(await agentPlatform(agent.handle,'/api/relay/session',{method:'POST',body:{},timeoutMs:RELAY_TIMEOUT_MS},fetchImpl));
  let cursor=0;
- try{const state=await platform('/api/senses/state',{timeoutMs:RELAY_TIMEOUT_MS},fetchImpl,agent.key);cursor=Number(state?.cursor)||0;}catch{/* next brief will simply include recent events */}
+ try{const state=unwrap(await agentPlatform(agent.handle,'/api/senses/state',{timeoutMs:RELAY_TIMEOUT_MS},fetchImpl));cursor=Number(state?.cursor)||0;}catch{/* next brief will simply include recent events */}
  setSetting(relaySetting(agent.handle),JSON.stringify({session_id:String(data.session_id||''),cursor,opened_at:new Date().toISOString()}));
  return {ok:true,handle:agent.handle,display_name:agent.display_name,provider:agent.provider,brief:String(data.brief_text||'')};
 }
@@ -356,17 +427,20 @@ export async function agentRoomRelayOutput(handle:unknown,output:unknown,fetchIm
  if(output.length>RELAY_OUTPUT_MAX)throw Error('That reply is too long. Paste a shorter reply.');
  const record=relaySessionRecord(agent.handle);
  if(!record)return {ok:false,reason:'no-session'};
- const result=await rawPlatform('/api/relay/session/'+record.session_id+'/output',{method:'POST',body:{output},timeoutMs:RELAY_TIMEOUT_MS},fetchImpl,agent.key);
+ const result=await agentPlatform(agent.handle,'/api/relay/session/'+record.session_id+'/output',{method:'POST',body:{output},timeoutMs:RELAY_TIMEOUT_MS},fetchImpl);
  if(result.status===404||result.status===410){setSetting(relaySetting(agent.handle),'');return {ok:false,reason:'expired'};}
  const data=unwrap(result);
  let cursor=Number(record.cursor)||0,newText='';
  try{
-  const since=await platform('/api/senses/since?cursor='+cursor,{timeoutMs:RELAY_TIMEOUT_MS},fetchImpl,agent.key);
+  const since=unwrap(await agentPlatform(agent.handle,'/api/senses/since?cursor='+cursor,{timeoutMs:RELAY_TIMEOUT_MS},fetchImpl));
   const events=Array.isArray(since?.events)?since.events:[];
   cursor=Number(since?.cursor)||cursor;
   if(events.length)newText='\n\nNEW IN THE ROOM SINCE YOUR LAST TURN:\n'+events.map(relayEventLine).join('\n');
  }catch{/* the results still go back; the AI can ask for a catchup */}
- setSetting(relaySetting(agent.handle),JSON.stringify({...record,cursor}));
+ // A heal during either call cleared the relay record (the session died
+ // with the old identity); do not resurrect the stale record here.
+ const current=relaySessionRecord(agent.handle);
+ if(current&&current.session_id===record.session_id)setSetting(relaySetting(agent.handle),JSON.stringify({...record,cursor}));
  return {ok:true,handle:agent.handle,
   actions_found:Number(data.actions_found)||0,
   actions_executed:Number(data.actions_executed)||0,
@@ -417,7 +491,7 @@ export async function agentRoomSpeakAs(handle:unknown,text:unknown,fetchImpl:Fet
  if(!key)throw Error('That agent is not connected here.');
  if(typeof text!=='string'||!text.trim())throw Error('Nothing to say.');
  if(text.length>2000)throw Error('Room speech is limited to 2000 characters');
- const data=await platform('/api/world/action',{method:'POST',body:{action:'speak',text:text.trim()}},fetchImpl,key);
+ const data=unwrap(await agentPlatform(cleanHandle,'/api/world/action',{method:'POST',body:{action:'speak',text:text.trim()}},fetchImpl));
  return {spoke:data?.spoke===true,heardWithinUnits:Number(data?.heard_within_units)||null};
 }
 

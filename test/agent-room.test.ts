@@ -1,11 +1,11 @@
 import {test,beforeEach,afterEach} from 'node:test';import assert from 'node:assert/strict';
 import {mkdtempSync} from 'node:fs';import {join} from 'node:path';import {tmpdir} from 'node:os';
 process.env.HQ_DATA_DIR=mkdtempSync(join(tmpdir(),'hq-agent-room-'));
-const {setSetting}=await import('../src/store.ts');
-const {agentRoomConfig,agentRoomState,agentRoomSince,agentRoomSpeak,agentRoomEnter,agentRoomInvite,agentRoomAddAgent,agentRoomAgents,agentRoomSetDeepSeekKey,agentRoomDeepSeekActivate,agentRoomCharacters,agentRoomSetCharacter,agentRoomSetClothing,agentRoomRelayOpen,agentRoomRelayOutput,agentRoomRelayClose,agentRoomRelayStatus}=await import('../src/agent-room.ts');
+const {setting,setSetting}=await import('../src/store.ts');
+const {agentRoomConfig,agentRoomState,agentRoomSince,agentRoomSpeak,agentRoomEnter,agentRoomInvite,agentRoomAddAgent,agentRoomAddApiAgent,agentRoomSpeakAs,agentRoomAgents,agentRoomSetDeepSeekKey,agentRoomDeepSeekActivate,agentRoomCharacters,agentRoomSetCharacter,agentRoomSetClothing,agentRoomRelayOpen,agentRoomRelayOutput,agentRoomRelayClose,agentRoomRelayStatus}=await import('../src/agent-room.ts');
 const KEY='test-agent-key-123';
 const saved={url:process.env.AGENT_PLATFORM_URL,key:process.env.AGENT_PLATFORM_KEY,place:process.env.AGENT_PLATFORM_PLACE,admin:process.env.AGENT_PLATFORM_ADMIN_KEY,auto:process.env.AGENT_PLATFORM_AUTO_REGISTER};
-beforeEach(()=>{process.env.AGENT_PLATFORM_URL='http://platform.test';delete process.env.AGENT_PLATFORM_KEY;delete process.env.AGENT_PLATFORM_PLACE;delete process.env.AGENT_PLATFORM_ADMIN_KEY;delete process.env.AGENT_PLATFORM_AUTO_REGISTER;setSetting('agent_platform_key','');setSetting('agent_platform_handle','');setSetting('agent_platform_agents','[]');setSetting('agent_platform_deepseek_key','');setSetting('agent_platform_character_assignments','{}');setSetting('agent_platform_relay_timothy','');setSetting('agent_platform_relay_claudey','');});
+beforeEach(()=>{process.env.AGENT_PLATFORM_URL='http://platform.test';delete process.env.AGENT_PLATFORM_KEY;delete process.env.AGENT_PLATFORM_PLACE;delete process.env.AGENT_PLATFORM_ADMIN_KEY;delete process.env.AGENT_PLATFORM_AUTO_REGISTER;setSetting('agent_platform_key','');setSetting('agent_platform_handle','');setSetting('agent_platform_env_key_dead','');setSetting('agent_platform_agents','[]');setSetting('agent_platform_deepseek_key','');setSetting('agent_platform_character_assignments','{}');setSetting('agent_platform_relay_timothy','');setSetting('agent_platform_relay_claudey','');setSetting('agent_platform_agent_key_helper-api','');setSetting('agent_platform_agent_key_live-one','');setSetting('agent_platform_agent_key_timothy','');});
 afterEach(()=>{for(const [name,value] of [['AGENT_PLATFORM_URL',saved.url],['AGENT_PLATFORM_KEY',saved.key],['AGENT_PLATFORM_PLACE',saved.place],['AGENT_PLATFORM_ADMIN_KEY',saved.admin],['AGENT_PLATFORM_AUTO_REGISTER',saved.auto]]){if(value===undefined)delete process.env[name];else process.env[name]=value;}});
 function stubFetch(handler){const calls=[];const impl=async(input,init={})=>{calls.push({url:String(input),init});const result=handler(String(input),init);if(result instanceof Error)throw result;return {ok:result.status<400,status:result.status,json:async()=>result.data};};impl.calls=calls;return impl;}
 const statePayload={ok:true,me:{identity:{id:3,handle:'mike-tyson',display_name:'Mike Tyson',works_for:'Darius Lea'},presence:null},current_place:{id:1,name:'lobby',kind:'zone',access:'open',owner:{id:2,handle:'platform-owner',display_name:'Darius Lea'},my_permissions:{speak:true}},presence_map:[{identity_id:3,handle:'mike-tyson',display_name:'Mike Tyson',online:true,location:'lobby',status:'sitting',position:{x:0,y:0,z:0},moving:false,target:null,workspace:null,place:{id:1,name:'lobby',kind:'zone'},distance:0,nearby:true},{identity_id:4,handle:'deepseek',display_name:'DeepSeek',online:true,location:'lobby',status:'standing',position:{x:3,y:4,z:0},moving:false,target:null,workspace:{id:1,name:'MOTHER table'},place:{id:1,name:'lobby',kind:'zone'},distance:5,nearby:true}],workspaces:[{id:1,name:'MOTHER table',kind:'table',location:'lobby',position:{x:3,y:4,z:0},seated:[{id:4,handle:'deepseek',display_name:'DeepSeek',status:'sitting'}]}],recent_world_actions:[{id:9,type:'world.speak',actor:{id:4,handle:'deepseek'},payload:{text:'Session 17 is at step 33,100.'},location:'lobby',distance:5,created_at:'2026-11-26T17:00:00Z'},{id:8,type:'world.move',actor:{id:4,handle:'deepseek'},payload:{},location:'lobby',distance:5,created_at:'2026-11-26T16:59:00Z'}],cursor:9,radii:{near:10,hear:20,walk_speed:3}};
@@ -394,4 +394,121 @@ test('mix-and-match clothing is validated, merged, and stored server-side',async
  const fresh=agentRoomSetClothing('new-agent',{top:'sweater'});
  assert.equal(fresh.assignment.character,'char-01');
  assert.equal(fresh.assignment.clothing.top,'sweater');
+});
+test('a dead env key heals by registration when auto-register is on, and is not retried',async()=>{
+ process.env.AGENT_PLATFORM_KEY='dead-env-key';
+ const fetchImpl=stubFetch((url,init)=>{
+  if(url.endsWith('/api/health'))return {status:200,data:{ok:true}};
+  if(url.endsWith('/api/register'))return {status:201,data:{ok:true,identity:{id:41,handle:'leax-office-seat'},api_key:'seat-key-healed'}};
+  if(url.endsWith('/api/senses/state'))return init.headers.Authorization==='Bearer seat-key-healed'?{status:200,data:statePayload}:{status:401,data:{ok:false,error:'authentication required'}};
+  return {status:404,data:{ok:false,error:'nope'}};
+ });
+ const state=await agentRoomState(fetchImpl);
+ assert.equal(state.me.handle,'mike-tyson');assert.equal(state.error,undefined);
+ assert.equal(fetchImpl.calls.filter(c=>c.url.endsWith('/api/register')).length,1);
+ const stateCalls=fetchImpl.calls.filter(c=>c.url.endsWith('/api/senses/state'));
+ assert.equal(stateCalls.length,2);assert.equal(stateCalls[1].init.headers.Authorization,'Bearer seat-key-healed');
+ const again=await agentRoomState(fetchImpl);
+ assert.equal(again.error,undefined);
+ assert.equal(fetchImpl.calls.filter(c=>c.url.endsWith('/api/register')).length,1,'the stored healed key is used; the dead env key is not retried');
+ const laterCalls=fetchImpl.calls.filter(c=>c.url.endsWith('/api/senses/state'));
+ assert.equal(laterCalls[laterCalls.length-1].init.headers.Authorization,'Bearer seat-key-healed');
+});
+test('no heal when auto-register is off: a dead env key stays a plain error',async()=>{
+ process.env.AGENT_PLATFORM_KEY='dead-env-key';process.env.AGENT_PLATFORM_AUTO_REGISTER='0';
+ const fetchImpl=stubFetch(()=>({status:401,data:{ok:false,error:'authentication required'}}));
+ const state=await agentRoomState(fetchImpl);
+ assert.match(state.error,/authentication required/);
+ assert.equal(fetchImpl.calls.filter(c=>c.url.endsWith('/api/register')).length,0,'no registration attempted');
+ await assert.rejects(agentRoomSpeak('hi',fetchImpl),/authentication required/);
+ assert.equal(fetchImpl.calls.filter(c=>c.url.endsWith('/api/register')).length,0,'still no registration attempted');
+});
+test('a second wipe between register and retry heals again within the same call',async()=>{
+ setSetting('agent_platform_key','dead-key-1');setSetting('agent_platform_handle','leax-office-seat');
+ let registrations=0;
+ const fetchImpl=stubFetch((url,init)=>{
+  if(url.endsWith('/api/health'))return {status:200,data:{ok:true}};
+  if(url.endsWith('/api/register')){registrations++;return {status:201,data:{ok:true,identity:{id:42,handle:'leax-office-seat'},api_key:'seat-key-'+registrations}};}
+  if(url.endsWith('/api/senses/state'))return init.headers.Authorization==='Bearer seat-key-2'?{status:200,data:statePayload}:{status:401,data:{ok:false,error:'authentication required'}};
+  return {status:404,data:{ok:false,error:'nope'}};
+ });
+ const state=await agentRoomState(fetchImpl);
+ assert.equal(state.me.handle,'mike-tyson');assert.equal(state.error,undefined);
+ assert.equal(registrations,2,'two heals: the first registered key was wiped before its retry');
+ assert.equal(fetchImpl.calls.filter(c=>c.url.endsWith('/api/senses/state')).length,3);
+});
+test('registration wakes the platform first and retries once on 502',async()=>{
+ let registerCalls=0;
+ const fetchImpl=stubFetch(url=>{
+  if(url.endsWith('/api/health'))return {status:200,data:{ok:true}};
+  if(url.endsWith('/api/register')){registerCalls++;return registerCalls===1?{status:502,data:{}}:{status:201,data:{ok:true,identity:{id:43,handle:'leax-office-seat'},api_key:'seat-key-woke'}};}
+  if(url.endsWith('/api/senses/state'))return {status:200,data:statePayload};
+  return {status:404,data:{ok:false,error:'nope'}};
+ });
+ const state=await agentRoomState(fetchImpl);
+ assert.equal(state.me.handle,'mike-tyson');assert.equal(state.error,undefined);
+ const urls=fetchImpl.calls.map(c=>c.url);
+ const firstHealth=urls.findIndex(u=>u.endsWith('/api/health'));
+ const firstRegister=urls.findIndex(u=>u.endsWith('/api/register'));
+ assert.ok(firstHealth>-1&&firstHealth<firstRegister,'health ping precedes the register POST');
+ assert.equal(registerCalls,2,'one wake + retry after the 502');
+ const healthAfter502=urls.findIndex((u,i)=>i>firstRegister&&u.endsWith('/api/health'));
+ assert.ok(healthAfter502>firstRegister,'the retry is preceded by another wake ping');
+});
+test('speakAs heals a wiped agent key by re-registering the same handle and storing the new key',async()=>{
+ let registrations=0;
+ const fetchImpl=stubFetch((url,init)=>{
+  if(url.endsWith('/api/register')){registrations++;return {status:201,data:{ok:true,identity:{id:51},api_key:'agent-key-'+registrations}};}
+  if(url.endsWith('/api/world/action'))return init.headers.Authorization==='Bearer agent-key-2'?{status:200,data:{ok:true,spoke:true,heard_within_units:20}}:{status:401,data:{ok:false,error:'authentication required'}};
+  return {status:404,data:{ok:false,error:'nope'}};
+ });
+ const added=await agentRoomAddApiAgent('Helper Api',fetchImpl);
+ assert.equal(added.handle,'helper-api');
+ const result=await agentRoomSpeakAs('helper-api','Hello from the helper',fetchImpl);
+ assert.equal(result.spoke,true);assert.equal(result.heardWithinUnits,20);
+ const registerBodies=fetchImpl.calls.filter(c=>c.url.endsWith('/api/register')).map(c=>JSON.parse(c.init.body));
+ assert.equal(registerBodies.length,2);
+ assert.equal(registerBodies[1].handle,'helper-api','re-registration uses the same handle');
+ assert.match(registerBodies[1].declaration,/connected by API key/);
+ const speaks=fetchImpl.calls.filter(c=>c.url.endsWith('/api/world/action'));
+ assert.equal(speaks.length,2);assert.equal(speaks[1].init.headers.Authorization,'Bearer agent-key-2');
+ assert.equal(setting('agent_platform_agent_key_helper-api'),'agent-key-2','the fresh key is stored server-side');
+ const again=await agentRoomSpeakAs('helper-api','Second line',fetchImpl);
+ assert.equal(again.spoke,true);
+ assert.equal(fetchImpl.calls.filter(c=>c.url.endsWith('/api/register')).length,2,'the stored healed key is reused');
+ assert.ok(!JSON.stringify(result).includes('agent-key-2'),'agent key must not appear in speak output');
+});
+test('a 409 on agent re-registration leaves the stored key untouched and surfaces the plain error',async()=>{
+ let registrations=0;
+ const fetchImpl=stubFetch(url=>{
+  if(url.endsWith('/api/register')){registrations++;return registrations===1?{status:201,data:{ok:true,identity:{id:52},api_key:'agent-key-live'}}:{status:409,data:{ok:false,error:'handle already taken.'}};}
+  if(url.endsWith('/api/world/action'))return {status:401,data:{ok:false,error:'authentication required'}};
+  return {status:404,data:{ok:false,error:'nope'}};
+ });
+ await agentRoomAddApiAgent('Live One',fetchImpl);
+ await assert.rejects(agentRoomSpeakAs('live-one','hi',fetchImpl),/authentication required/);
+ assert.equal(registrations,2,'re-registration was attempted');
+ assert.equal(setting('agent_platform_agent_key_live-one'),'agent-key-live','the stored key is untouched after a 409');
+ const speaks=fetchImpl.calls.filter(c=>c.url.endsWith('/api/world/action'));
+ assert.equal(speaks.length,1,'no retry with a key that was never issued');
+});
+test('relay open after a wipe re-registers the agent, clears the stale session record, and opens fresh',async()=>{
+ let registrations=0;
+ const fetchImpl=stubFetch((url,init)=>{
+  if(url.endsWith('/api/register')){registrations++;return {status:201,data:{ok:true,identity:{id:61},api_key:'relay-key-'+registrations}};}
+  if(url.endsWith('/api/relay/session'))return init.headers.Authorization==='Bearer relay-key-2'?{status:201,data:{ok:true,session_id:'rs_fresh',brief_text:'FRESH BRIEF'}}:{status:401,data:{ok:false,error:'authentication required'}};
+  if(url.endsWith('/api/senses/state'))return init.headers.Authorization==='Bearer relay-key-2'?{status:200,data:statePayload}:{status:401,data:{ok:false,error:'authentication required'}};
+  if(url.includes('/close'))return {status:200,data:{ok:true}};
+  return {status:404,data:{ok:false,error:'nope'}};
+ });
+ await agentRoomAddAgent('Timothy','chatgpt',fetchImpl);
+ setSetting('agent_platform_relay_timothy',JSON.stringify({session_id:'rs_stale',cursor:5,opened_at:'2026-11-27T00:00:00Z'}));
+ const opened=await agentRoomRelayOpen('timothy',fetchImpl);
+ assert.equal(opened.ok,true);assert.match(opened.brief,/FRESH BRIEF/);
+ assert.equal(registrations,2,'the agent was re-registered after the wipe');
+ assert.equal(setting('agent_platform_agent_key_timothy'),'relay-key-2','the fresh agent key is stored');
+ const record=JSON.parse(setting('agent_platform_relay_timothy'));
+ assert.equal(record.session_id,'rs_fresh','the stale session record was cleared and replaced by the fresh session');
+ assert.deepEqual(agentRoomRelayStatus().sessions,{timothy:true});
+ assert.ok(!JSON.stringify(opened).includes('relay-key-2'),'agent key must not appear in relay output');
 });
