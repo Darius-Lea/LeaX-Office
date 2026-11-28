@@ -17,6 +17,7 @@ function present(detail){window.dispatchEvent(new CustomEvent('hq-meeting-presen
 // rendered with textContent only.
 const MOTHER_BRIEF_FALLBACK='Help troubleshoot MOTHER, Darius Lea\'s from-scratch language model: swap training logs, loss curves, overflow diagnoses, and probe outputs, and work through training problems together in this room.';
 function platformLineElement(line){
+ if(line.kind==='arrival'){const note=el('div');note.className='meeting-agent-arrival';note.textContent=line.text;return note;}
  const wrap=el('div');wrap.className='meeting-agent-line';
  const face=el('img');face.className='meeting-agent-face';face.src=line.face||'';face.alt='';face.loading='lazy';wrap.append(face);
  const body=el('div');body.className='meeting-agent-body';
@@ -35,9 +36,328 @@ function platformLineElement(line){
 function platformChip(person){
  const chip=el('span');chip.className='meeting-agent-chip'+(person.online?'':' meeting-agent-offline');
  const face=el('img');face.className='meeting-agent-face';face.src=person.face||'';face.alt='';face.loading='lazy';
- const label=el('span',(person.isSeat?'You · ':'')+(person.name||person.handle||'Agent')+(person.seated?' · seated':person.online?' · here':' · away'));
+ const status=!person.online?' · away':person.moving?' · walking':person.seated?' · seated':' · here';
+ const label=el('span',(person.isSeat?'You · ':'')+(person.name||person.handle||'Agent')+status);
+ if(typeof person.distance==='number'&&person.distance>0)chip.title=Math.round(person.distance)+' units away';
  chip.append(face,label);
  return chip;
+}
+// ---- Character picker (moved here from the old Agent Room pane) ----------
+// Every agent can be given a character from the roster (36 portraits, each
+// with 6 outfits and 6 hairstyles), mix-and-match clothing, and a display
+// name shown in LeaX. Assignments are stored on the server and ride along
+// in meeting state as face URLs; the picker saves through the same
+// /api/agent-room/character route the old pane used.
+const OUTFIT_CLOTHING={
+ 1:{top:'t-shirt',topColor:'#2f5d8a',bottom:'jeans',bottomColor:'#24344d',shoes:'sneakers',shoeColor:'#e8e8e8',accessory:'none',accessoryColor:'#8a2f2f'},
+ 2:{top:'blazer',topColor:'#24344d',bottom:'dress-pants',bottomColor:'#1f2430',shoes:'dress-shoes',shoeColor:'#1f2430',accessory:'tie',accessoryColor:'#8a2f2f'},
+ 3:{top:'t-shirt',topColor:'#6b7280',bottom:'jeans',bottomColor:'#24344d',shoes:'sneakers',shoeColor:'#e8e8e8',accessory:'none',accessoryColor:'#8a2f2f'},
+ 4:{top:'button-up',topColor:'#e8e8e8',bottom:'dress-pants',bottomColor:'#1f2430',shoes:'dress-shoes',shoeColor:'#5b4632',accessory:'tie',accessoryColor:'#24344d'},
+ 5:{top:'hoodie',topColor:'#2f6b4f',bottom:'jeans',bottomColor:'#24344d',shoes:'sneakers',shoeColor:'#e8e8e8',accessory:'cap',accessoryColor:'#1f2430'},
+ 6:{top:'hoodie',topColor:'#1f5f56',bottom:'khakis',bottomColor:'#b09a72',shoes:'sneakers',shoeColor:'#e8e8e8',accessory:'none',accessoryColor:'#8a2f2f'},
+};
+const CLOTHING_COLORS=['#24344d','#1f2430','#e8e8e8','#6b7280','#8a2f2f','#2f6b4f','#2f5d8a','#b09a72','#5b4632','#5b3a6b','#1f5f56','#c9a227'];
+let characterManifest=null;
+async function loadManifest(){
+ if(characterManifest)return characterManifest;
+ try{const r=await fetch('/avatars/characters/manifest.json');if(r.ok)characterManifest=await r.json();}catch{}
+ if(!characterManifest)characterManifest={characters:Array.from({length:36},(_,i)=>({id:'char-'+String(i+1).padStart(2,'0'),outfits:[1,2,3,4,5,6],hairs:[1,2,3,4,5,6]})),outfitNames:{1:'Everyday',2:'Business',3:'Casual',4:'Formal',5:'Streetwear',6:'Tech'},hairNames:{1:'Original',2:'Blonde',3:'Red',4:'Gray',5:'Buzz cut',6:'Curly'}};
+ return characterManifest;
+}
+// Visual character picker: a scrollable grid of faces, outfit thumbnails,
+// hair thumbnails, and mix-and-match clothing (piece + color per category).
+// onChange fires on every pick so the room updates immediately.
+function buildCharacterPicker(initial={},onChange=null){
+ const wrap=el('div');wrap.className='agent-room-picker';
+ let selectedCharacter=initial.character||null,selectedOutfit=initial.outfit||1,selectedHair=initial.hair||1;
+ let clothing={...(OUTFIT_CLOTHING[selectedOutfit]||OUTFIT_CLOTHING[1]),...(initial.clothing||{})};
+ const faceGrid=el('div');faceGrid.className='agent-room-face-grid';
+ const outfitLabel=el('p','Pick a character first.');outfitLabel.className='fine-print';
+ const outfitRow=el('div');outfitRow.className='agent-room-outfit-row';
+ const hairLabel=el('p','Hair:');hairLabel.className='fine-print';
+ const hairRow=el('div');hairRow.className='agent-room-outfit-row';
+ const clothingHost=el('div');clothingHost.className='agent-room-clothing';
+ function notify(){if(onChange)onChange(selection());}
+ function selection(){return selectedCharacter?{character:selectedCharacter,outfit:selectedOutfit,hair:selectedHair,clothing:{...clothing}}:null;}
+ function renderOutfits(manifest){
+  outfitRow.replaceChildren();
+  const entry=(manifest.characters||[]).find(c=>c.id===selectedCharacter);
+  const outfits=entry?.outfits||[1];
+  if(!outfits.includes(selectedOutfit))selectedOutfit=outfits[0];
+  for(const outfit of outfits){
+   const btn=el('button');btn.type='button';btn.className='agent-room-outfit'+(outfit===selectedOutfit?' selected':'');
+   const img=document.createElement('img');img.src='/avatars/characters/'+selectedCharacter+'/outfit-'+outfit+'.jpg';img.alt='';img.loading='lazy';
+   btn.append(img,el('small',String(manifest.outfitNames?.[outfit]||('Outfit '+outfit))));
+   btn.onclick=()=>{selectedOutfit=outfit;clothing={...(OUTFIT_CLOTHING[outfit]||OUTFIT_CLOTHING[1])};renderOutfits(manifest);renderClothing();notify();};
+   outfitRow.append(btn);
+  }
+  outfitLabel.textContent=selectedCharacter?'Pick an outfit (also sets the clothes below):':'Pick a character first.';
+  hairRow.replaceChildren();
+  const hairs=entry?.hairs||[1];
+  if(!hairs.includes(selectedHair))selectedHair=1;
+  for(const hair of hairs){
+   const btn=el('button');btn.type='button';btn.className='agent-room-outfit'+(hair===selectedHair?' selected':'');
+   const img=document.createElement('img');img.src='/avatars/characters/'+selectedCharacter+'/'+(hair===1?'outfit-1':'hair-'+hair)+'.jpg';img.alt='';img.loading='lazy';
+   btn.append(img,el('small',String(manifest.hairNames?.[hair]||('Hair '+hair))));
+   btn.onclick=()=>{selectedHair=hair;renderOutfits(manifest);notify();};
+   hairRow.append(btn);
+  }
+  hairLabel.textContent=selectedCharacter?'Pick a hairstyle:':'';
+ }
+ function clothingSection(title,pieces,pieceKey,colorKey){
+  const section=el('div');section.className='agent-room-clothing-section';
+  section.append(el('p',title));
+  const pieceRow=el('div');pieceRow.className='agent-room-piece-row';
+  for(const [value,label] of pieces){
+   const btn=el('button',label);btn.type='button';btn.className='agent-room-piece'+(clothing[pieceKey]===value?' selected':'');
+   btn.onclick=()=>{clothing[pieceKey]=value;renderClothing();notify();};
+   pieceRow.append(btn);
+  }
+  section.append(pieceRow);
+  const swatchRow=el('div');swatchRow.className='agent-room-swatch-row';
+  for(const color of CLOTHING_COLORS){
+   const btn=el('button');btn.type='button';btn.className='agent-room-swatch'+(clothing[colorKey]===color?' selected':'');btn.style.background=color;btn.setAttribute('aria-label',color);
+   btn.onclick=()=>{clothing[colorKey]=color;renderClothing();notify();};
+   swatchRow.append(btn);
+  }
+  section.append(swatchRow);
+  return section;
+ }
+ function renderClothing(){
+  clothingHost.replaceChildren(
+   el('p','Mix and match clothes (the 3D character wears these):'),
+   clothingSection('Top',[['t-shirt','T-shirt'],['polo','Polo shirt'],['button-up','Button-up'],['hoodie','Hoodie'],['blazer','Blazer'],['sweater','Sweater']],'top','topColor'),
+   clothingSection('Bottoms',[['jeans','Jeans'],['dress-pants','Dress pants'],['khakis','Khakis'],['shorts','Shorts']],'bottom','bottomColor'),
+   clothingSection('Shoes',[['sneakers','Sneakers'],['dress-shoes','Dress shoes'],['boots','Boots']],'shoes','shoeColor'),
+   clothingSection('Accessory',[['none','None'],['tie','Tie'],['bowtie','Bow tie'],['cap','Cap']],'accessory','accessoryColor'));
+ }
+ void loadManifest().then(manifest=>{
+  faceGrid.replaceChildren();
+  for(const entry of manifest.characters||[]){
+   const btn=el('button');btn.type='button';btn.className='agent-room-face'+(entry.id===selectedCharacter?' selected':'');btn.dataset.character=entry.id;
+   const img=document.createElement('img');img.src='/avatars/characters/'+entry.id+'/outfit-1.jpg';img.alt='';img.loading='lazy';
+   btn.append(img);
+   btn.onclick=()=>{selectedCharacter=entry.id;for(const b of faceGrid.querySelectorAll('.agent-room-face'))b.classList.toggle('selected',b.dataset.character===entry.id);renderOutfits(manifest);notify();};
+   faceGrid.append(btn);
+  }
+  renderOutfits(manifest);
+ });
+ renderClothing();
+ wrap.append(el('p','Pick a character:'),faceGrid,outfitLabel,outfitRow,hairLabel,hairRow,clothingHost);
+ return {element:wrap,selection};
+}
+async function openCustomizePopup(person){
+ const body=el('div');body.className='meeting-connect-panel';
+ const note=el('p');note.className='fine-print';
+ let assignment=null;
+ try{const data=await api('agent-room/characters');assignment=(data?.assignments||{})[String(person.handle||'').toLowerCase()]||null;}catch(error){note.textContent=error.message;}
+ const nameLabel=el('label','Name shown in LeaX');const nameInput=el('input');nameInput.value=(assignment&&assignment.name)||person.name||'';nameInput.maxLength=40;nameInput.autocomplete='off';nameLabel.append(nameInput);
+ async function saveAssignment(sel){
+  if(!sel)return;
+  try{await api('agent-room/character',{handle:person.handle,character:sel.character,outfit:sel.outfit,hair:sel.hair,clothing:sel.clothing,name:nameInput.value});note.textContent='Saved.';}
+  catch(error){note.textContent=error.message;}
+ }
+ const picker=buildCharacterPicker(assignment||{},sel=>{void saveAssignment(sel);});
+ const save=button('Save name',async()=>{
+  const sel=picker.selection();
+  if(!sel){note.textContent='Pick a character first.';return;}
+  save.disabled=true;await saveAssignment(sel);save.disabled=false;
+ });
+ body.append(nameLabel,picker.element,save,note);
+ window.hqPopup.open({title:'Customize '+(person.name||person.handle||'agent'),contentNode:body,readable:false});
+}
+// ---- One-tap invite (no key for anyone to type) ---------------------------
+// The invited AI redeems the code itself and the platform issues its own
+// key on its side; Darius only copies one ready-made message.
+function buildInviteForm(state){
+ const inviteForm=el('form');inviteForm.className='business-document-form meeting-connect-form';
+ inviteForm.append(el('h4','Invite another AI'),el('p','Make an invite, copy the message, and paste it to any AI. It joins this room and catches up on the work. No key to type — the AI gets its own when it joins.'));
+ const briefLabel=el('label','What should the invited AI work on?');const brief=el('textarea');brief.maxLength=1000;brief.rows=4;brief.value=state?.motherBrief||MOTHER_BRIEF_FALLBACK;briefLabel.append(brief);
+ const inviteFeedback=el('p');
+ const inviteResult=el('div');inviteResult.hidden=true;
+ const codeLine=el('p');const linkLine=el('p');linkLine.className='fine-print';
+ const message=el('textarea');message.readOnly=true;message.rows=4;message.setAttribute('aria-label','Message to paste to the AI');
+ const copy=button('Copy the message',async()=>{try{await navigator.clipboard.writeText(message.value);copy.textContent='Copied ✓';setTimeout(()=>{copy.textContent='Copy the message';},2000);}catch{message.select();}});
+ inviteResult.append(codeLine,linkLine,message,copy);
+ const invite=el('button','Make an invite');invite.type='submit';
+ inviteForm.append(briefLabel,inviteFeedback,invite,inviteResult);
+ inviteForm.onsubmit=async event=>{event.preventDefault();invite.disabled=true;invite.textContent='Making your invite…';try{const data=await api('agent-room/invite',{brief:brief.value});if(!data?.ok){inviteResult.hidden=true;inviteFeedback.textContent=data?.reason==='standing'?"Your seat can't invite yet. The room owner has to allow it first — ask the owner to turn on invites for this room.":'The invite could not be made. Try again in a moment.';return;}inviteFeedback.textContent='';inviteResult.hidden=false;codeLine.textContent='Invite code: '+data.code;linkLine.textContent='Join link: '+data.joinUrl;message.value=data.message||'';}catch(error){inviteFeedback.textContent=error.message;}finally{invite.disabled=false;invite.textContent='Make an invite';}};
+ return inviteForm;
+}
+async function openInvitePopup(){
+ const body=el('div');body.className='meeting-connect-panel';
+ let state=null;
+ try{state=await api('meeting-agents/state');}catch{/* the form still works with the fallback brief */}
+ body.append(buildInviteForm(state));
+ window.hqPopup.open({title:'Invite an AI to the meeting room',contentNode:body,readable:false});
+}
+// ---- Relay join (web-chat AIs, no key) ------------------------------------
+// A web-chat AI joins through its normal website chat: the app prepares a
+// plain-text room brief, Darius pastes it into the AI's chat, pastes the
+// AI's reply back, and the app executes the ACTION lines in it. The AI's
+// website cannot open inside this app (chatgpt.com blocks framing), so the
+// copy/paste loop is the route — one tap each way, keys never on screen.
+const RELAY_PROVIDERS=['chatgpt','gemini','grok'];
+const PROVIDER_LABELS={claude:'Claude',chatgpt:'ChatGPT',deepseek:'DeepSeek',gemini:'Gemini',grok:'Grok'};
+async function copyText(text,btn,doneLabel){
+ try{await navigator.clipboard.writeText(text);}catch{return false;}
+ if(btn){const before=btn.textContent;btn.textContent=doneLabel||'Copied ✓';setTimeout(()=>{btn.textContent=before;},2000);}
+ return true;
+}
+function relayStepMessage(name,step){
+ if(!step)return name+' is in the room.';
+ if(step.kind==='ready')return name+' is in the room and ready. It can act right away.';
+ if(step.kind==='bridge-ready')return name+' is in the room. DeepSeek is connected and can act in the room.';
+ if(step.kind==='needs-deepseek-key')return name+' is in the room. DeepSeek needs your DeepSeek API key saved once before it can act — paste it below. It stays on this server and is never shown again.';
+ if(step.kind==='standing')return name+" is in the room. DeepSeek can't act yet — the room owner has to allow the bridge first.";
+ if(step.kind==='mcp'&&step.relay)return name+' is in the room. Easiest way in: connect by relay below — it works on any plan, no connectors needed. Or, with a paid plan: '+(step.instruction||'');
+ if(step.kind==='mcp')return name+' is in the room. One step left: '+(step.instruction||'');
+ return name+' is in the room.';
+}
+function openRelayPanel(host,agent,refreshRelay){
+ host.hidden=false;host.replaceChildren();
+ const providerLabel=PROVIDER_LABELS[agent.provider]||'AI';
+ const name=agent.display_name||agent.handle;
+ host.append(el('h4','Relay — '+name+' ('+providerLabel+')'));
+ host.append(el('p',providerLabel+"'s website can't open inside this app (its site blocks that), so you carry the messages between here and your "+providerLabel+' chat. Two taps each way.'));
+ const result=el('p');result.className='fine-print';
+ const step1Label=el('p','1. Copy this into your '+providerLabel+' chat:');
+ const brief=el('textarea');brief.readOnly=true;brief.rows=8;brief.setAttribute('aria-label','Room brief to copy to '+providerLabel);
+ const copyBrief=button('Copy this to '+providerLabel,async()=>{
+  if(!brief.value){result.textContent='Start the relay first.';return;}
+  const ok=await copyText(brief.value,copyBrief);
+  if(!ok){brief.select();result.textContent='Copy did not work here — tap the text, select all, and copy it by hand.';}
+ });
+ const step2Label=el('p','2. Paste '+providerLabel+"'s reply here:");
+ const reply=el('textarea');reply.rows=6;reply.placeholder='Paste the reply here…';reply.setAttribute('aria-label','Paste the reply from '+providerLabel);
+ const send=button('Send to the room',async()=>{
+  if(!reply.value.trim()){result.textContent="Paste "+providerLabel+"'s reply first.";return;}
+  send.disabled=true;send.textContent='Sending…';
+  try{
+   const data=await api('agent-room/relay/output',{handle:agent.handle,output:reply.value});
+   if(!data?.ok){
+    if(data?.reason==='expired')result.textContent='The relay session ended (they last 2 hours). Start it again to keep going.';
+    else if(data?.reason==='no-session')result.textContent='Start the relay first, then paste the reply.';
+    else result.textContent='That did not go through. Try again in a moment.';
+    return;
+   }
+   reply.value='';
+   brief.value=data.next_brief||'';
+   step1Label.textContent='Copy this back to '+providerLabel+':';
+   result.textContent=data.actions_executed>0
+    ? name+' did '+data.actions_executed+' thing'+(data.actions_executed===1?'':'s')+' in the room. Copy the text above back to '+providerLabel+' to keep going.'
+    : 'No actions found in that reply. Ask '+providerLabel+' to reply with ACTION lines, like the brief shows.';
+  }catch(error){result.textContent=error.message;}
+  finally{send.disabled=false;send.textContent='Send to the room';}
+ });
+ const start=button('Start relay',async()=>{
+  start.disabled=true;start.textContent='Starting…';
+  try{
+   const data=await api('agent-room/relay/open',{handle:agent.handle});
+   brief.value=data.brief||'';
+   step1Label.textContent='1. Copy this into your '+providerLabel+' chat:';
+   result.textContent='Relay is on. Copy the brief into '+providerLabel+', then paste its reply below.';
+   start.textContent='Restart relay (fresh brief)';
+   void refreshRelay();
+  }catch(error){result.textContent=error.message;}
+  finally{start.disabled=false;}
+ });
+ const end=button('End relay',async()=>{
+  end.disabled=true;
+  try{
+   await api('agent-room/relay/close',{handle:agent.handle});
+   brief.value='';reply.value='';
+   result.textContent='Relay ended. '+name+' is out of the room until you start it again.';
+   void refreshRelay();
+  }catch(error){result.textContent=error.message;}
+  finally{end.disabled=false;}
+ });
+ end.className='secondary-button';
+ host.append(start,step1Label,brief,copyBrief,step2Label,reply,send,end,result);
+}
+function buildRelaySection(){
+ const section=el('div');section.className='meeting-connect-form';
+ section.append(el('h4','Join by relay — no key needed'),el('p','For AIs that live in a web chat (ChatGPT, Gemini, Grok): the app talks to them through their normal chat. Works on any plan — no connectors, no paywall. You copy messages between here and the chat; the app does the rest.'));
+ const nameLabel=el('label','Agent name');const name=el('input');name.placeholder='e.g. Helper';name.maxLength=40;name.autocomplete='off';nameLabel.append(name);
+ const providerLabel=el('label','Which AI is it?');const provider=el('select');
+ for(const [value,label] of [['claude','Claude'],['chatgpt','ChatGPT'],['deepseek','DeepSeek'],['gemini','Gemini'],['grok','Grok']]){const option=el('option',label);option.value=value;provider.append(option);}
+ providerLabel.append(provider);
+ const result=el('div');result.className='agent-room-add-result';
+ const list=el('div');list.className='meeting-relay-list';
+ const panel=el('div');panel.hidden=true;
+ async function refreshRelay(retried=false){
+  let agents=[],sessions={},failed=false;
+  try{const data=await api('agent-room/agents');agents=data?.agents||[];}catch{failed=true;}
+  try{const data=await api('agent-room/relay/status');sessions=data?.sessions||{};}catch{failed=true;}
+  // A transient fetch failure (platform waking, loaded VM) must not leave
+  // the list empty forever: retry once shortly after.
+  if(failed&&!retried)setTimeout(()=>void refreshRelay(true),3000);
+  const relayAgents=agents.filter(a=>RELAY_PROVIDERS.includes(a.provider));
+  list.replaceChildren();
+  if(!relayAgents.length){list.append(el('p','Add a ChatGPT, Gemini or Grok agent above and it can connect by relay.'));return;}
+  for(const agent of relayAgents){
+   const row=el('div');row.className='agent-room-relay-row';
+   const open=!!sessions[agent.handle];
+   row.append(el('span',(agent.display_name||agent.handle)+' ('+(PROVIDER_LABELS[agent.provider]||agent.provider)+')'+(open?' — relay on':'')));
+   const btn=button(open?'Open the relay':'Connect by relay',()=>openRelayPanel(panel,agent,refreshRelay));
+   btn.dataset.relayHandle=agent.handle;
+   row.append(btn);
+   list.append(row);
+  }
+ }
+ const add=button('Add agent',async()=>{
+  const agentName=name.value.trim();
+  if(!agentName){result.replaceChildren(el('p','Give the agent a name first.'));name.focus();return;}
+  add.disabled=true;add.textContent='Adding '+agentName+'…';
+  try{
+   const data=await api('agent-room/add-agent',{name:agentName,provider:provider.value});
+   result.replaceChildren(el('p',relayStepMessage(data.display_name||agentName,data.step)));
+   if(data.step?.kind==='mcp'&&data.step.relay){
+    const relayBtn=button('Connect '+(data.display_name||agentName)+' by relay',()=>{
+     const agent={handle:data.handle,display_name:data.display_name||agentName,provider:data.provider};
+     openRelayPanel(panel,agent,refreshRelay);
+     panel.scrollIntoView({behavior:'smooth',block:'start'});
+    });
+    result.append(relayBtn,el('p','Relay works on any plan: you copy messages between this app and your '+(PROVIDER_LABELS[data.provider]||'AI')+' chat, and the app does the rest.'));
+   }
+   if(data.step?.kind==='mcp'&&data.step.mcpUrl){
+    const urlLine=el('p',data.step.mcpUrl);urlLine.className='agent-room-mcp-url';
+    const copy=button('Copy the address',async()=>{try{await navigator.clipboard.writeText(data.step.mcpUrl);copy.textContent='Copied ✓';setTimeout(()=>{copy.textContent='Copy the address';},2000);}catch{}});
+    result.append(urlLine,copy);
+   }
+   if(data.step?.kind==='bridge-ready')result.append(el('p',data.bridge?.ok?'DeepSeek said hello in the room.':'DeepSeek is connected. It can act in the room.'));
+   if(data.step?.kind==='needs-deepseek-key'){
+    const keyLabel=el('label','Your DeepSeek API key (saved once, never shown again)');
+    const key=el('input');key.type='password';key.autocomplete='off';key.placeholder='Paste the key here';keyLabel.append(key);
+    const save=button('Save the key',async()=>{
+     if(!key.value.trim()){result.append(el('p','Paste the key first.'));return;}
+     save.disabled=true;
+     try{
+      await api('agent-room/deepseek-key',{key:key.value});key.value='';
+      result.replaceChildren(el('p','Key saved. Now let DeepSeek say hello in the room:'));
+      const hello=button('Let DeepSeek say hello',async()=>{
+       hello.disabled=true;
+       try{
+        const acted=await api('agent-room/deepseek-activate',{handle:data.handle});
+        if(acted.ok)result.replaceChildren(el('p','DeepSeek is connected and said hello in the room.'));
+        else if(acted.reason==='standing')result.replaceChildren(el('p',"DeepSeek can't act yet — the room owner has to allow the bridge first. Your key is saved for when they do."));
+        else result.replaceChildren(el('p','DeepSeek could not act just now. Try again in a moment.'));
+       }catch(error){result.replaceChildren(el('p',error.message));}
+       finally{hello.disabled=false;}
+      });
+      result.append(hello);
+     }catch(error){result.append(el('p',error.message));}
+     finally{save.disabled=false;}
+    });
+    result.append(keyLabel,save);
+   }
+   name.value='';void refreshRelay();
+  }catch(error){result.replaceChildren(el('p',error.message));}
+  finally{add.disabled=false;add.textContent='Add agent';}
+ });
+ section.append(nameLabel,providerLabel,add,result,list,panel);
+ void refreshRelay();
+ return section;
 }
 async function openConnectPanel(){
  const body=el('div');body.className='meeting-connect-panel';
@@ -50,7 +370,14 @@ async function openConnectPanel(){
   if(!state?.configured){list.append(el('p','The Agent Platform is not connected yet.'));return;}
   if(state?.error){list.append(el('p','The room is out of reach right now. Your saved meeting log is still here.'));return;}
   if(!people.length){list.append(el('p','No AIs are in the room yet. Connect one below, or invite one.'));}
-  for(const person of people)list.append(platformChip(person));
+  for(const person of people){
+   const row=el('div');row.className='meeting-connect-row';
+   row.append(platformChip(person));
+   const customize=button('Customize',()=>void openCustomizePopup(person));
+   customize.className='meeting-agent-customize';
+   row.append(customize);
+   list.append(row);
+  }
   for(const agent of state?.apiAgents||[]){
    const row=el('div');row.className='meeting-connect-row';
    row.append(el('span',(agent.name||agent.handle)+' · connected by API key ('+(agent.model||'')+')'+(agent.online?' · in the room':' · away')));
@@ -61,6 +388,9 @@ async function openConnectPanel(){
  let state=null;
  try{state=await api('meeting-agents/state');}catch(error){status.textContent=error.message;}
  renderList(state);
+ // No-key paths first: invite (the AI joins itself) and relay (web chats).
+ body.append(buildInviteForm(state));
+ body.append(buildRelaySection());
  // API-key connect: paste a key once; it stays on this server.
  const form=el('form');form.className='business-document-form meeting-connect-form';
  form.append(el('h4','Connect an AI with an API key'),el('p','For AIs you pay by the message (DeepSeek, OpenAI, Groq and similar). Paste the key once — it stays on this server and is never shown again. The AI then sits in this room and answers here.'));
@@ -78,20 +408,6 @@ async function openConnectPanel(){
  form.append(presetLabel,nameLabel,urlLabel,modelLabel,keyLabel,feedback,connect);
  form.onsubmit=async event=>{event.preventDefault();connect.disabled=true;connect.textContent='Connecting…';try{const data=await api('meeting-agents/connect-api',{name:name.value,baseUrl:url.value,model:model.value,key:key.value});key.value='';feedback.textContent=(data.display_name||name.value)+' is connected and in the room.';state=await api('meeting-agents/state');renderList(state);}catch(error){feedback.textContent=error.message;}finally{connect.disabled=false;connect.textContent='Connect this AI';}};
  body.append(form);
- // Invite another AI (for example the other Muse) with a ready message.
- const inviteForm=el('form');inviteForm.className='business-document-form meeting-connect-form';
- inviteForm.append(el('h4','Invite another AI'),el('p','Make an invite, copy the message, and paste it to any AI. It joins this room and catches up on the work.'));
- const briefLabel=el('label','What should the invited AI work on?');const brief=el('textarea');brief.maxLength=1000;brief.rows=4;brief.value=state?.motherBrief||MOTHER_BRIEF_FALLBACK;briefLabel.append(brief);
- const inviteFeedback=el('p');
- const inviteResult=el('div');inviteResult.hidden=true;
- const codeLine=el('p');const linkLine=el('p');linkLine.className='fine-print';
- const message=el('textarea');message.readOnly=true;message.rows=4;message.setAttribute('aria-label','Message to paste to the AI');
- const copy=button('Copy the message',async()=>{try{await navigator.clipboard.writeText(message.value);copy.textContent='Copied ✓';setTimeout(()=>{copy.textContent='Copy the message';},2000);}catch{message.select();}});
- inviteResult.append(codeLine,linkLine,message,copy);
- const invite=el('button','Make an invite');invite.type='submit';
- inviteForm.append(briefLabel,inviteFeedback,invite,inviteResult);
- inviteForm.onsubmit=async event=>{event.preventDefault();invite.disabled=true;invite.textContent='Making your invite…';try{const data=await api('agent-room/invite',{brief:brief.value});if(!data?.ok){inviteResult.hidden=true;inviteFeedback.textContent=data?.reason==='standing'?"Your seat can't invite yet. The room owner has to allow it first — ask the owner to turn on invites for this room.":'The invite could not be made. Try again in a moment.';return;}inviteFeedback.textContent='';inviteResult.hidden=false;codeLine.textContent='Invite code: '+data.code;linkLine.textContent='Join link: '+data.joinUrl;message.value=data.message||'';}catch(error){inviteFeedback.textContent=error.message;}finally{invite.disabled=false;invite.textContent='Make an invite';}};
- body.append(inviteForm);
  const logRow=el('div');logRow.className='meeting-connect-row';
  const download=el('a','Download the meeting log');download.href='/api/meeting-agents/export';download.download='leax-meeting-log.txt';download.className='meeting-connect-download';
  logRow.append(el('span','Everything said in this room, saved as plain text:'),download);
@@ -110,7 +426,7 @@ export function renderAIMeetings(state){
  const signature=JSON.stringify({meetings:state?.aiMeetings,relay:state?.aiRelay,configured:state?.aiConfigured});
  if(pane.dataset.signature===signature)return;pane.dataset.signature=signature;
  pane.replaceChildren(el('h2','Meet your office agents'),el('p','This is an internal AI work session. Agents answer from saved company records and available research tools. Replies run one at a time on the selected model; they cannot send email, submit bids or claim a contact was verified unless the source check saved it. Spoken questions are transcribed by your browser; replies use voices installed on this device.'));
- pane.append(button('Start an agent meeting',startForm),button('Open meeting room remote',openMeetingRemote),button('Connect an AI',()=>void openConnectPanel()));
+ pane.append(button('Start an agent meeting',startForm),button('Open meeting room remote',openMeetingRemote),button('Connect an AI',()=>void openConnectPanel()),button('Invite an AI',()=>void openInvitePopup()));
  const relay=state?.aiRelay;
  pane.append(el('p',relay?.available?'Paired AI available: '+relay.worker.name+' / '+relay.worker.model:state?.aiConfigured?'Local model selected; the connection is checked when a request runs.':'AI setup required. No replies will be fabricated.'));
  const worker=button(relay?.local?.enabled?'Stop sharing this desktop AI':'Use this desktop AI for my paired web/mobile office',async()=>{try{await api('ai-worker/configure',{enabled:!relay?.local?.enabled,confirmed:true});await refresh();renderAIMeetings(window.hqState);}catch(e){window.hqPopup.open({title:'Local AI worker setup',intro:e.message,body:'On the desktop app, finish local model setup and pair it with your web office. Then enable this worker. Your desktop must stay running for web/mobile inference.',readable:false});}});
@@ -184,8 +500,9 @@ async function launch(id){
  const roomQuestion=el('textarea');roomQuestion.maxLength=2000;roomQuestion.required=true;roomQuestion.placeholder='Say something to the AIs in the room…';roomQuestion.setAttribute('aria-label','Message for the room AIs');
  const roomSend=el('button','Say to the room');roomSend.type='submit';roomForm.append(roomQuestion,roomSend);
  const connectBtn=button('Connect an AI',()=>void openConnectPanel());connectBtn.id='meeting-connect-button';
+ const inviteBtn=button('Invite an AI',()=>void openInvitePopup());inviteBtn.id='meeting-invite-button';
  const downloadLog=el('a','Download meeting log');downloadLog.href='/api/meeting-agents/export';downloadLog.download='leax-meeting-log.txt';downloadLog.className='meeting-connect-download';
- panel.append(heading,status,agentsStrip,log,roomForm,voice,voiceHelp,inviteMore,connectBtn,downloadLog,form,readLabel,leave,finish);document.body.append(panel);
+ panel.append(heading,status,agentsStrip,log,roomForm,voice,voiceHelp,inviteMore,connectBtn,inviteBtn,downloadLog,form,readLabel,leave,finish);document.body.append(panel);
  let stopped=false,timer,agentsTimer=null,platformState=null,lastSignature='',entered=false,spoken=new Set(),speechQueue=[],speaking=false,recognition=null,voiceEnabled=false,voiceRestartTimer=0,questionQueue=[],sending=false;
  const voiceLabel=()=>{voice.textContent=voiceEnabled?'🎙 Stop listening':'🎙 Start listening';voice.setAttribute('aria-pressed',voiceEnabled?'true':'false');};
  function scheduleVoiceRestart(){clearTimeout(voiceRestartTimer);if(!stopped&&voiceEnabled&&!speaking&&(!read.checked||!speechQueue.length))voiceRestartTimer=setTimeout(beginRecognition,500);}
@@ -195,13 +512,13 @@ async function launch(id){
  let lastStripSignature='';
  const display=()=>{
   const platformLines=platformState?.lines||[];
-  const stripSignature=JSON.stringify(platformState?.participants||[])+'|'+(platformState?.error||'')+'|'+(platformState?.configured===false?'off':'on');
+  const stripSignature=JSON.stringify(platformState?.participants||[])+'|'+JSON.stringify(platformState?.offline||[])+'|'+(platformState?.error||'')+'|'+(platformState?.configured===false?'off':'on');
   if(stripSignature!==lastStripSignature){lastStripSignature=stripSignature;agentsStrip.replaceChildren(el('span','In the room:'));
    if(!platformState)agentsStrip.append(el('span','checking…'));
    else if(platformState.error)agentsStrip.append(el('span','room out of reach'));
    else if(!platformState.configured)agentsStrip.append(el('span','platform not connected'));
-   else if(!platformState.participants?.length)agentsStrip.append(el('span','no AIs here yet'));
-   else for(const person of platformState.participants)agentsStrip.append(platformChip(person));}
+   else if(!platformState.participants?.length&&!platformState.offline?.length)agentsStrip.append(el('span','no AIs here yet'));
+   else{for(const person of platformState.participants||[])agentsStrip.append(platformChip(person));for(const person of platformState.offline||[])agentsStrip.append(platformChip(person));}}
   const signature=JSON.stringify(meeting.turns)+'|'+platformLines.map(line=>line.id).join(',');
   if(signature!==lastSignature){lastSignature=signature;log.replaceChildren();const items=[...meeting.turns.map(turn=>({time:turn.createdAt||0,turn})),...platformLines.map(line=>({time:line.recordedAt||0,line}))].sort((a,b)=>a.time-b.time);for(const item of items){if(item.line){log.append(platformLineElement(item.line));continue;}const turn=item.turn;const who=turn.role==='user'?'You':window.hqState?.employees?.find(employee=>employee.id===turn.agent)?.name||turn.agent;log.append(el('strong',who),el('p',meetingTurnMessage(turn,meeting.turns)));if(turn.role==='agent'&&turn.text&&turn.runId){if(turn.qualityFeedback){log.append(el('small',turn.qualityFeedback.rating==='useful'?(turn.qualityFeedback.trainingEligible?'Your 👍 vote is saved as a training-ready example.':'Your 👍 vote is saved for review only; this older reply has no captured evidence context.'):(turn.qualityFeedback.trainingEligible?'Your 👎 correction is saved as a training-ready example.':'Your 👎 vote is saved for review only; a corrected answer needs captured evidence context.'),'meeting-feedback-saved'));}else{const vote=el('div');vote.className='meeting-feedback-vote';vote.append(button('👍 Useful',()=>qualityFeedbackForm(turn,'useful')),button('👎 Needs work',()=>qualityFeedbackForm(turn,'needs_work')));log.append(vote);}}if(read.checked&&turn.role==='agent'&&turn.text&&!spoken.has(turn.id)){spoken.add(turn.id);speechQueue.push({agent:turn.agent,line:who+': '+turn.text});speakNext();}}log.scrollTop=log.scrollHeight;}
   const participants=[...(meeting.participants||[]).map(agentId=>{const employee=window.hqState?.employees?.find(item=>item.id===agentId);return {id:agentId,name:employee?.name||agentId,role:employee?.role||'AI agent'};}),...(platformState?.participants||[]).filter(person=>!person.isSeat).map(person=>({id:'platform-'+person.handle,name:String(person.name||person.handle).slice(0,40),role:'AI agent',kind:'ai'}))].slice(0,26);

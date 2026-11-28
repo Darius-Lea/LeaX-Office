@@ -37,9 +37,8 @@ type FetchImpl=(input:string,init?:any)=>Promise<any>;
 export const MOTHER_WORK_BRIEF='Help troubleshoot MOTHER, Darius Lea\'s from-scratch language model: swap training logs, loss curves, overflow diagnoses, and probe outputs, and work through training problems together in this room.';
 
 // ---- Character faces -----------------------------------------------------
-// Mirrors public/agent-room.js avatarFor(): assignment first, then the
-// built-in defaults, then a stable hash pick. MOTHER keeps her own
-// portrait and is only ever shown while actually present.
+// Assignment first, then the built-in defaults, then a stable hash pick.
+// MOTHER keeps her own portrait and is only ever shown while actually present.
 function hashPick(handle:string){
  let n=0;for(const ch of handle)n=(n*31+ch.charCodeAt(0))>>>0;
  return n;
@@ -66,8 +65,7 @@ function nameForHandle(handle:string,displayName:any,assignments:Record<string,a
  return (a&&a.name)||displayName||handle||'Agent';
 }
 // Give every present agent without a character a distinct one, persisted
-// through the same assignment store the Agent Room picker uses, so the
-// face is stable and matches in both rooms.
+// through the shared assignment store, so the face is stable everywhere.
 function ensureAssignments(handles:string[]){
  const assignments=characterAssignments();
  const taken=new Set(Object.values(assignments).map((a:any)=>a.character));
@@ -202,6 +200,27 @@ export async function meetingAgentsRespond(handle:unknown,fetchImpl:FetchImpl=fe
 }
 
 // ---- Meeting state + speak -------------------------------------------------
+// Arrivals are announced once per continuous presence: when an agent
+// first shows up in the room it gets one quiet "joined the room" line;
+// routine presence check-ins (heartbeats) never reach the feed. When an
+// agent leaves, it drops out of the seen set, so a later return is
+// announced again. The seat is Darius himself and gets no arrival line.
+const ARRIVALS_SETTING='meeting_agents_present_handles';
+function noteArrivals(participants:any[]){
+ let seen:string[]=[];
+ try{seen=JSON.parse(String(setting(ARRIVALS_SETTING)||'[]'));}catch{seen=[];}
+ const seenSet=new Set((Array.isArray(seen)?seen:[]).map((h:any)=>String(h).toLowerCase()));
+ const now=Date.now();
+ const insert=db.prepare('INSERT INTO meeting_agent_lines(event_id,handle,display_name,text,kind,created,recorded) VALUES(NULL,?,?,?,?,?,?)');
+ const current:string[]=[];
+ for(const person of participants||[]){
+  const handle=String(person?.handle||'').toLowerCase();
+  if(!handle||person?.isSeat)continue;
+  current.push(handle);
+  if(!seenSet.has(handle))insert.run(handle,person.name||handle,(person.name||handle)+' joined the room','arrival','',now);
+ }
+ setSetting(ARRIVALS_SETTING,JSON.stringify(current));
+}
 export async function meetingAgentsState(fetchImpl:FetchImpl=fetch){
  const config=agentRoomConfig();
  if(!config.configured)return {configured:false,participants:[],offline:[],lines:recentLines(characterAssignments()),apiAgents:apiAgentList([],characterAssignments()),motherBrief:MOTHER_WORK_BRIEF};
@@ -227,9 +246,14 @@ export async function meetingAgentsState(fetchImpl:FetchImpl=fetch){
   status:row.status||null,
   seated:row.status==='sitting'||!!row.workspace,
   workspace:row.workspace?.name||null,
+  moving:row.moving===true,
+  position:row.position||null,
+  distance:typeof row.distance==='number'?row.distance:null,
+  nearby:row.nearby===true,
   isSeat:seatHandle!==''&&String(row.handle||'').toLowerCase()===seatHandle,
  })).sort((a:any,b:any)=>(a.isSeat?-1:b.isSeat?1:String(a.name).localeCompare(String(b.name))));
  const offline=(state.offline||[]).map((row:any)=>({handle:String(row.handle||'').toLowerCase(),name:nameForHandle(row.handle,row.display_name,assignments),face:faceForHandle(row.handle,assignments),online:false}));
+ noteArrivals(participants);
  return {configured:true,me:state.me,place:state.currentPlace,participants,offline,lines:recentLines(assignments),apiAgents:apiAgentList(state.presence||[],assignments),motherBrief:MOTHER_WORK_BRIEF};
 }
 export async function meetingAgentsSpeak(text:unknown,fetchImpl:FetchImpl=fetch){

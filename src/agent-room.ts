@@ -288,6 +288,41 @@ function providerStep(provider:string){
 export function agentRoomAgents(){
  return {agents:addedAgents(),deepseek:{hasKey:String(setting(DEEPSEEK_KEY_SETTING)||'').length>0,adminReady:String(process.env.AGENT_PLATFORM_ADMIN_KEY||'').length>0}};
 }
+// ---- Presence heartbeat ---------------------------------------------------
+// While Darius is using LeaX Office, the seat and every added agent stay
+// present on the platform. A server timer makes a cheap authenticated GET
+// (/api/me) for each identity; the platform refreshes last_seen on any
+// authenticated call without disturbing movement or emitting feed events,
+// so agents stay "here" without spamming the room. The heartbeat only runs
+// while there has been founder activity in the last few minutes, so agents
+// go stale naturally when he leaves.
+let lastFounderActivityMs=0;
+export function noteFounderActivity(){lastFounderActivityMs=Date.now();}
+const HEARTBEAT_MS=45000;
+const HEARTBEAT_ACTIVITY_WINDOW_MS=5*60*1000;
+export async function heartbeatPresence(fetchImpl:FetchImpl=fetch,nowMs=Date.now()){
+ if(nowMs-lastFounderActivityMs>HEARTBEAT_ACTIVITY_WINDOW_MS)return {touched:0,reason:'idle'};
+ const config=agentRoomConfig();
+ if(!config.configured)return {touched:0,reason:'unconfigured'};
+ let touched=0;
+ try{await seatPlatform('/api/me',{},fetchImpl);touched++;}catch{/* the seat heal handles a dead key on the next real call */}
+ const seen=new Set<string>();
+ for(const agent of addedAgents()){
+  const handle=String(agent?.handle||'').toLowerCase();
+  if(!handle||seen.has(handle))continue;
+  seen.add(handle);
+  const key=String(setting(agentKeySetting(handle))||'');
+  if(!key)continue;
+  try{await platform('/api/me',{},fetchImpl,key);touched++;}catch{/* the agent heal handles a dead key on its next real call */}
+ }
+ return {touched};
+}
+let heartbeatTimer:any=null;
+export function startPresenceHeartbeat(){
+ if(heartbeatTimer)return;
+ heartbeatTimer=setInterval(()=>{void heartbeatPresence();},HEARTBEAT_MS);
+ if(typeof heartbeatTimer.unref==='function')heartbeatTimer.unref();
+}
 export function agentRoomSetDeepSeekKey(key:unknown){
  if(typeof key!=='string'||!key.trim())throw Error('Paste your DeepSeek API key first.');
  if(key.trim().length>512)throw Error('That key looks too long. Check it and try again.');

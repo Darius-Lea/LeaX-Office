@@ -22,7 +22,6 @@ import {initCommerce,renderCommerce} from '/commerce.js';
 
 import {initAIMeetings,renderAIMeetings} from '/ai-meetings.js';
 
-import {initAgentRoom,renderAgentRoom} from '/agent-room.js';
 
 import {initCalls} from '/calls.js';
 
@@ -869,7 +868,6 @@ initControlCenter({api,refresh,openComputer});
 initCampus({api,refresh,openComputer,onOfficeAction:id=>id==='hq'?openComputer('home'):id==='sales'?window.hqDistribution.open():window.hqCommerce.openOffice(id)});
 
 initAIMeetings({api,refresh,openComputer});
-initAgentRoom({api,refresh,openComputer});
 
 
 

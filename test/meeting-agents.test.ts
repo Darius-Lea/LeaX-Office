@@ -150,3 +150,40 @@ test('the MOTHER work brief names the troubleshooting work',()=>{
  assert.match(MOTHER_WORK_BRIEF,/overflow/);
  assert.match(MOTHER_WORK_BRIEF,/probe/);
 });
+function arrivalsFor(handle){return db.prepare("SELECT * FROM meeting_agent_lines WHERE kind='arrival' AND handle=? ORDER BY id").all(handle);}
+function fetchForPresence(presence){
+ return stubFetch(url=>{
+  if(url.endsWith('/api/senses/state'))return {status:200,data:statePayload(presence,[],3)};
+  if(url.includes('/api/senses/since'))return {status:200,data:{ok:true,events:[],cursor:3,latest:3}};
+  return {status:404,data:{ok:false,error:'nope'}};
+ });
+}
+test('an agent arrival is announced once per continuous presence, never per heartbeat',async()=>{
+ // Owner requirement 2026-11-27: AIs stay present while the office is in
+ // use, and the feed must not repeat "is here" on every check-in — one
+ // arrival line when an agent actually enters, quiet after that.
+ process.env.AGENT_PLATFORM_KEY=KEY;
+ setSetting('meeting_agents_present_handles','[]');
+ const presence=[presenceRow(1,'leax-office-seat','Darius — Owner',true,'standing'),presenceRow(5,'muse-one','Muse One',true,'standing')];
+ const first=await meetingAgentsState(fetchForPresence(presence));
+ assert.equal(arrivalsFor('muse-one').length,1,'first sighting announces the arrival once');
+ assert.equal(arrivalsFor('muse-one')[0].text,'Muse One joined the room');
+ assert.equal(arrivalsFor('leax-office-seat').length,0,'the seat (Darius) gets no arrival line');
+ assert.ok(first.lines.some(line=>line.kind==='arrival'&&line.handle==='muse-one'),'arrival rides along in the conversation lines');
+ const second=await meetingAgentsState(fetchForPresence(presence));
+ assert.equal(arrivalsFor('muse-one').length,1,'routine presence polls add no new arrival lines');
+ assert.equal(second.lines.filter(line=>line.kind==='arrival').length,1);
+});
+test('leaving and returning announces a fresh arrival',async()=>{
+ process.env.AGENT_PLATFORM_KEY=KEY;
+ setSetting('meeting_agents_present_handles','[]');
+ const here=[presenceRow(1,'leax-office-seat','Darius — Owner',true,'standing'),presenceRow(5,'muse-one','Muse One',true,'standing')];
+ const away=[presenceRow(1,'leax-office-seat','Darius — Owner',true,'standing'),presenceRow(5,'muse-one','Muse One',false,'offline')];
+ await meetingAgentsState(fetchForPresence(here));
+ assert.equal(arrivalsFor('muse-one').length,1);
+ const gone=await meetingAgentsState(fetchForPresence(away));
+ assert.ok(gone.offline.some(person=>person.handle==='muse-one'),'offline agent listed as away');
+ assert.equal(arrivalsFor('muse-one').length,1,'leaving adds no line');
+ await meetingAgentsState(fetchForPresence(here));
+ assert.equal(arrivalsFor('muse-one').length,2,'returning announces a fresh arrival');
+});

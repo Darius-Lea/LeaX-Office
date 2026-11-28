@@ -2,7 +2,7 @@ import {test,beforeEach,afterEach} from 'node:test';import assert from 'node:ass
 import {mkdtempSync} from 'node:fs';import {join} from 'node:path';import {tmpdir} from 'node:os';
 process.env.HQ_DATA_DIR=mkdtempSync(join(tmpdir(),'hq-agent-room-'));
 const {setting,setSetting}=await import('../src/store.ts');
-const {agentRoomConfig,agentRoomState,agentRoomSince,agentRoomSpeak,agentRoomEnter,agentRoomInvite,agentRoomAddAgent,agentRoomAddApiAgent,agentRoomSpeakAs,agentRoomAgents,agentRoomSetDeepSeekKey,agentRoomDeepSeekActivate,agentRoomCharacters,agentRoomSetCharacter,agentRoomSetClothing,agentRoomRelayOpen,agentRoomRelayOutput,agentRoomRelayClose,agentRoomRelayStatus}=await import('../src/agent-room.ts');
+const {agentRoomConfig,agentRoomState,agentRoomSince,agentRoomSpeak,agentRoomEnter,agentRoomInvite,agentRoomAddAgent,agentRoomAddApiAgent,agentRoomSpeakAs,agentRoomAgents,agentRoomSetDeepSeekKey,agentRoomDeepSeekActivate,agentRoomCharacters,agentRoomSetCharacter,agentRoomSetClothing,agentRoomRelayOpen,agentRoomRelayOutput,agentRoomRelayClose,agentRoomRelayStatus,heartbeatPresence,noteFounderActivity}=await import('../src/agent-room.ts');
 const KEY='test-agent-key-123';
 const saved={url:process.env.AGENT_PLATFORM_URL,key:process.env.AGENT_PLATFORM_KEY,place:process.env.AGENT_PLATFORM_PLACE,admin:process.env.AGENT_PLATFORM_ADMIN_KEY,auto:process.env.AGENT_PLATFORM_AUTO_REGISTER};
 beforeEach(()=>{process.env.AGENT_PLATFORM_URL='http://platform.test';delete process.env.AGENT_PLATFORM_KEY;delete process.env.AGENT_PLATFORM_PLACE;delete process.env.AGENT_PLATFORM_ADMIN_KEY;delete process.env.AGENT_PLATFORM_AUTO_REGISTER;setSetting('agent_platform_key','');setSetting('agent_platform_handle','');setSetting('agent_platform_env_key_dead','');setSetting('agent_platform_agents','[]');setSetting('agent_platform_deepseek_key','');setSetting('agent_platform_character_assignments','{}');setSetting('agent_platform_relay_timothy','');setSetting('agent_platform_relay_claudey','');setSetting('agent_platform_agent_key_helper-api','');setSetting('agent_platform_agent_key_live-one','');setSetting('agent_platform_agent_key_timothy','');});
@@ -511,4 +511,33 @@ test('relay open after a wipe re-registers the agent, clears the stale session r
  assert.equal(record.session_id,'rs_fresh','the stale session record was cleared and replaced by the fresh session');
  assert.deepEqual(agentRoomRelayStatus().sessions,{timothy:true});
  assert.ok(!JSON.stringify(opened).includes('relay-key-2'),'agent key must not appear in relay output');
+});
+test('presence heartbeat touches the seat and every roster agent while the founder is active',async()=>{
+ // Owner requirement 2026-11-27: while someone is using LeaX Office,
+ // their AIs stay constantly present. The heartbeat is a cheap
+ // authenticated GET per identity (the platform refreshes last_seen on
+ // any authed call, without disturbing movement or feed events).
+ process.env.AGENT_PLATFORM_KEY=KEY;
+ setSetting('agent_platform_agents',JSON.stringify([{handle:'helper-api',display_name:'Helper',provider:'api',created_at:'2026-11-27T00:00:00Z'},{handle:'live-one',display_name:'Live One',provider:'chatgpt',created_at:'2026-11-27T00:00:00Z'}]));
+ setSetting('agent_platform_agent_key_helper-api','helper-key-1');
+ setSetting('agent_platform_agent_key_live-one','live-key-1');
+ const fetchImpl=stubFetch(url=>url.endsWith('/api/me')?{status:200,data:{ok:true}}:{status:404,data:{ok:false,error:'nope'}});
+ noteFounderActivity();
+ const result=await heartbeatPresence(fetchImpl);
+ assert.equal(result.touched,3,'seat + two roster agents touched');
+ const keys=fetchImpl.calls.map(c=>c.init.headers.Authorization).sort();
+ assert.deepEqual(keys,['Bearer '+KEY,'Bearer helper-key-1','Bearer live-key-1'].sort(),'each identity touched with its own key');
+ assert.ok(fetchImpl.calls.every(c=>c.url.endsWith('/api/me')),'heartbeat is the cheap /api/me GET only');
+});
+test('presence heartbeat stays quiet when the founder is idle or the platform is unconfigured',async()=>{
+ process.env.AGENT_PLATFORM_KEY=KEY;
+ setSetting('agent_platform_agents',JSON.stringify([{handle:'helper-api',display_name:'Helper',provider:'api',created_at:'2026-11-27T00:00:00Z'}]));
+ setSetting('agent_platform_agent_key_helper-api','helper-key-1');
+ const fetchImpl=stubFetch(()=>({status:200,data:{ok:true}}));
+ const idle=await heartbeatPresence(fetchImpl,Date.now()+10*60*1000);
+ assert.equal(idle.touched,0);assert.equal(idle.reason,'idle');assert.equal(fetchImpl.calls.length,0,'no calls while idle');
+ process.env.AGENT_PLATFORM_AUTO_REGISTER='0';delete process.env.AGENT_PLATFORM_KEY;
+ noteFounderActivity();
+ const unconfigured=await heartbeatPresence(fetchImpl);
+ assert.equal(unconfigured.touched,0);assert.equal(unconfigured.reason,'unconfigured');assert.equal(fetchImpl.calls.length,0,'no calls while unconfigured');
 });
